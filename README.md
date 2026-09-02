@@ -4,7 +4,7 @@ A full-stack research assistant for PDF-based document Q&A. The app uses a Pytho
 
 ## What is included right now
 
-- PDF upload support in the backend
+- PDF upload and indexing directly from the frontend
 - Text chunking and metadata extraction from uploaded documents
 - Dense vector search using FAISS
 - Cross-encoder reranking on retrieved chunks
@@ -71,7 +71,7 @@ npm install
 npm run dev
 ```
 
-Then open the frontend in the browser and use the page to ask questions. The app expects the backend to be running on port 8000.
+Then open the frontend in the browser, upload one or more text-based PDFs, and ask questions. The app expects the backend to be running on port 8000. To use a different API address, create `frontend/.env.local` with `NEXT_PUBLIC_API_BASE_URL=http://your-host:8000`.
 
 ## Current features in the app
 

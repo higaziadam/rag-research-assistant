@@ -238,7 +238,8 @@ class RAGService:
             "history": self.session_history[request.session_id],
         }
 
-    def summary_metrics(self) -> Dict[str, Any]:
+    @staticmethod
+    def summary_metrics() -> Dict[str, Any]:
         recall_at_5 = 0.84
         mrr = 0.71
         citation_accuracy = 0.89
@@ -307,12 +308,12 @@ def query_documents(request: QueryRequest):
 
 @app.get("/metrics")
 def metrics() -> Dict[str, Any]:
-    return get_service().summary_metrics()
+    return RAGService.summary_metrics()
 
 
 @app.get("/compare")
 def compare() -> Dict[str, Any]:
-    return get_service().summary_metrics()
+    return RAGService.summary_metrics()
 
 
 @app.post("/session/{session_id}/query")
