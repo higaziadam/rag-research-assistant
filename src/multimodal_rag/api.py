@@ -4,6 +4,7 @@ import io
 import re
 import time
 from collections import defaultdict
+from pathlib import Path
 from typing import Any, Dict, List
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -12,7 +13,7 @@ from pydantic import BaseModel, Field
 from pypdf import PdfReader
 
 from .config import settings
-from .data_models import DocumentChunk, QueryResponse
+from .data_models import DocumentChunk
 from .embeddings import EmbeddingStore
 from .retrieval import FAISSRetriever
 from .reranker import Reranker
@@ -20,7 +21,7 @@ from .reranker import Reranker
 
 class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1)
-    top_k: int = 5
+    top_k: int = Field(default=5, ge=1, le=20)
     session_id: str = "default"
     history: List[str] = Field(default_factory=list)
 
@@ -43,7 +44,7 @@ class EvaluationSummary(BaseModel):
 class RAGService:
     def __init__(self):
         self.embedding_store = EmbeddingStore(settings.model_name)
-        self.retriever = FAISSRetriever(embedding_dim=384)
+        self.retriever = FAISSRetriever(embedding_dim=self.embedding_store.embedding_dimension)
         self.reranker = Reranker(settings.reranker_model)
         self.documents: List[Dict[str, Any]] = []
         self.session_history: Dict[str, List[str]] = defaultdict(list)
@@ -117,6 +118,8 @@ class RAGService:
         reader = PdfReader(io.BytesIO(file_bytes))
         for page_num, page in enumerate(reader.pages, start=1):
             page_text = page.extract_text() or ""
+            if not page_text.strip():
+                continue
             table_text, figure_caption = self._extract_table_and_caption(page_text)
             sections = ["Methods", "Results", "Discussion", "Appendix"]
             section = sections[(page_num - 1) % len(sections)]
@@ -137,20 +140,29 @@ class RAGService:
         return chunks
 
     def _index_chunks(self, chunks: List[DocumentChunk]):
-        if not chunks:
+        searchable_chunks = [chunk for chunk in chunks if chunk.to_text_for_search()]
+        if not searchable_chunks:
             return
-        embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in chunks])
-        self.retriever.add_chunks(chunks, embeddings)
+        embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in searchable_chunks])
+        self.retriever.add_chunks(searchable_chunks, embeddings)
 
     def upload_documents(self, files: List[UploadFile]) -> UploadResponse:
         all_chunks: List[DocumentChunk] = []
         uploaded_names: List[str] = []
         for file in files:
-            filename = file.filename or "uploaded_document.pdf"
+            filename = Path(file.filename or "uploaded_document.pdf").name
             if not filename.lower().endswith(".pdf"):
-                continue
+                raise HTTPException(status_code=415, detail=f"{filename} is not a PDF file.")
             data = file.file.read()
-            chunks = self._parse_pdf_to_chunks(filename, data)
+            try:
+                chunks = self._parse_pdf_to_chunks(filename, data)
+            except Exception as exc:
+                raise HTTPException(status_code=422, detail=f"Could not read {filename} as a PDF: {exc}") from exc
+            if not chunks:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"No extractable text was found in {filename}. Scanned PDFs need OCR before upload.",
+                )
             all_chunks.extend(chunks)
             uploaded_names.append(filename)
             self.documents.append({"filename": filename, "pages": max((c.metadata.get("page", 0) for c in chunks), default=0), "chunks": len(chunks)})
@@ -182,11 +194,14 @@ class RAGService:
             confidence = 0.0
         else:
             evidence = []
-            for _, item in reranked:
+            # Reranker.rerank returns ``((passage, RetrievalResult), score)``.
+            # Unpack the candidate before reading its associated result.
+            for candidate, rerank_score in reranked:
+                _, item = candidate
                 evidence.append(
                     {
                         "chunk_id": item.chunk_id,
-                        "score": round(float(item.score), 4),
+                        "score": round(float(rerank_score), 4),
                         "source": item.source,
                         "page": item.metadata.get("page", 1),
                         "text": item.text,
@@ -195,16 +210,19 @@ class RAGService:
                         "section": item.section,
                     }
                 )
-            best_score = float(reranked[0][1].score)
+            best_score = float(reranked[0][1])
             confidence = min(1.0, max(0.0, (best_score + 0.5) / 1.5))
             unsupported = confidence < 0.45
             if unsupported:
                 answer = "Unsupported answer: the retrieved evidence is too weak to support a confident response."
             else:
                 citations = ", ".join(f"{item['source']} (p.{item['page']})" for item in evidence[:3])
+                evidence_text = " ".join(item["text"] for item in evidence[:3]).strip()
+                max_answer_characters = 900
+                if len(evidence_text) > max_answer_characters:
+                    evidence_text = evidence_text[:max_answer_characters].rsplit(" ", 1)[0] + "…"
                 answer = (
-                    f"Based on the retrieved evidence from {citations}, the answer is grounded in the uploaded document set. "
-                    "It follows the cited passages and avoids unsupported claims."
+                    f"Based on {citations}: {evidence_text}"
                 )
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
@@ -214,7 +232,7 @@ class RAGService:
             "unsupported": unsupported,
             "confidence": round(confidence, 4),
             "sources": evidence,
-            "retrieval_scores": [round(float(item[1].score), 4) for item in reranked],
+            "retrieval_scores": [round(float(rerank_score), 4) for _, rerank_score in reranked],
             "latency_ms": latency_ms,
             "session_id": request.session_id,
             "history": self.session_history[request.session_id],
@@ -241,7 +259,17 @@ class RAGService:
         }
 
 
-service = RAGService()
+service: RAGService | None = None
+
+
+def get_service() -> RAGService:
+    """Initialize models only when an endpoint needs retrieval."""
+    global service
+    if service is None:
+        service = RAGService()
+    return service
+
+
 app = FastAPI(
     title="Multimodal RAG Research Assistant",
     version="1.0.0",
@@ -250,8 +278,8 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -266,28 +294,28 @@ def health() -> Dict[str, str]:
 async def upload_documents(files: List[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="At least one PDF file is required.")
-    return service.upload_documents(files)
+    return get_service().upload_documents(files)
 
 
 @app.post("/query")
 def query_documents(request: QueryRequest):
     try:
-        return service.query(request)
+        return get_service().query(request)
     except Exception as exc:  # pragma: no cover - runtime safeguard
         raise HTTPException(status_code=500, detail=f"Query failed: {str(exc)}") from exc
 
 
 @app.get("/metrics")
 def metrics() -> Dict[str, Any]:
-    return service.summary_metrics()
+    return get_service().summary_metrics()
 
 
 @app.get("/compare")
 def compare() -> Dict[str, Any]:
-    return service.summary_metrics()
+    return get_service().summary_metrics()
 
 
 @app.post("/session/{session_id}/query")
 def query_session(session_id: str, request: QueryRequest):
     request.session_id = session_id
-    return service.query(request)
+    return get_service().query(request)

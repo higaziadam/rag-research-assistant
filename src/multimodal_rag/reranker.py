@@ -3,7 +3,22 @@ from __future__ import annotations
 from typing import List, Sequence, Tuple
 
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+
+def logits_to_scores(logits: torch.Tensor) -> List[float]:
+    logits = torch.as_tensor(logits).detach().cpu()
+
+    if logits.dim() == 1:
+        return logits.float().tolist()
+
+    if logits.dim() == 2:
+        if logits.shape[-1] == 1:
+            return logits[:, 0].float().tolist()
+        if logits.shape[-1] >= 2:
+            return logits[:, 1].float().tolist()
+
+    raise ValueError(f"Unsupported logit shape for reranking: {tuple(logits.shape)}")
 
 
 class Reranker:
@@ -29,7 +44,7 @@ class Reranker:
 
         with torch.no_grad():
             logits = self.model(**features).logits
-            scores = logits[:, 1].cpu().tolist()
+            scores = logits_to_scores(logits)
         return scores
 
     def rerank(self, query: str, candidates: Sequence[Tuple[str, dict]], top_k: int = 5):
