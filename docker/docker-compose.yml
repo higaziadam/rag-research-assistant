@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  multimodal-rag:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app/src
+    restart: unless-stopped
