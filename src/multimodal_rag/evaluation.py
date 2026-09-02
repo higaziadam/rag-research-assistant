@@ -56,8 +56,8 @@ def evaluate_ranking_predictions(predictions_path: str, ground_truth_path: str, 
         relevance_list.append(ranking)
 
     return {
-        "recall@5": compute_recall_at_k(relevance_list, k=k),
-        "ndcg@5": compute_ndcg_at_k(relevance_list, k=k),
+        f"recall@{k}": compute_recall_at_k(relevance_list, k=k),
+        f"ndcg@{k}": compute_ndcg_at_k(relevance_list, k=k),
     }
 
 

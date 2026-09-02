@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
+from typing import List
 
 
 @dataclass
@@ -13,6 +15,9 @@ class Settings:
     faiss_index_path: str = "artifacts/faiss_index.index"
     metadata_path: str = "artifacts/metadata.jsonl"
     max_context_tokens: int = 1500
+    cors_origins: List[str] = field(
+        default_factory=lambda: [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if origin.strip()]
+    )
 
 
 settings = Settings()

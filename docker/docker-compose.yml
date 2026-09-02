@@ -1,7 +1,5 @@
-version: "3.9"
-
 services:
-  multimodal-rag:
+  backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -9,4 +7,18 @@ services:
       - "8000:8000"
     environment:
       - PYTHONPATH=/app/src
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
     restart: unless-stopped

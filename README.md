@@ -73,6 +73,14 @@ npm run dev
 
 Then open the frontend in the browser, upload one or more text-based PDFs, and ask questions. The app expects the backend to be running on port 8000. To use a different API address, create `frontend/.env.local` with `NEXT_PUBLIC_API_BASE_URL=http://your-host:8000`.
 
+### Run the full stack with Docker
+
+```powershell
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Open `http://localhost:3000`. For a deployed environment, set `NEXT_PUBLIC_API_BASE_URL` to the browser-accessible backend URL and set `CORS_ORIGINS` to the frontend URL before building the images. The frontend API URL is embedded during its Docker build.
+
 ## Current features in the app
 
 - Upload PDF documents
