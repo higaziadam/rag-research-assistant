@@ -1,28 +1,16 @@
 "use client";
 
-import { ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
-const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
-
-type Source = { chunk_id: string; source: string; page: number; text: string };
-type DocumentInfo = { filename: string; pages: number; chunks: number };
-type QueryResponse = { answer?: string; sources?: Source[]; latency_ms?: number; detail?: string };
-type UploadResponse = { uploaded?: string[]; total_chunks?: number; documents?: DocumentInfo[]; detail?: string };
-type MetricsResponse = {
-  recall_at_5: number;
-  mrr: number;
-  citation_accuracy: number;
-  answer_faithfulness: number;
-  latency_ms: number;
-};
-
-async function readJson<T>(response: Response): Promise<T> {
-  const data = (await response.json()) as T & { detail?: unknown };
-  if (!response.ok) {
-    throw new Error(typeof data.detail === "string" ? data.detail : `The backend returned HTTP ${response.status}.`);
-  }
-  return data;
-}
+import {
+  apiBaseUrl,
+  readJson,
+  type DocumentInfo,
+  type MetricsResponse,
+  type QueryResponse,
+  type Source,
+  type UploadResponse,
+} from "@/lib/api";
 
 export default function Home() {
   const [query, setQuery] = useState("How does the reranker improve retrieval quality?");
@@ -59,7 +47,7 @@ export default function Home() {
     }
 
     setUploading(true);
-    setUploadStatus("Extracting text and indexing document chunks…");
+    setUploadStatus("Extracting text and indexing document chunks...");
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append("files", file));
@@ -141,7 +129,7 @@ export default function Home() {
                 disabled={uploading || files.length === 0}
                 className="shrink-0 rounded-xl border border-cyan-500 px-4 py-2 text-sm font-semibold text-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {uploading ? "Indexing…" : "Upload PDFs"}
+                {uploading ? "Indexing..." : "Upload PDFs"}
               </button>
             </div>
             <p className="mt-2 text-sm text-slate-400" aria-live="polite">{uploadStatus}</p>
@@ -166,7 +154,7 @@ export default function Home() {
               className="mt-4 rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={loading}
             >
-              {loading ? "Thinking…" : "Ask research assistant"}
+              {loading ? "Thinking..." : "Ask research assistant"}
             </button>
 
             <div className="mt-8 rounded-xl border border-slate-800 bg-slate-950 p-4" aria-live="polite">
@@ -179,11 +167,11 @@ export default function Home() {
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <p className="mb-4 text-xs uppercase tracking-[0.25em] text-slate-400">Evaluation</p>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span>Recall@5</span><strong>{metrics ? metrics.recall_at_5.toFixed(2) : "—"}</strong></div>
-                <div className="flex justify-between"><span>MRR</span><strong>{metrics ? metrics.mrr.toFixed(2) : "—"}</strong></div>
-                <div className="flex justify-between"><span>Citation accuracy</span><strong>{metrics ? metrics.citation_accuracy.toFixed(2) : "—"}</strong></div>
-                <div className="flex justify-between"><span>Faithfulness</span><strong>{metrics ? metrics.answer_faithfulness.toFixed(2) : "—"}</strong></div>
-                <div className="flex justify-between"><span>Query latency</span><strong>{queryLatency !== null ? `${Math.round(queryLatency)} ms` : "—"}</strong></div>
+                <div className="flex justify-between"><span>Recall@5</span><strong>{metrics ? metrics.recall_at_5.toFixed(2) : "-"}</strong></div>
+                <div className="flex justify-between"><span>MRR</span><strong>{metrics ? metrics.mrr.toFixed(2) : "-"}</strong></div>
+                <div className="flex justify-between"><span>Citation accuracy</span><strong>{metrics ? metrics.citation_accuracy.toFixed(2) : "-"}</strong></div>
+                <div className="flex justify-between"><span>Faithfulness</span><strong>{metrics ? metrics.answer_faithfulness.toFixed(2) : "-"}</strong></div>
+                <div className="flex justify-between"><span>Query latency</span><strong>{queryLatency !== null ? `${Math.round(queryLatency)} ms` : "-"}</strong></div>
               </div>
             </div>
 

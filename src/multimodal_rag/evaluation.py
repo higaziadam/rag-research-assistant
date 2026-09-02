@@ -21,7 +21,7 @@ def compute_recall_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float
             if item > 0:
                 hits += 1
         scores.append(hits / total)
-    return float(np.mean(scores))
+    return float(np.mean(scores)) if scores else 0.0
 
 
 def compute_ndcg_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float:
@@ -38,7 +38,7 @@ def compute_ndcg_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float:
         ideal_discounts = np.log2(np.arange(2, ideal.size + 2))
         ideal_dcg = float(np.sum((2**ideal - 1) / ideal_discounts))
         scores.append(dcg / ideal_dcg if ideal_dcg else 0.0)
-    return float(np.mean(scores))
+    return float(np.mean(scores)) if scores else 0.0
 
 
 def evaluate_ranking_predictions(predictions_path: str, ground_truth_path: str, k: int = 5) -> Dict[str, float]:

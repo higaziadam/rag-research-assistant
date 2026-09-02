@@ -13,28 +13,36 @@ from .data_models import DocumentChunk, RetrievalResult
 class FAISSRetriever:
     """Dense retriever over document chunks."""
 
-    def __init__(self, embedding_dim: int, index_path: Optional[str] = None):
+    def __init__(self, embedding_dim: int, index_path: Optional[str] = None, metadata_path: Optional[str] = None):
         self.embedding_dim = embedding_dim
         self.index = faiss.IndexFlatIP(embedding_dim)
         self.chunks: List[DocumentChunk] = []
         self.chunk_lookup: Dict[str, DocumentChunk] = {}
 
         if index_path:
-            self.load(index_path)
+            self.load(index_path, metadata_path)
 
     def add_chunks(self, chunks: Sequence[DocumentChunk], embeddings: np.ndarray):
+        embeddings = np.asarray(embeddings, dtype=np.float32)
         if len(chunks) != len(embeddings):
             raise ValueError("chunks and embeddings must have matching lengths")
+        if embeddings.ndim != 2 or embeddings.shape[1] != self.embedding_dim:
+            raise ValueError(f"Expected embeddings with shape (n, {self.embedding_dim}).")
 
         self.chunks.extend(chunks)
         for chunk in chunks:
             self.chunk_lookup[chunk.chunk_id] = chunk
-        self.index.add(embeddings.astype(np.float32))
+        self.index.add(embeddings)
 
     def search(self, query_embedding: np.ndarray, top_k: int = 5) -> List[Tuple[int, float]]:
         if self.index.ntotal == 0:
             return []
-        scores, indices = self.index.search(np.asarray(query_embedding, dtype=np.float32).reshape(1, -1), top_k)
+        if top_k < 1:
+            raise ValueError("top_k must be at least 1")
+        query = np.asarray(query_embedding, dtype=np.float32).reshape(1, -1)
+        if query.shape[1] != self.embedding_dim:
+            raise ValueError(f"Expected a query embedding with {self.embedding_dim} dimensions.")
+        scores, indices = self.index.search(query, top_k)
         results = []
         for idx, score in zip(indices[0], scores[0]):
             if idx == -1:
@@ -64,6 +72,7 @@ class FAISSRetriever:
     def save(self, index_path: str, metadata_path: str):
         index_dir = Path(index_path).parent
         index_dir.mkdir(parents=True, exist_ok=True)
+        Path(metadata_path).parent.mkdir(parents=True, exist_ok=True)
 
         faiss.write_index(self.index, index_path)
         with open(metadata_path, "w", encoding="utf-8") as f:
@@ -80,27 +89,32 @@ class FAISSRetriever:
                 }
                 f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
-    def load(self, index_path: str):
+    def load(self, index_path: str, metadata_path: Optional[str] = None):
         self.index = faiss.read_index(index_path)
+        self.embedding_dim = self.index.d
 
-        metadata_path = str(Path(index_path).with_suffix(".jsonl"))
-        if Path(metadata_path).exists():
-            self.chunks = []
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if not line.strip():
-                        continue
-                    payload = json.loads(line)
-                    self.chunks.append(
-                        DocumentChunk(
-                            chunk_id=payload["chunk_id"],
-                            text=payload.get("text", ""),
-                            table=payload.get("table", ""),
-                            figure_caption=payload.get("figure_caption", ""),
-                            source=payload.get("source", ""),
-                            section=payload.get("section", ""),
-                            metadata=payload.get("metadata", {}),
-                            type=payload.get("type", "text"),
-                        )
+        resolved_metadata_path = metadata_path or str(Path(index_path).with_suffix(".jsonl"))
+        if not Path(resolved_metadata_path).exists():
+            raise FileNotFoundError(f"Metadata file not found: {resolved_metadata_path}")
+
+        self.chunks = []
+        with open(resolved_metadata_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                self.chunks.append(
+                    DocumentChunk(
+                        chunk_id=payload["chunk_id"],
+                        text=payload.get("text", ""),
+                        table=payload.get("table", ""),
+                        figure_caption=payload.get("figure_caption", ""),
+                        source=payload.get("source", ""),
+                        section=payload.get("section", ""),
+                        metadata=payload.get("metadata", {}),
+                        type=payload.get("type", "text"),
                     )
-            self.chunk_lookup = {chunk.chunk_id: chunk for chunk in self.chunks}
+                )
+        if len(self.chunks) != self.index.ntotal:
+            raise ValueError("FAISS index and metadata contain different numbers of chunks.")
+        self.chunk_lookup = {chunk.chunk_id: chunk for chunk in self.chunks}

@@ -3,43 +3,50 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
-from datasets import load_dataset
+from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, DataCollatorWithPadding, Trainer, TrainingArguments
 
 
-def prepare_dataset(data_path: str):
-    with open(data_path, "r", encoding="utf-8") as f:
-        rows = json.load(f)
+def _load_rows(data_path: str) -> List[Dict[str, Any]]:
+    path = Path(data_path)
+    raw = path.read_text(encoding="utf-8").strip()
+    if not raw:
+        raise ValueError("Training data is empty.")
+
+    try:
+        parsed = json.loads(raw)
+        rows = parsed if isinstance(parsed, list) else [parsed]
+    except json.JSONDecodeError:
+        rows = [json.loads(line) for line in raw.splitlines() if line.strip()]
 
     examples = []
     for row in rows:
-        if "query" in row and "passage" in row and "label" in row:
-            examples.append(
-                {
-                    "query": row["query"],
-                    "passage": row["passage"],
-                    "label": int(row["label"]),
-                }
-            )
+        if not {"query", "passage", "label"}.issubset(row):
+            continue
+        label = float(row["label"])
+        if label not in (0.0, 1.0):
+            raise ValueError("Reranker labels must be 0 or 1.")
+        examples.append({"query": str(row["query"]), "passage": str(row["passage"]), "label": label})
 
     if not examples:
-        raise ValueError("Dataset must contain query, passage, and label fields.")
+        raise ValueError("Dataset must contain query, passage, and binary label fields.")
+    return examples
 
-    ds = load_dataset("json", data_files={"train": data_path})
-    return ds["train"], examples
+
+def prepare_dataset(data_path: str) -> Dataset:
+    """Load validated JSON or JSONL query/passage relevance examples."""
+    return Dataset.from_list(_load_rows(data_path))
 
 
 def train_reranker(data_path: str, output_dir: str):
-    rows = []
-    with open(data_path, "r", encoding="utf-8") as f:
-        rows = json.load(f)
-
+    dataset = prepare_dataset(data_path)
     model_name = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+    # Keep the base model's single-logit head: runtime reranking uses a scalar score.
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
     lora_config = LoraConfig(
         r=8,
@@ -52,16 +59,9 @@ def train_reranker(data_path: str, output_dir: str):
     model = get_peft_model(model, lora_config)
 
     def tokenize_function(examples):
-        return tokenizer(
-            list(zip(examples["query"], examples["passage"])),
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt",
-        )
+        return tokenizer(examples["query"], examples["passage"], truncation=True, max_length=512)
 
-    dataset = load_dataset("json", data_files={"train": data_path})
-    tokenized = dataset["train"].map(tokenize_function, batched=True)
+    tokenized = dataset.map(tokenize_function, batched=True, remove_columns=["query", "passage"])
     tokenized = tokenized.rename_column("label", "labels")
 
     args = TrainingArguments(
@@ -71,19 +71,24 @@ def train_reranker(data_path: str, output_dir: str):
         learning_rate=2e-5,
         logging_steps=20,
         save_strategy="no",
+        report_to="none",
     )
 
-    trainer = Trainer(model=model, args=args, train_dataset=tokenized)
+    trainer = Trainer(
+        model=model,
+        args=args,
+        train_dataset=tokenized,
+        data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
+    )
     trainer.train()
     trainer.save_model(output_dir)
     tokenizer.save_pretrained(output_dir)
-
     print(f"Saved LoRA-tuned reranker to {output_dir}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tune a cross-encoder reranker with PEFT/LoRA")
-    parser.add_argument("--data-path", type=str, required=True, help="Path to JSONL or JSON dataset")
-    parser.add_argument("--output-dir", type=str, default="artifacts/reranker", help="Output folder")
+    parser.add_argument("--data-path", type=str, required=True, help="Path to JSON or JSONL training data")
+    parser.add_argument("--output-dir", type=str, default="artifacts/reranker", help="Output directory")
     args = parser.parse_args()
     train_reranker(args.data_path, args.output_dir)

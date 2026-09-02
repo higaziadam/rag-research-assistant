@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 
 @dataclass
@@ -28,11 +28,3 @@ class RetrievalResult:
     source: str = ""
     section: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class QueryResponse:
-    answer: str
-    sources: List[Dict[str, Any]]
-    retrieval_scores: List[float]
-    latency_ms: Optional[float] = None

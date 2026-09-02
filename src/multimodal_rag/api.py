@@ -5,11 +5,11 @@ import re
 import time
 from collections import defaultdict
 from pathlib import Path
+from threading import Lock
 from typing import Any, Dict, List
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 from pypdf import PdfReader
 
 from .config import settings
@@ -17,28 +17,7 @@ from .data_models import DocumentChunk
 from .embeddings import EmbeddingStore
 from .retrieval import FAISSRetriever
 from .reranker import Reranker
-
-
-class QueryRequest(BaseModel):
-    query: str = Field(..., min_length=1)
-    top_k: int = Field(default=5, ge=1, le=20)
-    session_id: str = "default"
-    history: List[str] = Field(default_factory=list)
-
-
-class UploadResponse(BaseModel):
-    uploaded: List[str]
-    total_chunks: int
-    documents: List[Dict[str, Any]]
-
-
-class EvaluationSummary(BaseModel):
-    recall_at_5: float
-    mrr: float
-    citation_accuracy: float
-    answer_faithfulness: float
-    latency_ms: float
-    comparison: Dict[str, Dict[str, float]]
+from .schemas import EvaluationSummary, QueryRequest, QueryResponse, UploadResponse
 
 
 class RAGService:
@@ -149,6 +128,7 @@ class RAGService:
     def upload_documents(self, files: List[UploadFile]) -> UploadResponse:
         all_chunks: List[DocumentChunk] = []
         uploaded_names: List[str] = []
+        uploaded_documents: List[Dict[str, Any]] = []
         for file in files:
             filename = Path(file.filename or "uploaded_document.pdf").name
             if not filename.lower().endswith(".pdf"):
@@ -165,8 +145,11 @@ class RAGService:
                 )
             all_chunks.extend(chunks)
             uploaded_names.append(filename)
-            self.documents.append({"filename": filename, "pages": max((c.metadata.get("page", 0) for c in chunks), default=0), "chunks": len(chunks)})
+            uploaded_documents.append(
+                {"filename": filename, "pages": max((c.metadata.get("page", 0) for c in chunks), default=0), "chunks": len(chunks)}
+            )
         self._index_chunks(all_chunks)
+        self.documents.extend(uploaded_documents)
         return UploadResponse(
             uploaded=uploaded_names,
             total_chunks=len(all_chunks),
@@ -220,7 +203,7 @@ class RAGService:
                 evidence_text = " ".join(item["text"] for item in evidence[:3]).strip()
                 max_answer_characters = 900
                 if len(evidence_text) > max_answer_characters:
-                    evidence_text = evidence_text[:max_answer_characters].rsplit(" ", 1)[0] + "…"
+                    evidence_text = evidence_text[:max_answer_characters].rsplit(" ", 1)[0] + "..."
                 answer = (
                     f"Based on {citations}: {evidence_text}"
                 )
@@ -261,13 +244,16 @@ class RAGService:
 
 
 service: RAGService | None = None
+service_lock = Lock()
 
 
 def get_service() -> RAGService:
     """Initialize models only when an endpoint needs retrieval."""
     global service
     if service is None:
-        service = RAGService()
+        with service_lock:
+            if service is None:
+                service = RAGService()
     return service
 
 
@@ -298,25 +284,25 @@ async def upload_documents(files: List[UploadFile] = File(...)):
     return get_service().upload_documents(files)
 
 
-@app.post("/query")
-def query_documents(request: QueryRequest):
+@app.post("/query", response_model=QueryResponse)
+def query_documents(request: QueryRequest) -> Dict[str, Any]:
     try:
         return get_service().query(request)
     except Exception as exc:  # pragma: no cover - runtime safeguard
         raise HTTPException(status_code=500, detail=f"Query failed: {str(exc)}") from exc
 
 
-@app.get("/metrics")
+@app.get("/metrics", response_model=EvaluationSummary)
 def metrics() -> Dict[str, Any]:
     return RAGService.summary_metrics()
 
 
-@app.get("/compare")
+@app.get("/compare", response_model=EvaluationSummary)
 def compare() -> Dict[str, Any]:
     return RAGService.summary_metrics()
 
 
-@app.post("/session/{session_id}/query")
-def query_session(session_id: str, request: QueryRequest):
+@app.post("/session/{session_id}/query", response_model=QueryResponse)
+def query_session(session_id: str, request: QueryRequest) -> Dict[str, Any]:
     request.session_id = session_id
     return get_service().query(request)
