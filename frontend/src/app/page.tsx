@@ -5,12 +5,28 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import {
   apiBaseUrl,
   readJson,
+  type DeleteDocumentResponse,
   type DocumentInfo,
   type MetricsResponse,
   type QueryResponse,
   type Source,
   type UploadResponse,
 } from "@/lib/api";
+
+function sourceFileUrl(source: Source) {
+  return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/file#page=${source.page}`;
+}
+
+function getOrCreateSessionId() {
+  const storedSessionId = window.sessionStorage.getItem("rag-session-id");
+  if (storedSessionId) {
+    return storedSessionId;
+  }
+
+  const newSessionId = `browser-${crypto.randomUUID()}`;
+  window.sessionStorage.setItem("rag-session-id", newSessionId);
+  return newSessionId;
+}
 
 export default function Home() {
   const [query, setQuery] = useState("How does the reranker improve retrieval quality?");
@@ -21,24 +37,35 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [queryLatency, setQueryLatency] = useState<number | null>(null);
+  const [selectedSource, setSelectedSource] = useState<Source | null>(null);
   const [uploadStatus, setUploadStatus] = useState("No PDFs indexed from this browser session.");
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadMetrics() {
-      try {
-        const response = await fetch(`${apiBaseUrl}/metrics`);
-        setMetrics(await readJson<MetricsResponse>(response));
-      } catch {
-        // Question and upload actions show connection errors when the backend is unavailable.
+    getOrCreateSessionId();
+
+    async function loadDashboardData() {
+      const [metricsResult, documentsResult] = await Promise.allSettled([
+        fetch(`${apiBaseUrl}/metrics`).then(readJson<MetricsResponse>),
+        fetch(`${apiBaseUrl}/documents`).then(readJson<DocumentInfo[]>),
+      ]);
+
+      if (metricsResult.status === "fulfilled") {
+        setMetrics(metricsResult.value);
+      }
+      if (documentsResult.status === "fulfilled") {
+        setDocuments(documentsResult.value);
       }
     }
-    void loadMetrics();
+
+    void loadDashboardData();
   }, []);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
     setFiles(Array.from(event.target.files ?? []));
+    event.target.value = "";
   }
 
   async function handleUpload() {
@@ -76,7 +103,7 @@ export default function Home() {
       const response = await fetch(`${apiBaseUrl}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, top_k: 5, session_id: "browser-session" }),
+        body: JSON.stringify({ query, top_k: 5, session_id: getOrCreateSessionId() }),
       });
       const data = await readJson<QueryResponse>(response);
       if (!data.answer) {
@@ -86,14 +113,39 @@ export default function Home() {
       setSources(data.sources ?? []);
       setUnsupported(data.unsupported ?? false);
       setQueryLatency(data.latency_ms ?? null);
+      setSelectedSource(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown request error.";
       setAnswer(`Unable to answer the question: ${message}`);
       setSources([]);
       setUnsupported(true);
       setQueryLatency(null);
+      setSelectedSource(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDelete(filename: string) {
+    if (!window.confirm(`Remove ${filename} from the assistant? This also deletes its saved PDF and index entries.`)) {
+      return;
+    }
+
+    setDeletingFilename(filename);
+    try {
+      const response = await fetch(`${apiBaseUrl}/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
+      const data = await readJson<DeleteDocumentResponse>(response);
+      setDocuments(data.documents);
+      setSources((currentSources) => currentSources.filter((source) => source.source !== filename));
+      if (selectedSource?.source === filename) {
+        setSelectedSource(null);
+      }
+      setUploadStatus(`Removed ${data.deleted} from the assistant.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown deletion error.";
+      setUploadStatus(`Could not remove ${filename}: ${message}`);
+    } finally {
+      setDeletingFilename(null);
     }
   }
 
@@ -137,9 +189,21 @@ export default function Home() {
             </div>
             <p className="mt-2 text-sm text-slate-400" aria-live="polite">{uploadStatus}</p>
             {documents.length > 0 && (
-              <ul className="mt-3 space-y-1 text-sm text-slate-300">
+              <ul className="mt-3 space-y-2 text-sm text-slate-300">
                 {documents.map((document, index) => (
-                  <li key={`${document.filename}-${index}`}>{document.filename}: {document.pages} pages, {document.chunks} chunks</li>
+                  <li key={`${document.filename}-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-950/60 px-3 py-2">
+                    <span className="min-w-0 break-all">{document.filename}: {document.pages} pages, {document.chunks} chunks</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(document.filename)}
+                      disabled={deletingFilename !== null}
+                      aria-label={`Remove ${document.filename}`}
+                      title={`Remove ${document.filename}`}
+                      className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-slate-400 transition hover:bg-rose-950/60 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deletingFilename === document.filename ? "…" : "×"}
+                    </button>
+                  </li>
                 ))}
               </ul>
             )}
@@ -195,6 +259,23 @@ export default function Home() {
                           <p className="mt-2">{source.text}</p>
                         </details>
                       )}
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSource(source)}
+                          className="rounded-md border border-cyan-700 px-3 py-2 text-cyan-300 transition hover:border-cyan-400 hover:text-cyan-100"
+                        >
+                          Preview cited page
+                        </button>
+                        <a
+                          href={sourceFileUrl(source)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-md border border-slate-700 px-3 py-2 text-slate-300 transition hover:border-slate-500 hover:text-white"
+                        >
+                          Open PDF
+                        </a>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -203,6 +284,48 @@ export default function Home() {
           </aside>
         </div>
       </div>
+
+      {selectedSource && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="source-viewer-title"
+        >
+          <section className="flex h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl shadow-black/50">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-5 py-4">
+              <div className="min-w-0">
+                <h2 id="source-viewer-title" className="truncate font-semibold text-white">
+                  {selectedSource.source}
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">Cited page {selectedSource.page}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href={sourceFileUrl(selectedSource)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-md border border-cyan-700 px-3 py-2 text-sm font-medium text-cyan-300 transition hover:border-cyan-400 hover:text-cyan-100"
+                >
+                  Open in new tab
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSource(null)}
+                  className="rounded-md border border-slate-700 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+            </header>
+            <iframe
+              src={sourceFileUrl(selectedSource)}
+              title={`PDF viewer for ${selectedSource.source}, page ${selectedSource.page}`}
+              className="min-h-0 flex-1 bg-white"
+            />
+          </section>
+        </div>
+      )}
     </main>
   );
 }

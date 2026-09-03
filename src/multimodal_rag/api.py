@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import io
+import json
+import logging
 import re
 import time
 from collections import defaultdict
 from pathlib import Path
-from threading import Lock
+from threading import Lock, RLock
 from typing import Any, Dict, List
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pypdf import PdfReader
 
 from .config import settings
@@ -17,7 +20,9 @@ from .data_models import DocumentChunk
 from .embeddings import EmbeddingStore
 from .retrieval import FAISSRetriever
 from .reranker import Reranker
-from .schemas import EvaluationSummary, QueryRequest, QueryResponse, UploadResponse
+from .schemas import DeleteDocumentResponse, DocumentInfo, EvaluationSummary, QueryRequest, QueryResponse, UploadResponse
+
+logger = logging.getLogger(__name__)
 
 
 class RAGService:
@@ -27,7 +32,57 @@ class RAGService:
         self.reranker = Reranker(settings.reranker_model)
         self.documents: List[Dict[str, Any]] = []
         self.session_history: Dict[str, List[str]] = defaultdict(list)
-        self._bootstrap_demo_docs()
+        self.storage_lock = RLock()
+        if self._has_persisted_index():
+            self._restore_persisted_state()
+        else:
+            self._bootstrap_demo_docs()
+
+    @staticmethod
+    def _has_persisted_index() -> bool:
+        index_exists = settings.faiss_index_path.exists()
+        metadata_exists = settings.metadata_path.exists()
+        if index_exists != metadata_exists:
+            raise RuntimeError("Persistent index is incomplete: both FAISS index and metadata files are required.")
+        return index_exists
+
+    def _restore_persisted_state(self) -> None:
+        self.retriever = FAISSRetriever(
+            embedding_dim=self.embedding_store.embedding_dimension,
+            index_path=str(settings.faiss_index_path),
+            metadata_path=str(settings.metadata_path),
+        )
+        if settings.documents_path.exists():
+            documents = json.loads(settings.documents_path.read_text(encoding="utf-8"))
+            if not isinstance(documents, list):
+                raise RuntimeError("Persistent document manifest must contain a list of documents.")
+            self.documents = documents
+        else:
+            self.documents = self._documents_from_chunks()
+
+    def _documents_from_chunks(self) -> List[Dict[str, Any]]:
+        documents: Dict[str, Dict[str, Any]] = {}
+        for chunk in self.retriever.chunks:
+            document = documents.setdefault(chunk.source, {"filename": chunk.source, "pages": 0, "chunks": 0})
+            document["pages"] = max(document["pages"], int(chunk.metadata.get("page", 0)))
+            document["chunks"] += 1
+        return list(documents.values())
+
+    def _persist_state(self) -> None:
+        settings.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        self.retriever.save(str(settings.faiss_index_path), str(settings.metadata_path))
+        settings.documents_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_manifest = settings.documents_path.with_suffix(f"{settings.documents_path.suffix}.tmp")
+        temporary_manifest.write_text(json.dumps(self.documents, indent=2), encoding="utf-8")
+        temporary_manifest.replace(settings.documents_path)
+
+    @staticmethod
+    def _persist_upload(filename: str, data: bytes) -> None:
+        settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+        destination = settings.uploads_dir / filename
+        temporary = destination.with_suffix(f"{destination.suffix}.uploading")
+        temporary.write_bytes(data)
+        temporary.replace(destination)
 
     def _bootstrap_demo_docs(self):
         demo_chunks = [
@@ -77,6 +132,12 @@ class RAGService:
                 else:
                     if current:
                         pieces.append(current)
+                    current = ""
+                    while len(sentence) > chunk_length:
+                        split_at = sentence.rfind(" ", 0, chunk_length + 1)
+                        split_at = split_at if split_at > 0 else chunk_length
+                        pieces.append(sentence[:split_at].strip())
+                        sentence = sentence[split_at:].strip()
                     current = sentence
             if current:
                 pieces.append(current)
@@ -118,7 +179,7 @@ class RAGService:
                 )
         return chunks
 
-    def _index_chunks(self, chunks: List[DocumentChunk]):
+    def _index_chunks(self, chunks: List[DocumentChunk]) -> None:
         searchable_chunks = [chunk for chunk in chunks if chunk.to_text_for_search()]
         if not searchable_chunks:
             return
@@ -126,42 +187,89 @@ class RAGService:
         self.retriever.add_chunks(searchable_chunks, embeddings)
 
     def upload_documents(self, files: List[UploadFile]) -> UploadResponse:
-        all_chunks: List[DocumentChunk] = []
-        uploaded_names: List[str] = []
-        uploaded_documents: List[Dict[str, Any]] = []
-        indexed_filenames = {document["filename"] for document in self.documents}
-        for file in files:
-            filename = Path(file.filename or "uploaded_document.pdf").name
-            if not filename.lower().endswith(".pdf"):
-                raise HTTPException(status_code=415, detail=f"{filename} is not a PDF file.")
-            if filename in indexed_filenames:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"{filename} is already indexed. Restart the backend before uploading a replacement.",
-                )
-            data = file.file.read()
+        with self.storage_lock:
+            all_chunks: List[DocumentChunk] = []
+            uploaded_names: List[str] = []
+            uploaded_documents: List[Dict[str, Any]] = []
+            uploaded_files: List[tuple[str, bytes]] = []
+            indexed_filenames = {document["filename"] for document in self.documents}
+            for file in files:
+                filename = Path(file.filename or "uploaded_document.pdf").name
+                if not filename.lower().endswith(".pdf"):
+                    raise HTTPException(status_code=415, detail=f"{filename} is not a PDF file.")
+                if filename in indexed_filenames:
+                    raise HTTPException(status_code=409, detail=f"{filename} is already indexed. Use a new filename to replace it.")
+                data = file.file.read(settings.max_upload_bytes + 1)
+                if len(data) > settings.max_upload_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"{filename} exceeds the {settings.max_upload_bytes // (1024 * 1024)} MB upload limit.",
+                    )
+                try:
+                    chunks = self._parse_pdf_to_chunks(filename, data)
+                except Exception as exc:
+                    raise HTTPException(status_code=422, detail=f"Could not read {filename} as a PDF: {exc}") from exc
+                if not chunks:
+                    raise HTTPException(status_code=422, detail=f"No extractable text was found in {filename}. Scanned PDFs need OCR before upload.")
+                all_chunks.extend(chunks)
+                uploaded_names.append(filename)
+                uploaded_files.append((filename, data))
+                indexed_filenames.add(filename)
+                uploaded_documents.append({"filename": filename, "pages": max((c.metadata.get("page", 0) for c in chunks), default=0), "chunks": len(chunks)})
+            self._index_chunks(all_chunks)
+            self.documents.extend(uploaded_documents)
+            for filename, data in uploaded_files:
+                self._persist_upload(filename, data)
+            self._persist_state()
+            return UploadResponse(uploaded=uploaded_names, total_chunks=len(all_chunks), documents=self.documents)
+
+    def list_documents(self) -> List[Dict[str, Any]]:
+        return self.documents
+
+    @staticmethod
+    def load_persisted_documents() -> List[Dict[str, Any]]:
+        if not settings.documents_path.exists():
+            return []
+        documents = json.loads(settings.documents_path.read_text(encoding="utf-8"))
+        if not isinstance(documents, list):
+            raise RuntimeError("Persistent document manifest must contain a list of documents.")
+        return documents
+
+    def delete_document(self, filename: str) -> Dict[str, Any]:
+        """Remove a document from the index, manifest, and persisted uploads."""
+        safe_filename = Path(filename).name
+        if filename != safe_filename:
+            raise HTTPException(status_code=400, detail="Invalid document filename.")
+
+        with self.storage_lock:
+            if not any(document["filename"] == safe_filename for document in self.documents):
+                raise HTTPException(status_code=404, detail=f"{safe_filename} is not indexed.")
+
+            previous_retriever = self.retriever
+            previous_documents = self.documents
+            remaining_documents = [document for document in self.documents if document["filename"] != safe_filename]
+            filtered_retriever = self.retriever.without_sources({safe_filename})
+
+            upload_path = settings.uploads_dir / safe_filename
+            temporary_upload_path = upload_path.with_suffix(f"{upload_path.suffix}.deleting")
+            if upload_path.exists():
+                upload_path.replace(temporary_upload_path)
+
+            self.retriever = filtered_retriever
+            self.documents = remaining_documents
             try:
-                chunks = self._parse_pdf_to_chunks(filename, data)
-            except Exception as exc:
-                raise HTTPException(status_code=422, detail=f"Could not read {filename} as a PDF: {exc}") from exc
-            if not chunks:
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"No extractable text was found in {filename}. Scanned PDFs need OCR before upload.",
-                )
-            all_chunks.extend(chunks)
-            uploaded_names.append(filename)
-            indexed_filenames.add(filename)
-            uploaded_documents.append(
-                {"filename": filename, "pages": max((c.metadata.get("page", 0) for c in chunks), default=0), "chunks": len(chunks)}
-            )
-        self._index_chunks(all_chunks)
-        self.documents.extend(uploaded_documents)
-        return UploadResponse(
-            uploaded=uploaded_names,
-            total_chunks=len(all_chunks),
-            documents=self.documents,
-        )
+                self._persist_state()
+            except Exception:
+                self.retriever = previous_retriever
+                self.documents = previous_documents
+                if temporary_upload_path.exists():
+                    temporary_upload_path.replace(upload_path)
+                raise
+
+            if temporary_upload_path.exists():
+                temporary_upload_path.unlink()
+
+            return {"deleted": safe_filename, "documents": self.documents}
 
     def _prepare_query(self, query: str, history: List[str]) -> str:
         prior = " ".join(history[-4:])
@@ -182,7 +290,11 @@ class RAGService:
         return "; ".join(labels)
 
     @staticmethod
-    def _extract_summary_sentences(query: str, evidence: List[Dict[str, Any]]) -> List[str]:
+    def _extract_summary_sentences(
+        query: str,
+        evidence: List[Dict[str, Any]],
+        max_sentence_characters: int,
+    ) -> List[str]:
         query_terms = set(re.findall(r"[a-zA-Z]{3,}", query.lower()))
         sentences = []
         for item in evidence:
@@ -190,12 +302,19 @@ class RAGService:
             if not candidates:
                 continue
             best = max(candidates, key=lambda sentence: len(query_terms.intersection(re.findall(r"[a-zA-Z]{3,}", sentence.lower()))))
-            sentences.append(best[:320].rsplit(" ", 1)[0] + "..." if len(best) > 320 else best)
+            if len(best) > max_sentence_characters:
+                shortened = best[:max_sentence_characters].rsplit(" ", 1)[0]
+                sentences.append(f"{shortened}...")
+            else:
+                sentences.append(best)
         return sentences
 
     def query(self, request: QueryRequest) -> Dict[str, Any]:
         start = time.perf_counter()
-        search_query = self._prepare_query(request.query, request.history)
+        with self.storage_lock:
+            saved_history = self.session_history.get(request.session_id, [])
+            conversation_history = request.history or saved_history
+            search_query = self._prepare_query(request.query, conversation_history)
         query_embedding = self.embedding_store.encode_single(search_query)
         initial_hits = self.retriever.retrieve(query_embedding, top_k=max(request.top_k, 5))
         pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in initial_hits]
@@ -235,13 +354,21 @@ class RAGService:
             if unsupported:
                 answer = "Unsupported answer: the retrieved evidence is too weak to support a confident response."
             else:
-                summary_sentences = self._extract_summary_sentences(request.query, evidence[:3])
-                citations = self._format_citations(evidence[:3])
+                answer_evidence = evidence[:settings.max_answer_sentences]
+                summary_sentences = self._extract_summary_sentences(
+                    request.query,
+                    answer_evidence,
+                    settings.max_answer_sentence_characters,
+                )
+                citations = self._format_citations(answer_evidence)
                 bullets = "\n".join(f"- {sentence}" for sentence in summary_sentences)
                 answer = f"Evidence-based summary:\n{bullets}\n\nSources: {citations}"
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
-        self.session_history[request.session_id].append(request.query)
+        with self.storage_lock:
+            history = self.session_history.setdefault(request.session_id, [])
+            history.append(request.query)
+            del history[:-settings.max_session_history]
         return {
             "answer": answer,
             "unsupported": unsupported,
@@ -250,7 +377,7 @@ class RAGService:
             "retrieval_scores": [item["score"] for item in evidence],
             "latency_ms": latency_ms,
             "session_id": request.session_id,
-            "history": self.session_history[request.session_id],
+            "history": history,
         }
 
     @staticmethod
@@ -313,7 +440,40 @@ def health() -> Dict[str, str]:
 async def upload_documents(files: List[UploadFile] = File(...)):
     if not files:
         raise HTTPException(status_code=400, detail="At least one PDF file is required.")
+    if len(files) > settings.max_upload_files:
+        raise HTTPException(status_code=413, detail=f"Upload at most {settings.max_upload_files} PDF files at a time.")
     return get_service().upload_documents(files)
+
+
+@app.get("/documents", response_model=List[DocumentInfo])
+def list_documents() -> List[Dict[str, Any]]:
+    return RAGService.load_persisted_documents()
+
+
+@app.get("/documents/{filename}/file")
+def get_document_file(filename: str) -> FileResponse:
+    """Serve an uploaded PDF for the source viewer."""
+    safe_filename = Path(filename).name
+    if filename != safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid document filename.")
+
+    document_path = settings.uploads_dir / safe_filename
+    if not document_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="The original PDF is not available. Upload the document again to view it.",
+        )
+
+    return FileResponse(
+        document_path,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{safe_filename}"'},
+    )
+
+
+@app.delete("/documents/{filename}", response_model=DeleteDocumentResponse)
+def delete_document(filename: str) -> Dict[str, Any]:
+    return get_service().delete_document(filename)
 
 
 @app.post("/query", response_model=QueryResponse)
@@ -321,7 +481,8 @@ def query_documents(request: QueryRequest) -> Dict[str, Any]:
     try:
         return get_service().query(request)
     except Exception as exc:  # pragma: no cover - runtime safeguard
-        raise HTTPException(status_code=500, detail=f"Query failed: {str(exc)}") from exc
+        logger.exception("Query processing failed")
+        raise HTTPException(status_code=500, detail="Query processing failed. Check the backend logs for details.") from exc
 
 
 @app.get("/metrics", response_model=EvaluationSummary)

@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+from threading import RLock
 from fastapi.testclient import TestClient
 
 import multimodal_rag.api as api
@@ -46,6 +47,17 @@ def test_empty_evaluation_inputs_return_zero_instead_of_nan():
     assert compute_ndcg_at_k([]) == 0.0
 
 
+def test_summary_sentences_respect_the_configured_character_limit():
+    sentence = "Organic chemistry " + "explains molecular structure " * 40 + "."
+    evidence = [{"text": sentence}]
+
+    summaries = RAGService._extract_summary_sentences("organic chemistry", evidence, max_sentence_characters=120)
+
+    assert len(summaries) == 1
+    assert len(summaries[0]) <= 123
+    assert summaries[0].endswith("...")
+
+
 def test_health_and_metrics_are_available_without_loading_models():
     api.service = None
     client = TestClient(api.app)
@@ -72,6 +84,7 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
 
     class FakeEmbeddings:
         def encode_single(self, query):
+            self.last_query = query
             return query
 
     class FakeRetriever:
@@ -86,11 +99,13 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
     service.embedding_store = FakeEmbeddings()
     service.retriever = FakeRetriever()
     service.reranker = FakeReranker()
-    service.session_history = {"test": []}
+    service.session_history = {"test": ["Earlier conversation context."]}
+    service.storage_lock = RLock()
 
     response = service.query(QueryRequest(query="What is organic chemistry?", session_id="test"))
 
     assert "Organic chemistry studies carbon-containing compounds." in response["answer"]
+    assert "Earlier conversation context." in service.embedding_store.last_query
     assert response["retrieval_scores"] == [0.9]
     assert response["sources"] == [
         {

@@ -22,12 +22,18 @@ class FAISSRetriever:
         if index_path:
             self.load(index_path, metadata_path)
 
-    def add_chunks(self, chunks: Sequence[DocumentChunk], embeddings: np.ndarray):
+    def add_chunks(self, chunks: Sequence[DocumentChunk], embeddings: np.ndarray) -> None:
         embeddings = np.asarray(embeddings, dtype=np.float32)
         if len(chunks) != len(embeddings):
             raise ValueError("chunks and embeddings must have matching lengths")
         if embeddings.ndim != 2 or embeddings.shape[1] != self.embedding_dim:
             raise ValueError(f"Expected embeddings with shape (n, {self.embedding_dim}).")
+        if not chunks:
+            return
+
+        chunk_ids = [chunk.chunk_id for chunk in chunks]
+        if len(set(chunk_ids)) != len(chunk_ids) or any(chunk_id in self.chunk_lookup for chunk_id in chunk_ids):
+            raise ValueError("Chunk IDs must be unique within and across indexed documents.")
 
         self.chunks.extend(chunks)
         for chunk in chunks:
@@ -69,7 +75,19 @@ class FAISSRetriever:
             )
         return results
 
-    def save(self, index_path: str, metadata_path: str):
+    def without_sources(self, sources: set[str]) -> "FAISSRetriever":
+        """Return a new index that excludes every chunk from the given sources."""
+        retained_indices = [index for index, chunk in enumerate(self.chunks) if chunk.source not in sources]
+        filtered = FAISSRetriever(embedding_dim=self.embedding_dim)
+        if not retained_indices:
+            return filtered
+
+        retained_chunks = [self.chunks[index] for index in retained_indices]
+        retained_embeddings = np.vstack([self.index.reconstruct(index) for index in retained_indices]).astype(np.float32)
+        filtered.add_chunks(retained_chunks, retained_embeddings)
+        return filtered
+
+    def save(self, index_path: str, metadata_path: str) -> None:
         index_dir = Path(index_path).parent
         index_dir.mkdir(parents=True, exist_ok=True)
         Path(metadata_path).parent.mkdir(parents=True, exist_ok=True)
@@ -89,7 +107,7 @@ class FAISSRetriever:
                 }
                 f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
-    def load(self, index_path: str, metadata_path: Optional[str] = None):
+    def load(self, index_path: str, metadata_path: Optional[str] = None) -> None:
         self.index = faiss.read_index(index_path)
         self.embedding_dim = self.index.d
 

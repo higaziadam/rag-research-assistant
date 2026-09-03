@@ -8,6 +8,8 @@ services:
     environment:
       - PYTHONPATH=/app/src
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - ../artifacts:/app/artifacts
     restart: unless-stopped
 
   frontend:

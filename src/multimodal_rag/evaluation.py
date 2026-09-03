@@ -9,6 +9,8 @@ import numpy as np
 
 def compute_recall_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float:
     """Compute Recall@k for binary relevance lists."""
+    if k < 1:
+        raise ValueError("k must be at least 1.")
     scores = []
     for rankings in relevance:
         rankings = list(rankings)
@@ -17,7 +19,7 @@ def compute_recall_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float
         if total == 0:
             scores.append(1.0)
             continue
-        for idx, item in enumerate(rankings[:k], start=1):
+        for item in rankings[:k]:
             if item > 0:
                 hits += 1
         scores.append(hits / total)
@@ -25,6 +27,8 @@ def compute_recall_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float
 
 
 def compute_ndcg_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float:
+    if k < 1:
+        raise ValueError("k must be at least 1.")
     scores = []
     for rankings in relevance:
         values = np.asarray(list(rankings), dtype=float)
@@ -53,6 +57,8 @@ def evaluate_ranking_predictions(predictions_path: str, ground_truth_path: str, 
         qid = item["query_id"]
         gt = relevance_by_query.get(qid, set())
         ranking = [1 if chunk_id in gt else 0 for chunk_id in item["ranked_chunk_ids"]]
+        missing_relevant = len(gt.difference(item["ranked_chunk_ids"]))
+        ranking.extend([1] * missing_relevant)
         relevance_list.append(ranking)
 
     return {

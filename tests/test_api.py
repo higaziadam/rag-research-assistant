@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 import pytest
+from threading import RLock
 
 import multimodal_rag.api as api
 from multimodal_rag.schemas import UploadResponse
@@ -30,6 +31,12 @@ class FakeService:
             "session_id": request.session_id,
             "history": [request.query],
         }
+
+    def list_documents(self):
+        return [{"filename": "notes.pdf", "pages": 1, "chunks": 2}]
+
+    def delete_document(self, filename):
+        return {"deleted": filename, "documents": []}
 
 
 def test_query_endpoint_validates_and_returns_the_public_schema(monkeypatch):
@@ -64,6 +71,7 @@ def test_session_query_and_upload_are_forwarded_to_the_service(monkeypatch):
 def test_duplicate_upload_is_rejected_before_indexing():
     service = api.RAGService.__new__(api.RAGService)
     service.documents = [{"filename": "notes.pdf", "pages": 1, "chunks": 2}]
+    service.storage_lock = RLock()
 
     class File:
         filename = "notes.pdf"
@@ -89,3 +97,62 @@ def test_cors_allows_the_configured_frontend_origin():
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_documents_endpoint_returns_persisted_documents(tmp_path, monkeypatch):
+    documents_path = tmp_path / "documents.json"
+    documents_path.write_text('[{"filename": "notes.pdf", "pages": 1, "chunks": 2}]', encoding="utf-8")
+    monkeypatch.setattr(api.settings, "documents_path", documents_path)
+
+    response = TestClient(api.app).get("/documents")
+
+    assert response.status_code == 200
+    assert response.json() == [{"filename": "notes.pdf", "pages": 1, "chunks": 2}]
+
+
+def test_document_file_endpoint_serves_uploaded_pdf(monkeypatch, tmp_path):
+    uploads_dir = tmp_path / "uploads"
+    uploads_dir.mkdir()
+    document_contents = b"%PDF-1.4\nplaceholder PDF content"
+    (uploads_dir / "notes.pdf").write_bytes(document_contents)
+    monkeypatch.setattr(api.settings, "uploads_dir", uploads_dir)
+
+    response = TestClient(api.app).get("/documents/notes.pdf/file")
+
+    assert response.status_code == 200
+    assert response.content == document_contents
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"].startswith("inline")
+
+
+def test_document_file_endpoint_rejects_missing_pdf(monkeypatch, tmp_path):
+    monkeypatch.setattr(api.settings, "uploads_dir", tmp_path / "uploads")
+
+    response = TestClient(api.app).get("/documents/missing.pdf/file")
+
+    assert response.status_code == 404
+
+
+def test_upload_endpoint_rejects_too_many_files(monkeypatch):
+    monkeypatch.setattr(api.settings, "max_upload_files", 1)
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/upload",
+        files=[
+            ("files", ("first.pdf", b"first", "application/pdf")),
+            ("files", ("second.pdf", b"second", "application/pdf")),
+        ],
+    )
+
+    assert response.status_code == 413
+
+
+def test_delete_document_endpoint_forwards_to_the_service(monkeypatch):
+    fake_service = FakeService()
+    monkeypatch.setattr(api, "get_service", lambda: fake_service)
+
+    response = TestClient(api.app).delete("/documents/notes.pdf")
+
+    assert response.status_code == 200
+    assert response.json() == {"deleted": "notes.pdf", "documents": []}

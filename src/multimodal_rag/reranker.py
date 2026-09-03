@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Sequence, Tuple
+from typing import Any, List, Sequence, Tuple
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -47,7 +47,7 @@ class Reranker:
             scores = logits_to_scores(logits)
         return scores
 
-    def rerank(self, query: str, candidates: Sequence[Tuple[str, dict]], top_k: int = 5):
+    def rerank(self, query: str, candidates: Sequence[Tuple[str, Any]], top_k: int = 5) -> List[Tuple[Tuple[str, Any], float]]:
         if not candidates:
             return []
         passages = [candidate[0] for candidate in candidates]

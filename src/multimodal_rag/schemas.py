@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field
 
 
 class QueryRequest(BaseModel):
-    query: str = Field(..., min_length=1)
+    query: str = Field(..., min_length=1, max_length=2_000)
     top_k: int = Field(default=5, ge=1, le=20)
-    session_id: str = "default"
-    history: List[str] = Field(default_factory=list)
+    session_id: str = Field(default="default", min_length=1, max_length=100)
+    history: List[str] = Field(default_factory=list, max_length=10)
 
 
 class DocumentInfo(BaseModel):
@@ -21,6 +21,11 @@ class DocumentInfo(BaseModel):
 class UploadResponse(BaseModel):
     uploaded: List[str]
     total_chunks: int
+    documents: List[DocumentInfo]
+
+
+class DeleteDocumentResponse(BaseModel):
+    deleted: str
     documents: List[DocumentInfo]
 
 

@@ -7,6 +7,7 @@ A full-stack research assistant for PDF-based document Q&A. The app uses a Pytho
 - PDF upload and indexing directly from the frontend
 - Text chunking and metadata extraction from uploaded documents
 - Dense vector search using FAISS
+- Persistent FAISS index, chunk metadata, and uploaded PDFs under `artifacts/`
 - Cross-encoder reranking on retrieved chunks
 - Query endpoint with answer generation flow and unsupported-answer handling
 - Frontend dashboard for asking questions and showing sources
@@ -94,7 +95,7 @@ Open `http://localhost:3000`. For a deployed environment, set `NEXT_PUBLIC_API_B
 
 This project is functional as a prototype, but it is not yet a production-grade system. Important next steps are:
 
-- Add persistent vector storage instead of in-memory indexing
+- Add a database or object store for multi-user persistent document storage
 - Improve PDF parsing and chunk quality for real documents
 - Add a real multimodal workflow for images/tables/figures, not only text extraction
 - Connect the reranker to a real dataset and evaluate with stronger metrics
