@@ -1,6 +1,6 @@
 """Pydantic schemas that define the public FastAPI contract."""
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -16,6 +16,7 @@ class DocumentInfo(BaseModel):
     filename: str
     pages: int
     chunks: int
+    file_size_bytes: Optional[int] = None
 
 
 class UploadResponse(BaseModel):

@@ -221,10 +221,24 @@ class RAGService:
             for filename, data in uploaded_files:
                 self._persist_upload(filename, data)
             self._persist_state()
-            return UploadResponse(uploaded=uploaded_names, total_chunks=len(all_chunks), documents=self.documents)
+            return UploadResponse(
+                uploaded=uploaded_names,
+                total_chunks=len(all_chunks),
+                documents=self._documents_with_file_sizes(self.documents),
+            )
 
     def list_documents(self) -> List[Dict[str, Any]]:
-        return self.documents
+        return self._documents_with_file_sizes(self.documents)
+
+    @staticmethod
+    def _documents_with_file_sizes(documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        documents_with_sizes = []
+        for document in documents:
+            filename = Path(document["filename"]).name
+            upload_path = settings.uploads_dir / filename
+            file_size_bytes = upload_path.stat().st_size if upload_path.is_file() else None
+            documents_with_sizes.append({**document, "file_size_bytes": file_size_bytes})
+        return documents_with_sizes
 
     @staticmethod
     def load_persisted_documents() -> List[Dict[str, Any]]:
@@ -233,7 +247,7 @@ class RAGService:
         documents = json.loads(settings.documents_path.read_text(encoding="utf-8"))
         if not isinstance(documents, list):
             raise RuntimeError("Persistent document manifest must contain a list of documents.")
-        return documents
+        return RAGService._documents_with_file_sizes(documents)
 
     def delete_document(self, filename: str) -> Dict[str, Any]:
         """Remove a document from the index, manifest, and persisted uploads."""
@@ -269,7 +283,7 @@ class RAGService:
             if temporary_upload_path.exists():
                 temporary_upload_path.unlink()
 
-            return {"deleted": safe_filename, "documents": self.documents}
+            return {"deleted": safe_filename, "documents": self._documents_with_file_sizes(self.documents)}
 
     def _prepare_query(self, query: str, history: List[str]) -> str:
         prior = " ".join(history[-4:])
@@ -290,6 +304,24 @@ class RAGService:
         return "; ".join(labels)
 
     @staticmethod
+    def _is_readable_prose(sentence: str) -> bool:
+        """Reject PDF extraction fragments that are dominated by broken equation tokens."""
+        tokens = sentence.split()
+        if len(tokens) < 5:
+            return False
+
+        word_count = len(re.findall(r"[A-Za-z]{2,}", sentence))
+        noisy_token_count = sum(
+            any(character.isdigit() for character in token)
+            or len(re.sub(r"[^A-Za-z]", "", token)) < 2
+            for token in tokens
+        )
+        visible_characters = [character for character in sentence if not character.isspace()]
+        letter_ratio = sum(character.isalpha() for character in visible_characters) / max(len(visible_characters), 1)
+
+        return word_count >= 5 and noisy_token_count / len(tokens) <= 0.25 and letter_ratio >= 0.65
+
+    @staticmethod
     def _extract_summary_sentences(
         query: str,
         evidence: List[Dict[str, Any]],
@@ -298,7 +330,11 @@ class RAGService:
         query_terms = set(re.findall(r"[a-zA-Z]{3,}", query.lower()))
         sentences = []
         for item in evidence:
-            candidates = [sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+", item["text"]) if len(sentence.strip()) >= 30]
+            candidates = [
+                sentence.strip()
+                for sentence in re.split(r"(?<=[.!?])\s+", item["text"])
+                if len(sentence.strip()) >= 30 and RAGService._is_readable_prose(sentence.strip())
+            ]
             if not candidates:
                 continue
             best = max(candidates, key=lambda sentence: len(query_terms.intersection(re.findall(r"[a-zA-Z]{3,}", sentence.lower()))))
@@ -361,8 +397,15 @@ class RAGService:
                     settings.max_answer_sentence_characters,
                 )
                 citations = self._format_citations(answer_evidence)
-                bullets = "\n".join(f"- {sentence}" for sentence in summary_sentences)
-                answer = f"Evidence-based summary:\n{bullets}\n\nSources: {citations}"
+                if summary_sentences:
+                    bullets = "\n".join(f"- {sentence}" for sentence in summary_sentences)
+                    answer = f"Evidence-based summary:\n{bullets}\n\nSources: {citations}"
+                else:
+                    answer = (
+                        "Relevant pages were found, but the PDF's equation text could not be extracted reliably. "
+                        "Open the cited PDF pages to view the original mathematical notation."
+                        f"\n\nSources: {citations}"
+                    )
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
         with self.storage_lock:
@@ -445,7 +488,7 @@ async def upload_documents(files: List[UploadFile] = File(...)):
     return get_service().upload_documents(files)
 
 
-@app.get("/documents", response_model=List[DocumentInfo])
+@app.get("/documents", response_model=List[DocumentInfo], response_model_exclude_none=True)
 def list_documents() -> List[Dict[str, Any]]:
     return RAGService.load_persisted_documents()
 

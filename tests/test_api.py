@@ -110,6 +110,21 @@ def test_documents_endpoint_returns_persisted_documents(tmp_path, monkeypatch):
     assert response.json() == [{"filename": "notes.pdf", "pages": 1, "chunks": 2}]
 
 
+def test_documents_endpoint_reports_saved_pdf_size(tmp_path, monkeypatch):
+    documents_path = tmp_path / "documents.json"
+    uploads_dir = tmp_path / "uploads"
+    uploads_dir.mkdir()
+    (uploads_dir / "notes.pdf").write_bytes(b"12345")
+    documents_path.write_text('[{"filename": "notes.pdf", "pages": 1, "chunks": 2}]', encoding="utf-8")
+    monkeypatch.setattr(api.settings, "documents_path", documents_path)
+    monkeypatch.setattr(api.settings, "uploads_dir", uploads_dir)
+
+    response = TestClient(api.app).get("/documents")
+
+    assert response.status_code == 200
+    assert response.json()[0]["file_size_bytes"] == 5
+
+
 def test_document_file_endpoint_serves_uploaded_pdf(monkeypatch, tmp_path):
     uploads_dir = tmp_path / "uploads"
     uploads_dir.mkdir()

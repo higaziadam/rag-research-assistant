@@ -58,6 +58,21 @@ def test_summary_sentences_respect_the_configured_character_limit():
     assert summaries[0].endswith("...")
 
 
+def test_summary_sentences_skip_formula_corrupted_pdf_text():
+    evidence = [
+        {
+            "text": (
+                "The procedure for defining arc length is similar to the procedure used for defining area and volume. "
+                "0d Thus the arc length function is given by ssxd – y x 1 s1 1 f f 9stdq2 dt – y x 1 S2t1 1 8t."
+            )
+        }
+    ]
+
+    summaries = RAGService._extract_summary_sentences("How is arc length defined?", evidence, max_sentence_characters=500)
+
+    assert summaries == ["The procedure for defining arc length is similar to the procedure used for defining area and volume."]
+
+
 def test_health_and_metrics_are_available_without_loading_models():
     api.service = None
     client = TestClient(api.app)

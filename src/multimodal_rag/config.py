@@ -16,7 +16,7 @@ class Settings:
     metadata_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "metadata.jsonl")
     documents_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "documents.json")
     uploads_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "uploads")
-    max_upload_bytes: int = 25 * 1024 * 1024
+    max_upload_bytes: int = 100 * 1024 * 1024
     max_upload_files: int = 10
     max_session_history: int = 10
     max_answer_sentences: int = 7

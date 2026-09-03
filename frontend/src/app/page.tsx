@@ -1,6 +1,9 @@
 "use client";
 
 import { type ChangeEvent, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
 
 import {
   apiBaseUrl,
@@ -17,6 +20,20 @@ function sourceFileUrl(source: Source) {
   return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/file#page=${source.page}`;
 }
 
+function formatFileSize(fileSizeBytes?: number) {
+  if (fileSizeBytes === undefined) {
+    return "size unavailable";
+  }
+  if (fileSizeBytes < 1024) {
+    return `${fileSizeBytes} B`;
+  }
+
+  const units = ["KB", "MB", "GB"];
+  const unitIndex = Math.min(Math.floor(Math.log(fileSizeBytes) / Math.log(1024)) - 1, units.length - 1);
+  const value = fileSizeBytes / 1024 ** (unitIndex + 1);
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
 function getOrCreateSessionId() {
   const storedSessionId = window.sessionStorage.getItem("rag-session-id");
   if (storedSessionId) {
@@ -26,6 +43,25 @@ function getOrCreateSessionId() {
   const newSessionId = `browser-${crypto.randomUUID()}`;
   window.sessionStorage.setItem("rag-session-id", newSessionId);
   return newSessionId;
+}
+
+function FormattedContent({ content, className = "" }: { content: string; className?: string }) {
+  return (
+    <div className={`math-content ${className}`}>
+      <ReactMarkdown
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={{
+          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+          ul: ({ children }) => <ul className="mb-3 list-disc space-y-2 pl-5 last:mb-0">{children}</ul>,
+          ol: ({ children }) => <ol className="mb-3 list-decimal space-y-2 pl-5 last:mb-0">{children}</ol>,
+          code: ({ children }) => <code className="rounded bg-slate-800 px-1 py-0.5 font-mono text-sm">{children}</code>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -192,7 +228,9 @@ export default function Home() {
               <ul className="mt-3 space-y-2 text-sm text-slate-300">
                 {documents.map((document, index) => (
                   <li key={`${document.filename}-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-950/60 px-3 py-2">
-                    <span className="min-w-0 break-all">{document.filename}: {document.pages} pages, {document.chunks} chunks</span>
+                    <span className="min-w-0 break-all">
+                      {document.filename}: {formatFileSize(document.file_size_bytes)} · {document.pages} pages, {document.chunks} chunks
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleDelete(document.filename)}
@@ -215,6 +253,7 @@ export default function Home() {
               onChange={(event) => setQuery(event.target.value)}
               className="h-28 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-base text-slate-100 outline-none ring-0"
             />
+            <p className="mt-2 text-xs text-slate-500">Math in answers and source passages supports LaTeX notation such as <code>$E = mc^2$</code> and <code>$$\int_0^1 x^2\,dx$$</code>.</p>
             <button
               type="button"
               onClick={handleAsk}
@@ -226,7 +265,7 @@ export default function Home() {
 
             <div className={`mt-8 rounded-xl border p-4 ${unsupported ? "border-amber-500/40 bg-amber-950/20" : "border-slate-800 bg-slate-950"}`} aria-live="polite">
               <p className="mb-2 text-xs uppercase tracking-[0.25em] text-slate-400">Answer</p>
-              <p className="whitespace-pre-line leading-7 text-slate-200">{answer}</p>
+              <FormattedContent content={answer} className="leading-7 text-slate-200" />
             </div>
           </section>
 
@@ -252,11 +291,14 @@ export default function Home() {
                     <li key={`${source.chunk_id}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
                       <div className="mb-1 break-all text-xs uppercase tracking-[0.2em] text-cyan-400">{source.source}</div>
                       <div className="text-slate-300">Page {source.page}</div>
-                      <div className="mt-2 text-slate-400">{source.text.slice(0, 280)}{source.text.length > 280 ? "..." : ""}</div>
+                      <FormattedContent
+                        content={`${source.text.slice(0, 280)}${source.text.length > 280 ? "..." : ""}`}
+                        className="mt-2 text-slate-400"
+                      />
                       {source.text.length > 280 && (
                         <details className="mt-2 text-slate-400">
                           <summary className="cursor-pointer text-cyan-300">View full passage</summary>
-                          <p className="mt-2">{source.text}</p>
+                          <FormattedContent content={source.text} className="mt-2" />
                         </details>
                       )}
                       <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium">
