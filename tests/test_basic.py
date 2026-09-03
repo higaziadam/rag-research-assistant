@@ -1,4 +1,5 @@
 import numpy as np
+import pymupdf
 import pytest
 import torch
 from threading import RLock
@@ -8,6 +9,8 @@ import multimodal_rag.api as api
 from multimodal_rag.api import QueryRequest, RAGService
 from multimodal_rag.data_models import DocumentChunk, RetrievalResult
 from multimodal_rag.evaluation import compute_ndcg_at_k, compute_recall_at_k
+from multimodal_rag.math_extraction import LocalMathExtractor
+from multimodal_rag.jobs import IngestionJob
 from multimodal_rag.retrieval import FAISSRetriever
 from multimodal_rag.reranker import logits_to_scores
 
@@ -47,6 +50,17 @@ def test_empty_evaluation_inputs_return_zero_instead_of_nan():
     assert compute_ndcg_at_k([]) == 0.0
 
 
+def test_ingestion_job_persists_its_status_and_progress():
+    job = IngestionJob.create("paper.pdf")
+    job.update(status="embedding", progress=65, message="Creating embeddings.")
+
+    restored = IngestionJob.from_dict(job.to_dict())
+
+    assert restored.filename == "paper.pdf"
+    assert restored.status == "embedding"
+    assert restored.progress == 65
+
+
 def test_summary_sentences_respect_the_configured_character_limit():
     sentence = "Organic chemistry " + "explains molecular structure " * 40 + "."
     evidence = [{"text": sentence}]
@@ -71,6 +85,36 @@ def test_summary_sentences_skip_formula_corrupted_pdf_text():
     summaries = RAGService._extract_summary_sentences("How is arc length defined?", evidence, max_sentence_characters=500)
 
     assert summaries == ["The procedure for defining arc length is similar to the procedure used for defining area and volume."]
+
+
+def test_readable_prose_allows_ordinary_numbers():
+    sentence = "For a radius of 3, the arc length is 6.28 units along the circle."
+
+    assert RAGService._is_readable_prose(sentence)
+
+
+def test_local_math_validation_requires_balanced_latex_delimiters():
+    assert LocalMathExtractor._is_valid_latex(r"\int_0^1 x^2 \, dx")
+    assert not LocalMathExtractor._is_valid_latex(r"\frac{a}{b")
+
+
+def test_local_math_extractor_marks_equations_as_source_only_without_a_checkpoint(tmp_path):
+    document = pymupdf.open()
+    document.new_page().insert_text((200, 300), "x = 2")
+    pdf_bytes = document.tobytes()
+    document.close()
+    extractor = LocalMathExtractor(enabled=True, checkpoint_path=tmp_path / "weights.pth")
+
+    pages = extractor.extract_pages(pdf_bytes)
+
+    assert pages[0].equations == [
+        {
+            "latex": "",
+            "status": "source_only",
+            "confidence": 0.0,
+            "bounding_box": pages[0].equations[0]["bounding_box"],
+        }
+    ]
 
 
 def test_health_and_metrics_are_available_without_loading_models():
@@ -132,5 +176,6 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
             "table": "",
             "figure_caption": "",
             "section": "",
+            "equations": [],
         }
     ]

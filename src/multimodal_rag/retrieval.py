@@ -71,6 +71,7 @@ class FAISSRetriever:
                     source=chunk.source,
                     section=chunk.section,
                     metadata=chunk.metadata,
+                    equations=chunk.equations,
                 )
             )
         return results
@@ -104,6 +105,7 @@ class FAISSRetriever:
                     "table": chunk.table,
                     "figure_caption": chunk.figure_caption,
                     "metadata": chunk.metadata,
+                    "equations": chunk.equations,
                 }
                 f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
@@ -130,6 +132,7 @@ class FAISSRetriever:
                         source=payload.get("source", ""),
                         section=payload.get("section", ""),
                         metadata=payload.get("metadata", {}),
+                        equations=payload.get("equations", []),
                         type=payload.get("type", "text"),
                     )
                 )

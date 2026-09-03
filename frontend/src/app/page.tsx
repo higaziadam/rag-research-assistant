@@ -10,6 +10,7 @@ import {
   readJson,
   type DeleteDocumentResponse,
   type DocumentInfo,
+  type Equation,
   type MetricsResponse,
   type QueryResponse,
   type Source,
@@ -64,6 +65,19 @@ function FormattedContent({ content, className = "" }: { content: string; classN
   );
 }
 
+function EquationTranscription({ equation }: { equation: Equation }) {
+  if (!equation.latex) {
+    return <p className="text-xs text-amber-300">Equation detected. Open the cited PDF page to verify the original notation.</p>;
+  }
+
+  return (
+    <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3">
+      <p className="mb-2 text-xs font-medium text-amber-300">Local OCR transcription — verify against the cited PDF page</p>
+      <FormattedContent content={`$$\n${equation.latex}\n$$`} className="overflow-x-auto text-slate-100" />
+    </div>
+  );
+}
+
 export default function Home() {
   const [query, setQuery] = useState("How does the reranker improve retrieval quality?");
   const [answer, setAnswer] = useState("Upload a PDF, then ask a document-grounded question.");
@@ -78,6 +92,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
+  const [retryingFilename, setRetryingFilename] = useState<string | null>(null);
 
   useEffect(() => {
     getOrCreateSessionId();
@@ -97,6 +112,14 @@ export default function Home() {
     }
 
     void loadDashboardData();
+    const documentPoller = window.setInterval(() => {
+      void fetch(`${apiBaseUrl}/documents`)
+        .then(readJson<DocumentInfo[]>)
+        .then(setDocuments)
+        .catch(() => undefined);
+    }, 2_000);
+
+    return () => window.clearInterval(documentPoller);
   }, []);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -111,14 +134,14 @@ export default function Home() {
     }
 
     setUploading(true);
-    setUploadStatus("Extracting text and indexing document chunks...");
+    setUploadStatus("Uploading PDFs and placing them in the indexing queue...");
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append("files", file));
       const response = await fetch(`${apiBaseUrl}/upload`, { method: "POST", body: formData });
       const data = await readJson<UploadResponse>(response);
       setDocuments(data.documents ?? []);
-      setUploadStatus(`Indexed ${data.uploaded?.join(", ") ?? "PDFs"} (${data.total_chunks ?? 0} chunks).`);
+      setUploadStatus(`Queued ${data.uploaded?.join(", ") ?? "PDFs"}. Progress updates below automatically.`);
       setFiles([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown upload error.";
@@ -185,6 +208,25 @@ export default function Home() {
     }
   }
 
+  async function handleRetry(filename: string) {
+    setRetryingFilename(filename);
+    try {
+      const response = await fetch(`${apiBaseUrl}/documents/${encodeURIComponent(filename)}/retry`, { method: "POST" });
+      await readJson(response);
+      setDocuments((currentDocuments) => currentDocuments.map((document) => (
+        document.filename === filename
+          ? { ...document, status: "queued", progress: 0, message: "Queued for retry.", error: undefined }
+          : document
+      )));
+      setUploadStatus(`Retrying ${filename}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown retry error.";
+      setUploadStatus(`Could not retry ${filename}: ${message}`);
+    } finally {
+      setRetryingFilename(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-7xl px-6 py-10">
@@ -220,7 +262,7 @@ export default function Home() {
                 disabled={uploading || files.length === 0}
                 className="shrink-0 rounded-xl border border-cyan-500 px-4 py-2 text-sm font-semibold text-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {uploading ? "Indexing..." : "Upload PDFs"}
+                {uploading ? "Uploading..." : "Upload PDFs"}
               </button>
             </div>
             <p className="mt-2 text-sm text-slate-400" aria-live="polite">{uploadStatus}</p>
@@ -228,19 +270,47 @@ export default function Home() {
               <ul className="mt-3 space-y-2 text-sm text-slate-300">
                 {documents.map((document, index) => (
                   <li key={`${document.filename}-${index}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-950/60 px-3 py-2">
-                    <span className="min-w-0 break-all">
-                      {document.filename}: {formatFileSize(document.file_size_bytes)} · {document.pages} pages, {document.chunks} chunks
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(document.filename)}
-                      disabled={deletingFilename !== null}
-                      aria-label={`Remove ${document.filename}`}
-                      title={`Remove ${document.filename}`}
-                      className="shrink-0 rounded-md px-2 py-1 text-lg leading-none text-slate-400 transition hover:bg-rose-950/60 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {deletingFilename === document.filename ? "…" : "×"}
-                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="break-all">
+                        {document.filename}: {formatFileSize(document.file_size_bytes)} · {document.pages} pages, {document.chunks} chunks
+                      </div>
+                      {document.status !== "indexed" && (
+                        <div className="mt-2" aria-live="polite">
+                          <div className="flex justify-between gap-3 text-xs text-slate-400">
+                            <span>{document.status === "failed" ? document.error ?? document.message : document.message}</span>
+                            <span>{document.progress}%</span>
+                          </div>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                            <div
+                              className={`h-full transition-all ${document.status === "failed" ? "bg-rose-400" : "bg-cyan-400"}`}
+                              style={{ width: `${document.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {document.status === "failed" && (
+                        <button
+                          type="button"
+                          onClick={() => handleRetry(document.filename)}
+                          disabled={retryingFilename !== null || deletingFilename !== null}
+                          className="rounded-md px-2 py-1 text-xs font-medium text-cyan-300 transition hover:bg-cyan-950/50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {retryingFilename === document.filename ? "Retrying..." : "Retry"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(document.filename)}
+                        disabled={deletingFilename !== null || retryingFilename !== null}
+                        aria-label={`Remove ${document.filename}`}
+                        title={document.status === "queued" || document.status === "extracting" || document.status === "embedding" ? `Cancel and remove ${document.filename}` : `Remove ${document.filename}`}
+                        className="rounded-md px-2 py-1 text-lg leading-none text-slate-400 transition hover:bg-rose-950/60 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingFilename === document.filename ? "…" : "×"}
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -299,6 +369,18 @@ export default function Home() {
                         <details className="mt-2 text-slate-400">
                           <summary className="cursor-pointer text-cyan-300">View full passage</summary>
                           <FormattedContent content={source.text} className="mt-2" />
+                        </details>
+                      )}
+                      {(source.equations?.length ?? 0) > 0 && (
+                        <details className="mt-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+                          <summary className="cursor-pointer text-xs font-medium uppercase tracking-[0.16em] text-amber-300">
+                            Math regions detected ({source.equations?.length})
+                          </summary>
+                          <div className="mt-3 space-y-3">
+                            {source.equations?.map((equation, equationIndex) => (
+                              <EquationTranscription key={`${source.chunk_id}-equation-${equationIndex}`} equation={equation} />
+                            ))}
+                          </div>
                         </details>
                       )}
                       <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium">

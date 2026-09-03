@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -11,6 +11,7 @@ class DocumentChunk:
     source: str = ""
     section: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
+    equations: List[Dict[str, Any]] = field(default_factory=list)
     type: str = "text"
 
     def to_text_for_search(self) -> str:
@@ -28,3 +29,4 @@ class RetrievalResult:
     source: str = ""
     section: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
+    equations: List[Dict[str, Any]] = field(default_factory=list)

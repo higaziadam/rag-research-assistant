@@ -17,6 +17,7 @@ class FakeService:
             uploaded=self.uploaded_filenames,
             total_chunks=2,
             documents=[{"filename": self.uploaded_filenames[0], "pages": 1, "chunks": 2}],
+            jobs=[],
         )
 
     def query(self, request):
@@ -99,6 +100,16 @@ def test_cors_allows_the_configured_frontend_origin():
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
 
 
+def test_math_status_reports_verification_only_mode_without_a_checkpoint(tmp_path, monkeypatch):
+    monkeypatch.setattr(api.settings, "math_ocr_enabled", True)
+    monkeypatch.setattr(api.settings, "math_ocr_checkpoint", tmp_path / "weights.pth")
+
+    response = TestClient(api.app).get("/math/status")
+
+    assert response.status_code == 200
+    assert response.json()["mode"] == "source_verification_only"
+
+
 def test_documents_endpoint_returns_persisted_documents(tmp_path, monkeypatch):
     documents_path = tmp_path / "documents.json"
     documents_path.write_text('[{"filename": "notes.pdf", "pages": 1, "chunks": 2}]', encoding="utf-8")
@@ -107,7 +118,16 @@ def test_documents_endpoint_returns_persisted_documents(tmp_path, monkeypatch):
     response = TestClient(api.app).get("/documents")
 
     assert response.status_code == 200
-    assert response.json() == [{"filename": "notes.pdf", "pages": 1, "chunks": 2}]
+    assert response.json() == [
+        {
+            "filename": "notes.pdf",
+            "pages": 1,
+            "chunks": 2,
+            "status": "indexed",
+            "progress": 100,
+            "message": "Indexed.",
+        }
+    ]
 
 
 def test_documents_endpoint_reports_saved_pdf_size(tmp_path, monkeypatch):

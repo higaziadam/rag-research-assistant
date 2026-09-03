@@ -1,10 +1,12 @@
 import json
+from threading import RLock
 
 import numpy as np
 import pytest
 
 from multimodal_rag.data_models import DocumentChunk
 from multimodal_rag.evaluation import evaluate_ranking_predictions
+from multimodal_rag.jobs import IngestionJob
 from multimodal_rag.retrieval import FAISSRetriever
 from multimodal_rag.train_reranker import prepare_dataset
 import multimodal_rag.api as api
@@ -98,6 +100,7 @@ def test_service_restores_persisted_index_and_document_manifest(tmp_path, monkey
     monkeypatch.setattr(api.settings, "faiss_index_path", tmp_path / "faiss.index")
     monkeypatch.setattr(api.settings, "metadata_path", tmp_path / "metadata.jsonl")
     monkeypatch.setattr(api.settings, "documents_path", tmp_path / "documents.json")
+    monkeypatch.setattr(api.settings, "jobs_path", tmp_path / "jobs.json")
 
     service = api.RAGService.__new__(api.RAGService)
     service.retriever = FAISSRetriever(embedding_dim=2)
@@ -115,3 +118,46 @@ def test_service_restores_persisted_index_and_document_manifest(tmp_path, monkey
 
     assert restored.documents == service.documents
     assert restored.retriever.retrieve(np.asarray([1.0, 0.0], dtype=np.float32), top_k=1)[0].source == "paper.pdf"
+
+
+def test_background_ingestion_indexes_a_queued_document_and_persists_progress(tmp_path, monkeypatch):
+    monkeypatch.setattr(api.settings, "artifacts_dir", tmp_path)
+    monkeypatch.setattr(api.settings, "uploads_dir", tmp_path / "uploads")
+    monkeypatch.setattr(api.settings, "faiss_index_path", tmp_path / "faiss.index")
+    monkeypatch.setattr(api.settings, "metadata_path", tmp_path / "metadata.jsonl")
+    monkeypatch.setattr(api.settings, "documents_path", tmp_path / "documents.json")
+    monkeypatch.setattr(api.settings, "jobs_path", tmp_path / "jobs.json")
+
+    class FakeEmbeddings:
+        def encode(self, texts):
+            return np.asarray([[1.0, 0.0] for _ in texts], dtype=np.float32)
+
+    service = api.RAGService.__new__(api.RAGService)
+    service.embedding_store = FakeEmbeddings()
+    service.retriever = FAISSRetriever(embedding_dim=2)
+    service.storage_lock = RLock()
+    job = IngestionJob.create("queued.pdf")
+    service.jobs = {job.job_id: job}
+    service.documents = [
+        {
+            "filename": job.filename,
+            "pages": 0,
+            "chunks": 0,
+            "status": "queued",
+            "progress": 0,
+            "message": "Queued for indexing.",
+            "job_id": job.job_id,
+        }
+    ]
+    (tmp_path / "uploads").mkdir()
+    (tmp_path / "uploads" / job.filename).write_bytes(b"placeholder")
+    service._parse_pdf_to_chunks = lambda filename, data: [
+        DocumentChunk(chunk_id="queued-1", text="Indexed background content.", source=filename, metadata={"page": 1})
+    ]
+
+    service._run_ingestion_job(job.job_id)
+
+    assert service.jobs[job.job_id].status == "indexed"
+    assert service.documents[0]["status"] == "indexed"
+    assert service.documents[0]["chunks"] == 1
+    assert (tmp_path / "jobs.json").is_file()

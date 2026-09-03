@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import io
 import json
 import logging
 import re
 import time
 from collections import defaultdict
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from threading import Lock, RLock
 from typing import Any, Dict, List
@@ -13,14 +13,24 @@ from typing import Any, Dict, List
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pypdf import PdfReader
 
 from .config import settings
 from .data_models import DocumentChunk
 from .embeddings import EmbeddingStore
+from .math_extraction import LocalMathExtractor
+from .jobs import ACTIVE_JOB_STATUSES, IngestionJob
 from .retrieval import FAISSRetriever
 from .reranker import Reranker
-from .schemas import DeleteDocumentResponse, DocumentInfo, EvaluationSummary, QueryRequest, QueryResponse, UploadResponse
+from .schemas import (
+    DeleteDocumentResponse,
+    DocumentInfo,
+    EvaluationSummary,
+    IngestionJobResponse,
+    MathOcrStatus,
+    QueryRequest,
+    QueryResponse,
+    UploadResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +40,27 @@ class RAGService:
         self.embedding_store = EmbeddingStore(settings.model_name)
         self.retriever = FAISSRetriever(embedding_dim=self.embedding_store.embedding_dimension)
         self.reranker = Reranker(settings.reranker_model)
+        self.math_extractor = LocalMathExtractor(
+            enabled=settings.math_ocr_enabled,
+            checkpoint_path=settings.math_ocr_checkpoint,
+            max_equations_per_page=settings.max_equations_per_page,
+        )
         self.documents: List[Dict[str, Any]] = []
+        self.jobs: Dict[str, IngestionJob] = self._load_persisted_jobs()
+        self.job_executor = ThreadPoolExecutor(
+            max_workers=settings.ingestion_worker_count,
+            thread_name_prefix="document-ingestion",
+        )
+        self.job_futures: Dict[str, Future[None]] = {}
         self.session_history: Dict[str, List[str]] = defaultdict(list)
         self.storage_lock = RLock()
         if self._has_persisted_index():
             self._restore_persisted_state()
+        elif settings.documents_path.exists():
+            self._restore_documents_without_index()
         else:
             self._bootstrap_demo_docs()
+        self._resume_pending_jobs()
 
     @staticmethod
     def _has_persisted_index() -> bool:
@@ -60,21 +84,68 @@ class RAGService:
         else:
             self.documents = self._documents_from_chunks()
 
+    def _restore_documents_without_index(self) -> None:
+        """Recover queued uploads even if a previous run stopped before index persistence."""
+        documents = json.loads(settings.documents_path.read_text(encoding="utf-8"))
+        if not isinstance(documents, list):
+            raise RuntimeError("Persistent document manifest must contain a list of documents.")
+        self.documents = documents
+        for document in self.documents:
+            if document.get("status", "indexed") == "indexed":
+                document.update(
+                    {
+                        "status": "failed",
+                        "progress": 0,
+                        "message": "The saved search index is unavailable. Retry to rebuild this document.",
+                        "error": "Persistent search index is unavailable.",
+                    }
+                )
+
     def _documents_from_chunks(self) -> List[Dict[str, Any]]:
         documents: Dict[str, Dict[str, Any]] = {}
         for chunk in self.retriever.chunks:
-            document = documents.setdefault(chunk.source, {"filename": chunk.source, "pages": 0, "chunks": 0})
+            document = documents.setdefault(
+                chunk.source,
+                {
+                    "filename": chunk.source,
+                    "pages": 0,
+                    "chunks": 0,
+                    "status": "indexed",
+                    "progress": 100,
+                    "message": "Indexed.",
+                },
+            )
             document["pages"] = max(document["pages"], int(chunk.metadata.get("page", 0)))
             document["chunks"] += 1
         return list(documents.values())
 
-    def _persist_state(self) -> None:
-        settings.artifacts_dir.mkdir(parents=True, exist_ok=True)
-        self.retriever.save(str(settings.faiss_index_path), str(settings.metadata_path))
+    @staticmethod
+    def _load_persisted_jobs() -> Dict[str, IngestionJob]:
+        if not settings.jobs_path.exists():
+            return {}
+        payload = json.loads(settings.jobs_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, list):
+            raise RuntimeError("Persistent ingestion job manifest must contain a list of jobs.")
+        return {job.job_id: job for item in payload if (job := IngestionJob.from_dict(item))}
+
+    def _persist_documents(self) -> None:
         settings.documents_path.parent.mkdir(parents=True, exist_ok=True)
         temporary_manifest = settings.documents_path.with_suffix(f"{settings.documents_path.suffix}.tmp")
         temporary_manifest.write_text(json.dumps(self.documents, indent=2), encoding="utf-8")
         temporary_manifest.replace(settings.documents_path)
+
+    def _persist_jobs(self) -> None:
+        settings.jobs_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_jobs = settings.jobs_path.with_suffix(f"{settings.jobs_path.suffix}.tmp")
+        serialized_jobs = [job.to_dict() for job in getattr(self, "jobs", {}).values()]
+        temporary_jobs.write_text(json.dumps(serialized_jobs, indent=2), encoding="utf-8")
+        temporary_jobs.replace(settings.jobs_path)
+
+    def _persist_state(self) -> None:
+        settings.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        self.retriever.save(str(settings.faiss_index_path), str(settings.metadata_path))
+        self._persist_documents()
+        self._persist_jobs()
 
     @staticmethod
     def _persist_upload(filename: str, data: bytes) -> None:
@@ -118,7 +189,16 @@ class RAGService:
             ),
         ]
         self._index_chunks(demo_chunks)
-        self.documents.append({"filename": "technical_report.pdf", "pages": 10, "chunks": len(demo_chunks)})
+        self.documents.append(
+            {
+                "filename": "technical_report.pdf",
+                "pages": 10,
+                "chunks": len(demo_chunks),
+                "status": "indexed",
+                "progress": 100,
+                "message": "Indexed.",
+            }
+        )
 
     def _split_text(self, text: str, chunk_length: int = 260) -> List[str]:
         pieces: List[str] = []
@@ -155,9 +235,8 @@ class RAGService:
 
     def _parse_pdf_to_chunks(self, filename: str, file_bytes: bytes) -> List[DocumentChunk]:
         chunks: List[DocumentChunk] = []
-        reader = PdfReader(io.BytesIO(file_bytes))
-        for page_num, page in enumerate(reader.pages, start=1):
-            page_text = page.extract_text() or ""
+        for page_num, page_extraction in enumerate(self.math_extractor.extract_pages(file_bytes), start=1):
+            page_text = page_extraction.text
             if not page_text.strip():
                 continue
             table_text, figure_caption = self._extract_table_and_caption(page_text)
@@ -174,6 +253,7 @@ class RAGService:
                         source=filename,
                         section=section,
                         metadata={"page": page_num, "document_type": "pdf"},
+                        equations=page_extraction.equations,
                         type="text",
                     )
                 )
@@ -186,12 +266,121 @@ class RAGService:
         embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in searchable_chunks])
         self.retriever.add_chunks(searchable_chunks, embeddings)
 
-    def upload_documents(self, files: List[UploadFile]) -> UploadResponse:
+    def _document_for_filename(self, filename: str) -> Dict[str, Any] | None:
+        return next((document for document in self.documents if document["filename"] == filename), None)
+
+    def _update_job(
+        self,
+        job_id: str,
+        status: str,
+        progress: int,
+        message: str,
+        error: str | None = None,
+    ) -> bool:
+        """Persist a job update and mirror it on the matching document record."""
+        job = self.jobs.get(job_id)
+        if job is None or job.status == "cancelled":
+            return False
+        job.update(status=status, progress=progress, message=message, error=error)
+        document = self._document_for_filename(job.filename)
+        if document is not None:
+            document.update(
+                {
+                    "status": job.status,
+                    "progress": job.progress,
+                    "message": job.message,
+                    "error": job.error,
+                    "job_id": job.job_id,
+                }
+            )
+        self._persist_documents()
+        self._persist_jobs()
+        return True
+
+    def _schedule_job(self, job_id: str) -> None:
+        future = self.job_futures.get(job_id)
+        if future is None or future.done():
+            self.job_futures[job_id] = self.job_executor.submit(self._run_ingestion_job, job_id)
+
+    def _resume_pending_jobs(self) -> None:
+        """Resume uploads that were queued when the backend last stopped."""
         with self.storage_lock:
-            all_chunks: List[DocumentChunk] = []
+            for job in self.jobs.values():
+                if job.status not in ACTIVE_JOB_STATUSES:
+                    continue
+                if (settings.uploads_dir / job.filename).is_file():
+                    job.update(status="queued", progress=0, message="Queued after backend restart.")
+                else:
+                    job.update(status="failed", progress=0, message="Upload file is missing.", error="Upload file is missing.")
+                    document = self._document_for_filename(job.filename)
+                    if document is not None:
+                        document.update({"status": "failed", "message": job.message, "error": job.error})
+                        continue
+                document = self._document_for_filename(job.filename)
+                if document is not None:
+                    document.update(
+                        {
+                            "status": job.status,
+                            "progress": job.progress,
+                            "message": job.message,
+                            "error": job.error,
+                            "job_id": job.job_id,
+                        }
+                    )
+            self._persist_documents()
+            self._persist_jobs()
+            pending_job_ids = [job.job_id for job in self.jobs.values() if job.status == "queued"]
+        for job_id in pending_job_ids:
+            self._schedule_job(job_id)
+
+    def _run_ingestion_job(self, job_id: str) -> None:
+        try:
+            with self.storage_lock:
+                job = self.jobs.get(job_id)
+                if job is None or job.status == "cancelled":
+                    return
+                filename = job.filename
+                self._update_job(job_id, "extracting", 10, "Extracting text and equation regions.")
+
+            file_bytes = (settings.uploads_dir / filename).read_bytes()
+            chunks = self._parse_pdf_to_chunks(filename, file_bytes)
+            if not chunks:
+                raise ValueError("No extractable text was found. Scanned PDFs need OCR before upload.")
+
+            with self.storage_lock:
+                if not self._update_job(job_id, "embedding", 65, "Creating embeddings and updating the search index."):
+                    return
+                self._index_chunks(chunks)
+                job = self.jobs[job_id]
+                document = self._document_for_filename(filename)
+                if document is None or job.status == "cancelled":
+                    return
+                document.update(
+                    {
+                        "pages": max((int(chunk.metadata.get("page", 0)) for chunk in chunks), default=0),
+                        "chunks": len(chunks),
+                    }
+                )
+                job.update(status="indexed", progress=100, message="Indexed.")
+                document.update(
+                    {
+                        "status": "indexed",
+                        "progress": 100,
+                        "message": "Indexed.",
+                        "error": None,
+                        "job_id": job.job_id,
+                    }
+                )
+                self._persist_state()
+        except Exception as exc:  # pragma: no cover - depends on malformed external PDFs
+            logger.exception("Document ingestion failed for job %s", job_id)
+            with self.storage_lock:
+                self._update_job(job_id, "failed", 0, "Indexing failed.", error=str(exc))
+
+    def upload_documents(self, files: List[UploadFile]) -> UploadResponse:
+        jobs: List[IngestionJob] = []
+        with self.storage_lock:
             uploaded_names: List[str] = []
-            uploaded_documents: List[Dict[str, Any]] = []
-            uploaded_files: List[tuple[str, bytes]] = []
             indexed_filenames = {document["filename"] for document in self.documents}
             for file in files:
                 filename = Path(file.filename or "uploaded_document.pdf").name
@@ -205,27 +394,35 @@ class RAGService:
                         status_code=413,
                         detail=f"{filename} exceeds the {settings.max_upload_bytes // (1024 * 1024)} MB upload limit.",
                     )
-                try:
-                    chunks = self._parse_pdf_to_chunks(filename, data)
-                except Exception as exc:
-                    raise HTTPException(status_code=422, detail=f"Could not read {filename} as a PDF: {exc}") from exc
-                if not chunks:
-                    raise HTTPException(status_code=422, detail=f"No extractable text was found in {filename}. Scanned PDFs need OCR before upload.")
-                all_chunks.extend(chunks)
                 uploaded_names.append(filename)
-                uploaded_files.append((filename, data))
                 indexed_filenames.add(filename)
-                uploaded_documents.append({"filename": filename, "pages": max((c.metadata.get("page", 0) for c in chunks), default=0), "chunks": len(chunks)})
-            self._index_chunks(all_chunks)
-            self.documents.extend(uploaded_documents)
-            for filename, data in uploaded_files:
                 self._persist_upload(filename, data)
-            self._persist_state()
-            return UploadResponse(
-                uploaded=uploaded_names,
-                total_chunks=len(all_chunks),
-                documents=self._documents_with_file_sizes(self.documents),
-            )
+                job = IngestionJob.create(filename)
+                self.jobs[job.job_id] = job
+                jobs.append(job)
+                self.documents.append(
+                    {
+                        "filename": filename,
+                        "pages": 0,
+                        "chunks": 0,
+                        "status": job.status,
+                        "progress": job.progress,
+                        "message": job.message,
+                        "job_id": job.job_id,
+                    }
+                )
+            self._persist_documents()
+            self._persist_jobs()
+            response_documents = self._documents_with_file_sizes(self.documents)
+
+        for job in jobs:
+            self._schedule_job(job.job_id)
+        return UploadResponse(
+            uploaded=uploaded_names,
+            total_chunks=0,
+            documents=response_documents,
+            jobs=[job.to_dict() for job in jobs],
+        )
 
     def list_documents(self) -> List[Dict[str, Any]]:
         return self._documents_with_file_sizes(self.documents)
@@ -256,8 +453,22 @@ class RAGService:
             raise HTTPException(status_code=400, detail="Invalid document filename.")
 
         with self.storage_lock:
-            if not any(document["filename"] == safe_filename for document in self.documents):
-                raise HTTPException(status_code=404, detail=f"{safe_filename} is not indexed.")
+            document = self._document_for_filename(safe_filename)
+            if document is None:
+                raise HTTPException(status_code=404, detail=f"{safe_filename} was not found.")
+
+            if document.get("status") in ACTIVE_JOB_STATUSES:
+                job_id = document.get("job_id")
+                job = self.jobs.get(job_id) if job_id else None
+                if job is not None:
+                    job.update(status="cancelled", progress=0, message="Cancelled and removed.")
+                self.documents = [item for item in self.documents if item["filename"] != safe_filename]
+                upload_path = settings.uploads_dir / safe_filename
+                if upload_path.is_file():
+                    upload_path.unlink()
+                self._persist_documents()
+                self._persist_jobs()
+                return {"deleted": safe_filename, "documents": self._documents_with_file_sizes(self.documents)}
 
             previous_retriever = self.retriever
             previous_documents = self.documents
@@ -284,6 +495,45 @@ class RAGService:
                 temporary_upload_path.unlink()
 
             return {"deleted": safe_filename, "documents": self._documents_with_file_sizes(self.documents)}
+
+    def get_job(self, job_id: str) -> Dict[str, Any]:
+        with self.storage_lock:
+            job = self.jobs.get(job_id)
+            if job is None:
+                raise HTTPException(status_code=404, detail="Ingestion job was not found.")
+            return job.to_dict()
+
+    def retry_document(self, filename: str) -> Dict[str, Any]:
+        safe_filename = Path(filename).name
+        if filename != safe_filename:
+            raise HTTPException(status_code=400, detail="Invalid document filename.")
+
+        with self.storage_lock:
+            document = self._document_for_filename(safe_filename)
+            if document is None:
+                raise HTTPException(status_code=404, detail=f"{safe_filename} was not found.")
+            if document.get("status") != "failed":
+                raise HTTPException(status_code=409, detail="Only failed documents can be retried.")
+            if not (settings.uploads_dir / safe_filename).is_file():
+                raise HTTPException(status_code=404, detail="The original PDF is not available for retry.")
+
+            job = IngestionJob.create(safe_filename)
+            self.jobs[job.job_id] = job
+            document.update(
+                {
+                    "pages": 0,
+                    "chunks": 0,
+                    "status": job.status,
+                    "progress": job.progress,
+                    "message": job.message,
+                    "error": None,
+                    "job_id": job.job_id,
+                }
+            )
+            self._persist_documents()
+            self._persist_jobs()
+        self._schedule_job(job.job_id)
+        return job.to_dict()
 
     def _prepare_query(self, query: str, history: List[str]) -> str:
         prior = " ".join(history[-4:])
@@ -312,14 +562,14 @@ class RAGService:
 
         word_count = len(re.findall(r"[A-Za-z]{2,}", sentence))
         noisy_token_count = sum(
-            any(character.isdigit() for character in token)
-            or len(re.sub(r"[^A-Za-z]", "", token)) < 2
+            bool(re.search(r"[A-Za-z].*\d|\d.*[A-Za-z]", token))
+            or (len(re.sub(r"[^A-Za-z]", "", token)) == 1 and token.isalpha())
             for token in tokens
         )
         visible_characters = [character for character in sentence if not character.isspace()]
         letter_ratio = sum(character.isalpha() for character in visible_characters) / max(len(visible_characters), 1)
 
-        return word_count >= 5 and noisy_token_count / len(tokens) <= 0.25 and letter_ratio >= 0.65
+        return word_count >= 5 and noisy_token_count / len(tokens) <= 0.35 and letter_ratio >= 0.55
 
     @staticmethod
     def _extract_summary_sentences(
@@ -352,7 +602,8 @@ class RAGService:
             conversation_history = request.history or saved_history
             search_query = self._prepare_query(request.query, conversation_history)
         query_embedding = self.embedding_store.encode_single(search_query)
-        initial_hits = self.retriever.retrieve(query_embedding, top_k=max(request.top_k, 5))
+        with self.storage_lock:
+            initial_hits = self.retriever.retrieve(query_embedding, top_k=max(request.top_k, 5))
         pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in initial_hits]
         reranked = self.reranker.rerank(search_query, pairs, top_k=request.top_k)
 
@@ -382,6 +633,7 @@ class RAGService:
                         "table": item.table,
                         "figure_caption": item.figure_caption,
                         "section": item.section,
+                        "equations": item.equations,
                     }
                 )
             best_score = float(reranked[0][1])
@@ -479,8 +731,19 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/math/status", response_model=MathOcrStatus)
+def math_ocr_status() -> Dict[str, Any]:
+    checkpoint_available = settings.math_ocr_checkpoint.is_file()
+    return {
+        "enabled": settings.math_ocr_enabled,
+        "checkpoint_available": checkpoint_available,
+        "checkpoint_path": str(settings.math_ocr_checkpoint),
+        "mode": "local_ocr" if settings.math_ocr_enabled and checkpoint_available else "source_verification_only",
+    }
+
+
 @app.post("/upload", response_model=UploadResponse)
-async def upload_documents(files: List[UploadFile] = File(...)):
+def upload_documents(files: List[UploadFile] = File(...)) -> UploadResponse:
     if not files:
         raise HTTPException(status_code=400, detail="At least one PDF file is required.")
     if len(files) > settings.max_upload_files:
@@ -517,6 +780,16 @@ def get_document_file(filename: str) -> FileResponse:
 @app.delete("/documents/{filename}", response_model=DeleteDocumentResponse)
 def delete_document(filename: str) -> Dict[str, Any]:
     return get_service().delete_document(filename)
+
+
+@app.post("/documents/{filename}/retry", response_model=IngestionJobResponse)
+def retry_document(filename: str) -> Dict[str, Any]:
+    return get_service().retry_document(filename)
+
+
+@app.get("/jobs/{job_id}", response_model=IngestionJobResponse)
+def get_ingestion_job(job_id: str) -> Dict[str, Any]:
+    return get_service().get_job(job_id)
 
 
 @app.post("/query", response_model=QueryResponse)
