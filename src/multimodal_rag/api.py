@@ -129,10 +129,16 @@ class RAGService:
         all_chunks: List[DocumentChunk] = []
         uploaded_names: List[str] = []
         uploaded_documents: List[Dict[str, Any]] = []
+        indexed_filenames = {document["filename"] for document in self.documents}
         for file in files:
             filename = Path(file.filename or "uploaded_document.pdf").name
             if not filename.lower().endswith(".pdf"):
                 raise HTTPException(status_code=415, detail=f"{filename} is not a PDF file.")
+            if filename in indexed_filenames:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"{filename} is already indexed. Restart the backend before uploading a replacement.",
+                )
             data = file.file.read()
             try:
                 chunks = self._parse_pdf_to_chunks(filename, data)
@@ -145,6 +151,7 @@ class RAGService:
                 )
             all_chunks.extend(chunks)
             uploaded_names.append(filename)
+            indexed_filenames.add(filename)
             uploaded_documents.append(
                 {"filename": filename, "pages": max((c.metadata.get("page", 0) for c in chunks), default=0), "chunks": len(chunks)}
             )
@@ -161,6 +168,30 @@ class RAGService:
         if prior:
             return f"Context: {prior} \nQuestion: {query}"
         return query
+
+    @staticmethod
+    def _format_citations(evidence: List[Dict[str, Any]]) -> str:
+        pages_by_source: Dict[str, List[int]] = defaultdict(list)
+        for item in evidence:
+            pages_by_source[item["source"]].append(item["page"])
+        labels = []
+        for source, pages in pages_by_source.items():
+            unique_pages = sorted(set(pages))
+            page_label = f"p. {unique_pages[0]}" if len(unique_pages) == 1 else f"pp. {', '.join(map(str, unique_pages))}"
+            labels.append(f"{source} ({page_label})")
+        return "; ".join(labels)
+
+    @staticmethod
+    def _extract_summary_sentences(query: str, evidence: List[Dict[str, Any]]) -> List[str]:
+        query_terms = set(re.findall(r"[a-zA-Z]{3,}", query.lower()))
+        sentences = []
+        for item in evidence:
+            candidates = [sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+", item["text"]) if len(sentence.strip()) >= 30]
+            if not candidates:
+                continue
+            best = max(candidates, key=lambda sentence: len(query_terms.intersection(re.findall(r"[a-zA-Z]{3,}", sentence.lower()))))
+            sentences.append(best[:320].rsplit(" ", 1)[0] + "..." if len(best) > 320 else best)
+        return sentences
 
     def query(self, request: QueryRequest) -> Dict[str, Any]:
         start = time.perf_counter()
@@ -179,8 +210,13 @@ class RAGService:
             evidence = []
             # Reranker.rerank returns ``((passage, RetrievalResult), score)``.
             # Unpack the candidate before reading its associated result.
+            seen_pages = set()
             for candidate, rerank_score in reranked:
                 _, item = candidate
+                page_key = (item.source, item.metadata.get("page", 1))
+                if page_key in seen_pages:
+                    continue
+                seen_pages.add(page_key)
                 evidence.append(
                     {
                         "chunk_id": item.chunk_id,
@@ -199,14 +235,10 @@ class RAGService:
             if unsupported:
                 answer = "Unsupported answer: the retrieved evidence is too weak to support a confident response."
             else:
-                citations = ", ".join(f"{item['source']} (p.{item['page']})" for item in evidence[:3])
-                evidence_text = " ".join(item["text"] for item in evidence[:3]).strip()
-                max_answer_characters = 900
-                if len(evidence_text) > max_answer_characters:
-                    evidence_text = evidence_text[:max_answer_characters].rsplit(" ", 1)[0] + "..."
-                answer = (
-                    f"Based on {citations}: {evidence_text}"
-                )
+                summary_sentences = self._extract_summary_sentences(request.query, evidence[:3])
+                citations = self._format_citations(evidence[:3])
+                bullets = "\n".join(f"- {sentence}" for sentence in summary_sentences)
+                answer = f"Evidence-based summary:\n{bullets}\n\nSources: {citations}"
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
         self.session_history[request.session_id].append(request.query)
@@ -215,7 +247,7 @@ class RAGService:
             "unsupported": unsupported,
             "confidence": round(confidence, 4),
             "sources": evidence,
-            "retrieval_scores": [round(float(rerank_score), 4) for _, rerank_score in reranked],
+            "retrieval_scores": [item["score"] for item in evidence],
             "latency_ms": latency_ms,
             "session_id": request.session_id,
             "history": self.session_history[request.session_id],

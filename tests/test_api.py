@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 
 import multimodal_rag.api as api
 from multimodal_rag.schemas import UploadResponse
@@ -58,6 +59,21 @@ def test_session_query_and_upload_are_forwarded_to_the_service(monkeypatch):
     assert fake_service.last_session_id == "research-123"
     assert upload_response.status_code == 200
     assert upload_response.json()["uploaded"] == ["notes.pdf"]
+
+
+def test_duplicate_upload_is_rejected_before_indexing():
+    service = api.RAGService.__new__(api.RAGService)
+    service.documents = [{"filename": "notes.pdf", "pages": 1, "chunks": 2}]
+
+    class File:
+        filename = "notes.pdf"
+
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as error:
+        service.upload_documents([File()])
+
+    assert error.value.status_code == 409
 
 
 def test_cors_allows_the_configured_frontend_origin():

@@ -2,7 +2,7 @@ export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://local
 
 export type Source = { chunk_id: string; source: string; page: number; text: string };
 export type DocumentInfo = { filename: string; pages: number; chunks: number };
-export type QueryResponse = { answer?: string; sources?: Source[]; latency_ms?: number; detail?: string };
+export type QueryResponse = { answer?: string; sources?: Source[]; latency_ms?: number; unsupported?: boolean; detail?: string };
 export type UploadResponse = { uploaded?: string[]; total_chunks?: number; documents?: DocumentInfo[]; detail?: string };
 export type MetricsResponse = {
   recall_at_5: number;

@@ -16,6 +16,7 @@ export default function Home() {
   const [query, setQuery] = useState("How does the reranker improve retrieval quality?");
   const [answer, setAnswer] = useState("Upload a PDF, then ask a document-grounded question.");
   const [sources, setSources] = useState<Source[]>([]);
+  const [unsupported, setUnsupported] = useState(false);
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
@@ -83,11 +84,13 @@ export default function Home() {
       }
       setAnswer(data.answer);
       setSources(data.sources ?? []);
+      setUnsupported(data.unsupported ?? false);
       setQueryLatency(data.latency_ms ?? null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown request error.";
       setAnswer(`Unable to answer the question: ${message}`);
       setSources([]);
+      setUnsupported(true);
       setQueryLatency(null);
     } finally {
       setLoading(false);
@@ -135,8 +138,8 @@ export default function Home() {
             <p className="mt-2 text-sm text-slate-400" aria-live="polite">{uploadStatus}</p>
             {documents.length > 0 && (
               <ul className="mt-3 space-y-1 text-sm text-slate-300">
-                {documents.map((document) => (
-                  <li key={document.filename}>{document.filename}: {document.pages} pages, {document.chunks} chunks</li>
+                {documents.map((document, index) => (
+                  <li key={`${document.filename}-${index}`}>{document.filename}: {document.pages} pages, {document.chunks} chunks</li>
                 ))}
               </ul>
             )}
@@ -157,9 +160,9 @@ export default function Home() {
               {loading ? "Thinking..." : "Ask research assistant"}
             </button>
 
-            <div className="mt-8 rounded-xl border border-slate-800 bg-slate-950 p-4" aria-live="polite">
+            <div className={`mt-8 rounded-xl border p-4 ${unsupported ? "border-amber-500/40 bg-amber-950/20" : "border-slate-800 bg-slate-950"}`} aria-live="polite">
               <p className="mb-2 text-xs uppercase tracking-[0.25em] text-slate-400">Answer</p>
-              <p className="leading-7 text-slate-200">{answer}</p>
+              <p className="whitespace-pre-line leading-7 text-slate-200">{answer}</p>
             </div>
           </section>
 
@@ -181,11 +184,17 @@ export default function Home() {
                 <p className="text-sm text-slate-400">No citations yet.</p>
               ) : (
                 <ul className="space-y-3 text-sm text-slate-200">
-                  {sources.map((source) => (
-                    <li key={source.chunk_id} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
-                      <div className="mb-1 text-xs uppercase tracking-[0.2em] text-cyan-400">{source.source}</div>
+                  {sources.map((source, index) => (
+                    <li key={`${source.chunk_id}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                      <div className="mb-1 break-all text-xs uppercase tracking-[0.2em] text-cyan-400">{source.source}</div>
                       <div className="text-slate-300">Page {source.page}</div>
-                      <div className="mt-2 text-slate-400">{source.text}</div>
+                      <div className="mt-2 text-slate-400">{source.text.slice(0, 280)}{source.text.length > 280 ? "..." : ""}</div>
+                      {source.text.length > 280 && (
+                        <details className="mt-2 text-slate-400">
+                          <summary className="cursor-pointer text-cyan-300">View full passage</summary>
+                          <p className="mt-2">{source.text}</p>
+                        </details>
+                      )}
                     </li>
                   ))}
                 </ul>
