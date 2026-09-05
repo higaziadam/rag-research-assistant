@@ -22,6 +22,7 @@ class DocumentInfo(BaseModel):
     message: str = "Indexed."
     error: Optional[str] = None
     job_id: Optional[str] = None
+    content_counts: Dict[str, int] = Field(default_factory=dict)
 
 
 class IngestionJobResponse(BaseModel):
@@ -64,6 +65,9 @@ class SourceResponse(BaseModel):
     figure_caption: str = ""
     section: str = ""
     equations: List[EquationResponse] = Field(default_factory=list)
+    type: Literal["text", "table", "figure"] = "text"
+    bounding_box: Optional[List[float]] = Field(default=None, min_length=4, max_length=4)
+    quality_flags: List[str] = Field(default_factory=list)
 
 
 class QueryResponse(BaseModel):

@@ -72,6 +72,7 @@ class FAISSRetriever:
                     section=chunk.section,
                     metadata=chunk.metadata,
                     equations=chunk.equations,
+                    type=chunk.type,
                 )
             )
         return results

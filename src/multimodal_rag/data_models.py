@@ -15,7 +15,8 @@ class DocumentChunk:
     type: str = "text"
 
     def to_text_for_search(self) -> str:
-        parts = [self.text.strip(), self.table.strip(), self.figure_caption.strip()]
+        type_label = f"{self.type.title()} evidence" if self.type != "text" else ""
+        parts = [type_label, self.text.strip(), self.table.strip(), self.figure_caption.strip()]
         return "\n".join(p for p in parts if p).strip()
 
 
@@ -30,3 +31,4 @@ class RetrievalResult:
     section: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
     equations: List[Dict[str, Any]] = field(default_factory=list)
+    type: str = "text"

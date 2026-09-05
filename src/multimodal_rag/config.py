@@ -33,7 +33,9 @@ class Settings:
         )
     )
     max_equations_per_page: int = 4
-    max_context_tokens: int = 1500
+    text_chunk_characters: int = 650
+    text_chunk_overlap_characters: int = 120
+    max_table_characters: int = 8_000
     cors_origins: List[str] = field(
         default_factory=lambda: [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if origin.strip()]
     )

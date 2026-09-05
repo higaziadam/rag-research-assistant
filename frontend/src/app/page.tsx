@@ -21,6 +21,30 @@ function sourceFileUrl(source: Source) {
   return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/file#page=${source.page}`;
 }
 
+function sourceRegionPreviewUrl(source: Source) {
+  if (!source.bounding_box || source.bounding_box.length !== 4) {
+    return null;
+  }
+  const [x0, y0, x1, y1] = source.bounding_box;
+  const parameters = new URLSearchParams({ page: String(source.page), x0: String(x0), y0: String(y0), x1: String(x1), y1: String(y1) });
+  return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/page-preview?${parameters}`;
+}
+
+function sourceLabel(source: Source) {
+  return source.type.charAt(0).toUpperCase() + source.type.slice(1);
+}
+
+function sourceContent(source: Source) {
+  return source.type === "table" ? source.table || source.text : source.figure_caption || source.text;
+}
+
+function documentContentSummary(document: DocumentInfo) {
+  return Object.entries(document.content_counts ?? {})
+    .filter(([, count]) => count > 0)
+    .map(([type, count]) => `${count} ${type}${count === 1 ? "" : "s"}`)
+    .join(", ");
+}
+
 function formatFileSize(fileSizeBytes?: number) {
   if (fileSizeBytes === undefined) {
     return "size unavailable";
@@ -274,6 +298,9 @@ export default function Home() {
                       <div className="break-all">
                         {document.filename}: {formatFileSize(document.file_size_bytes)} · {document.pages} pages, {document.chunks} chunks
                       </div>
+                      {document.status === "indexed" && documentContentSummary(document) && (
+                        <p className="mt-1 text-xs text-slate-500">Extracted: {documentContentSummary(document)}</p>
+                      )}
                       {document.status !== "indexed" && (
                         <div className="mt-2" aria-live="polite">
                           <div className="flex justify-between gap-3 text-xs text-slate-400">
@@ -359,17 +386,39 @@ export default function Home() {
                 <ul className="space-y-3 text-sm text-slate-200">
                   {sources.map((source, index) => (
                     <li key={`${source.chunk_id}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
-                      <div className="mb-1 break-all text-xs uppercase tracking-[0.2em] text-cyan-400">{source.source}</div>
-                      <div className="text-slate-300">Page {source.page}</div>
-                      <FormattedContent
-                        content={`${source.text.slice(0, 280)}${source.text.length > 280 ? "..." : ""}`}
-                        className="mt-2 text-slate-400"
-                      />
-                      {source.text.length > 280 && (
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="break-all text-xs uppercase tracking-[0.2em] text-cyan-400">{source.source}</div>
+                        <span className="rounded-full border border-cyan-800 bg-cyan-950/50 px-2 py-0.5 text-xs font-medium text-cyan-200">
+                          {sourceLabel(source)}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-slate-300">Page {source.page}</div>
+                      {source.type === "table" ? (
+                        <pre className="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
+                          {sourceContent(source)}
+                        </pre>
+                      ) : (
+                        <FormattedContent
+                          content={`${sourceContent(source).slice(0, 280)}${sourceContent(source).length > 280 ? "..." : ""}`}
+                          className="mt-2 text-slate-400"
+                        />
+                      )}
+                      {sourceContent(source).length > 280 && (
                         <details className="mt-2 text-slate-400">
                           <summary className="cursor-pointer text-cyan-300">View full passage</summary>
-                          <FormattedContent content={source.text} className="mt-2" />
+                          {source.type === "table" ? (
+                            <pre className="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
+                              {sourceContent(source)}
+                            </pre>
+                          ) : (
+                            <FormattedContent content={sourceContent(source)} className="mt-2" />
+                          )}
                         </details>
+                      )}
+                      {(source.quality_flags?.length ?? 0) > 0 && (
+                        <p className="mt-3 text-xs text-amber-300">
+                          Extraction note: {source.quality_flags?.join(", ").replaceAll("_", " ")}
+                        </p>
                       )}
                       {(source.equations?.length ?? 0) > 0 && (
                         <details className="mt-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
@@ -442,11 +491,28 @@ export default function Home() {
                 </button>
               </div>
             </header>
-            <iframe
-              src={sourceFileUrl(selectedSource)}
-              title={`PDF viewer for ${selectedSource.source}, page ${selectedSource.page}`}
-              className="min-h-0 flex-1 bg-white"
-            />
+            <div className="grid min-h-0 flex-1 lg:grid-cols-[0.8fr_1.2fr]">
+              <section className="min-h-0 overflow-auto border-b border-slate-800 p-4 lg:border-b-0 lg:border-r">
+                <p className="mb-3 text-xs uppercase tracking-[0.16em] text-slate-400">Cited source region</p>
+                {sourceRegionPreviewUrl(selectedSource) ? (
+                  // The image is rendered locally from the cited PDF coordinates.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={sourceRegionPreviewUrl(selectedSource) ?? ""}
+                    alt={`Extracted ${sourceLabel(selectedSource).toLowerCase()} region from page ${selectedSource.page}`}
+                    className="w-full rounded-lg border border-slate-700 bg-white"
+                  />
+                ) : (
+                  <p className="text-sm text-slate-400">No precise region was saved for this older source. Use the page viewer to verify it.</p>
+                )}
+                <p className="mt-3 text-sm text-slate-400">{sourceLabel(selectedSource)} evidence from page {selectedSource.page}.</p>
+              </section>
+              <iframe
+                src={sourceFileUrl(selectedSource)}
+                title={`PDF viewer for ${selectedSource.source}, page ${selectedSource.page}`}
+                className="min-h-0 h-full w-full bg-white"
+              />
+            </div>
           </section>
         </div>
       )}

@@ -6,7 +6,18 @@ export type Equation = {
   confidence: number;
   bounding_box: number[];
 };
-export type Source = { chunk_id: string; source: string; page: number; text: string; equations?: Equation[] };
+export type Source = {
+  chunk_id: string;
+  source: string;
+  page: number;
+  text: string;
+  table?: string;
+  figure_caption?: string;
+  type: "text" | "table" | "figure";
+  bounding_box?: number[];
+  quality_flags?: string[];
+  equations?: Equation[];
+};
 export type IngestionStatus = "queued" | "extracting" | "embedding" | "indexed" | "failed" | "cancelled";
 export type DocumentInfo = {
   filename: string;
@@ -18,6 +29,7 @@ export type DocumentInfo = {
   message: string;
   error?: string;
   job_id?: string;
+  content_counts: Record<string, number>;
 };
 export type IngestionJob = {
   job_id: string;

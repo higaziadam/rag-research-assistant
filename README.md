@@ -5,13 +5,14 @@ A full-stack research assistant for PDF-based document Q&A. The app uses a Pytho
 ## What is included right now
 
 - PDF upload with persistent background indexing and live progress status
-- Text chunking and metadata extraction from uploaded documents
+- Layout-aware text chunking with section, page, bounding-box, and extraction-quality metadata
+- Local table extraction and figure/caption evidence records
 - Dense vector search using FAISS
 - Persistent FAISS index, chunk metadata, ingestion jobs, and uploaded PDFs under `artifacts/`
 - Cross-encoder reranking on retrieved chunks
 - Local math-region detection with optional Pix2Tex transcription and source verification
 - Query endpoint with answer generation flow and unsupported-answer handling
-- Frontend dashboard for asking questions and showing sources
+- Frontend dashboard for asking questions, showing typed evidence, and previewing cited PDF regions
 - API docs via FastAPI at /docs
 - Docker setup and pytest smoke tests
 
@@ -21,7 +22,7 @@ A full-stack research assistant for PDF-based document Q&A. The app uses a Pytho
 - FastAPI
 - FAISS
 - SentenceTransformers / embeddings
-- PyPDF
+- PyMuPDF
 - Next.js + TypeScript
 - Docker
 
@@ -89,6 +90,8 @@ Open `http://localhost:3000`. For a deployed environment, set `NEXT_PUBLIC_API_B
 - Show persistent queued/extracting/embedding/indexed/failed status and progress
 - Search over indexed document chunks
 - Return ranked sources with page references
+- Label source evidence as text, table, or figure and show extraction-quality notes
+- Preview the exact extracted PDF region beside the cited page
 - Show evaluation metrics such as Recall@5, MRR, and faithfulness
 - Support unsupported answers when evidence is weak
 - Demo UI for research assistant workflows

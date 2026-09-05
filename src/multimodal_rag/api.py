@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 import time
 from collections import defaultdict
@@ -12,10 +13,11 @@ from typing import Any, Dict, List
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from .config import settings
 from .data_models import DocumentChunk
+from .document_extraction import StructuredPdfExtractor, render_pdf_region
 from .embeddings import EmbeddingStore
 from .math_extraction import LocalMathExtractor
 from .jobs import ACTIVE_JOB_STATUSES, IngestionJob
@@ -45,6 +47,7 @@ class RAGService:
             checkpoint_path=settings.math_ocr_checkpoint,
             max_equations_per_page=settings.max_equations_per_page,
         )
+        self.pdf_extractor = StructuredPdfExtractor(max_table_characters=settings.max_table_characters)
         self.documents: List[Dict[str, Any]] = []
         self.jobs: Dict[str, IngestionJob] = self._load_persisted_jobs()
         self.job_executor = ThreadPoolExecutor(
@@ -200,7 +203,8 @@ class RAGService:
             }
         )
 
-    def _split_text(self, text: str, chunk_length: int = 260) -> List[str]:
+    def _split_text(self, text: str, chunk_length: int | None = None) -> List[str]:
+        chunk_length = chunk_length or settings.text_chunk_characters
         pieces: List[str] = []
         paragraph_blocks = [p.strip() for p in re.split(r"\n\s*\n+", text) if p.strip()]
         for block in paragraph_blocks:
@@ -221,43 +225,56 @@ class RAGService:
                     current = sentence
             if current:
                 pieces.append(current)
-        return pieces or [text[:chunk_length]]
+        if len(pieces) < 2 or settings.text_chunk_overlap_characters <= 0:
+            return pieces or [text[:chunk_length]]
 
-    def _extract_table_and_caption(self, raw_text: str) -> tuple[str, str]:
-        lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-        table_lines = [line for line in lines if "|" in line or re.search(r"\b[A-Za-z]+\s*\|\s*[A-Za-z0-9]", line)]
-        caption = ""
-        for line in lines:
-            if re.search(r"(?i)figure\s+\d+|chart\s+\d+|table\s+\d+", line):
-                caption = line
-                break
-        return "\n".join(table_lines[:6]), caption
+        overlapped_pieces = [pieces[0]]
+        for piece in pieces[1:]:
+            previous_tail = overlapped_pieces[-1][-settings.text_chunk_overlap_characters :].split(" ", 1)[-1]
+            overlapped_pieces.append(f"{previous_tail} {piece}".strip())
+        return overlapped_pieces
 
     def _parse_pdf_to_chunks(self, filename: str, file_bytes: bytes) -> List[DocumentChunk]:
         chunks: List[DocumentChunk] = []
-        for page_num, page_extraction in enumerate(self.math_extractor.extract_pages(file_bytes), start=1):
-            page_text = page_extraction.text
-            if not page_text.strip():
-                continue
-            table_text, figure_caption = self._extract_table_and_caption(page_text)
-            sections = ["Methods", "Results", "Discussion", "Appendix"]
-            section = sections[(page_num - 1) % len(sections)]
-            for idx, paragraph in enumerate(self._split_text(page_text)):
-                chunk_id = f"{filename}-{page_num}-{idx}"
-                chunks.append(
-                    DocumentChunk(
-                        chunk_id=chunk_id,
-                        text=paragraph,
-                        table=table_text,
-                        figure_caption=figure_caption,
-                        source=filename,
-                        section=section,
-                        metadata={"page": page_num, "document_type": "pdf"},
-                        equations=page_extraction.equations,
-                        type="text",
+        layout_pages = self.pdf_extractor.extract_pages(file_bytes)
+        math_pages = self.math_extractor.extract_pages(file_bytes)
+        for layout_page, math_page in zip(layout_pages, math_pages):
+            for element_index, element in enumerate(layout_page.elements):
+                text_parts = [element.text] if element.type != "text" else self._split_text(element.text)
+                for part_index, text in enumerate(text_parts):
+                    chunk_id = f"{filename}-{layout_page.page_number}-{element.type}-{element_index}-{part_index}"
+                    chunks.append(
+                        DocumentChunk(
+                            chunk_id=chunk_id,
+                            text=text,
+                            table=element.table,
+                            figure_caption=element.figure_caption,
+                            source=filename,
+                            section=element.section,
+                            metadata={
+                                "page": layout_page.page_number,
+                                "document_type": "pdf",
+                                "bounding_box": element.bounding_box,
+                                "quality_flags": element.quality_flags,
+                            },
+                            equations=self._equations_in_region(math_page.equations, element.bounding_box),
+                            type=element.type,
+                        )
                     )
-                )
         return chunks
+
+    @staticmethod
+    def _equations_in_region(equations: List[Dict[str, Any]], bounding_box: List[float]) -> List[Dict[str, Any]]:
+        x0, y0, x1, y1 = bounding_box
+        matching_equations = []
+        for equation in equations:
+            equation_box = equation.get("bounding_box", [])
+            if len(equation_box) != 4:
+                continue
+            ex0, ey0, ex1, ey1 = equation_box
+            if max(x0, ex0) <= min(x1, ex1) and max(y0, ey0) <= min(y1, ey1):
+                matching_equations.append(equation)
+        return matching_equations
 
     def _index_chunks(self, chunks: List[DocumentChunk]) -> None:
         searchable_chunks = [chunk for chunk in chunks if chunk.to_text_for_search()]
@@ -265,6 +282,13 @@ class RAGService:
             return
         embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in searchable_chunks])
         self.retriever.add_chunks(searchable_chunks, embeddings)
+
+    @staticmethod
+    def _content_counts(chunks: List[DocumentChunk]) -> Dict[str, int]:
+        counts: Dict[str, int] = defaultdict(int)
+        for chunk in chunks:
+            counts[chunk.type] += 1
+        return dict(counts)
 
     def _document_for_filename(self, filename: str) -> Dict[str, Any] | None:
         return next((document for document in self.documents if document["filename"] == filename), None)
@@ -359,6 +383,7 @@ class RAGService:
                     {
                         "pages": max((int(chunk.metadata.get("page", 0)) for chunk in chunks), default=0),
                         "chunks": len(chunks),
+                        "content_counts": self._content_counts(chunks),
                     }
                 )
                 job.update(status="indexed", progress=100, message="Indexed.")
@@ -409,6 +434,7 @@ class RAGService:
                         "progress": job.progress,
                         "message": job.message,
                         "job_id": job.job_id,
+                        "content_counts": {},
                     }
                 )
             self._persist_documents()
@@ -616,13 +642,13 @@ class RAGService:
             evidence = []
             # Reranker.rerank returns ``((passage, RetrievalResult), score)``.
             # Unpack the candidate before reading its associated result.
-            seen_pages = set()
+            seen_evidence_types = set()
             for candidate, rerank_score in reranked:
                 _, item = candidate
-                page_key = (item.source, item.metadata.get("page", 1))
-                if page_key in seen_pages:
+                evidence_key = (item.source, item.metadata.get("page", 1), item.type)
+                if evidence_key in seen_evidence_types:
                     continue
-                seen_pages.add(page_key)
+                seen_evidence_types.add(evidence_key)
                 evidence.append(
                     {
                         "chunk_id": item.chunk_id,
@@ -634,6 +660,9 @@ class RAGService:
                         "figure_caption": item.figure_caption,
                         "section": item.section,
                         "equations": item.equations,
+                        "type": item.type,
+                        "bounding_box": item.metadata.get("bounding_box"),
+                        "quality_flags": item.metadata.get("quality_flags", []),
                     }
                 )
             best_score = float(reranked[0][1])
@@ -653,11 +682,19 @@ class RAGService:
                     bullets = "\n".join(f"- {sentence}" for sentence in summary_sentences)
                     answer = f"Evidence-based summary:\n{bullets}\n\nSources: {citations}"
                 else:
-                    answer = (
-                        "Relevant pages were found, but the PDF's equation text could not be extracted reliably. "
-                        "Open the cited PDF pages to view the original mathematical notation."
-                        f"\n\nSources: {citations}"
-                    )
+                    evidence_types = {item["type"] for item in answer_evidence}
+                    if evidence_types.intersection({"table", "figure"}):
+                        answer = (
+                            "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. "
+                            "Open the cited source regions to review the original content."
+                            f"\n\nSources: {citations}"
+                        )
+                    else:
+                        answer = (
+                            "Relevant pages were found, but the PDF's equation text could not be extracted reliably. "
+                            "Open the cited PDF pages to view the original mathematical notation."
+                            f"\n\nSources: {citations}"
+                        )
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
         with self.storage_lock:
@@ -775,6 +812,36 @@ def get_document_file(filename: str) -> FileResponse:
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{safe_filename}"'},
     )
+
+
+@app.get("/documents/{filename}/page-preview")
+def get_document_region_preview(
+    filename: str,
+    page: int,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+) -> Response:
+    """Render the cited page region as an image for in-app source verification."""
+    safe_filename = Path(filename).name
+    if filename != safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid document filename.")
+    bounding_box = [x0, y0, x1, y1]
+    if not all(math.isfinite(value) for value in bounding_box) or x1 <= x0 or y1 <= y0:
+        raise HTTPException(status_code=400, detail="Invalid cited region.")
+
+    document_path = settings.uploads_dir / safe_filename
+    if not document_path.is_file():
+        raise HTTPException(status_code=404, detail="The original PDF is not available.")
+    try:
+        image = render_pdf_region(document_path, page, bounding_box)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - malformed external PDF
+        logger.exception("Could not render source preview for %s", safe_filename)
+        raise HTTPException(status_code=422, detail="Could not render the cited PDF region.") from exc
+    return Response(content=image, media_type="image/png")
 
 
 @app.delete("/documents/{filename}", response_model=DeleteDocumentResponse)

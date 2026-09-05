@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pymupdf
 import pytest
 from threading import RLock
 
@@ -32,9 +33,6 @@ class FakeService:
             "session_id": request.session_id,
             "history": [request.query],
         }
-
-    def list_documents(self):
-        return [{"filename": "notes.pdf", "pages": 1, "chunks": 2}]
 
     def delete_document(self, filename):
         return {"deleted": filename, "documents": []}
@@ -126,6 +124,7 @@ def test_documents_endpoint_returns_persisted_documents(tmp_path, monkeypatch):
             "status": "indexed",
             "progress": 100,
             "message": "Indexed.",
+            "content_counts": {},
         }
     ]
 
@@ -166,6 +165,25 @@ def test_document_file_endpoint_rejects_missing_pdf(monkeypatch, tmp_path):
     response = TestClient(api.app).get("/documents/missing.pdf/file")
 
     assert response.status_code == 404
+
+
+def test_document_preview_endpoint_renders_a_cited_region(monkeypatch, tmp_path):
+    uploads_dir = tmp_path / "uploads"
+    uploads_dir.mkdir()
+    document = pymupdf.open()
+    document.new_page().insert_text((72, 72), "Cited evidence")
+    document.save(uploads_dir / "notes.pdf")
+    document.close()
+    monkeypatch.setattr(api.settings, "uploads_dir", uploads_dir)
+
+    response = TestClient(api.app).get(
+        "/documents/notes.pdf/page-preview",
+        params={"page": 1, "x0": 50, "y0": 50, "x1": 240, "y1": 120},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content.startswith(b"\x89PNG")
 
 
 def test_upload_endpoint_rejects_too_many_files(monkeypatch):

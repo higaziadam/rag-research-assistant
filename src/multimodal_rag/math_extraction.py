@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PageMathExtraction:
-    text: str
     equations: list[dict[str, Any]]
 
 
@@ -51,7 +50,6 @@ class LocalMathExtractor:
             document.close()
 
     def _extract_page(self, page: pymupdf.Page) -> PageMathExtraction:
-        page_text = page.get_text("text", sort=True).strip()
         equations = []
         for block in page.get_text("blocks", sort=True):
             x0, y0, x1, y1, text, *_ = block
@@ -62,7 +60,7 @@ class LocalMathExtractor:
             equations.append(self._transcribe_or_flag(page, rectangle))
             if len(equations) >= self.max_equations_per_page:
                 break
-        return PageMathExtraction(text=page_text, equations=equations)
+        return PageMathExtraction(equations=equations)
 
     def _looks_like_equation(self, text: str, rectangle: pymupdf.Rect, page_width: float) -> bool:
         if len(text) < 3 or len(text) > 500:
