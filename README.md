@@ -120,6 +120,8 @@ The model never downloads during an upload. Retrieval and reranking also use loc
 
 Review the printed hashes before trusting the files. Set `MATH_OCR_ENABLED=true` (the default), restart the backend, then check `http://localhost:8000/math/status`. When OCR is unavailable or its transcription cannot be validated, the interface renders the original equation crop from the cited PDF rather than inventing notation.
 
+OCR is capped at 50 equation regions per document by default to keep large textbooks responsive. Remaining detected equations still appear as exact PDF crops; change `max_ocr_equations_per_document` in `config.py` only when the extra processing time is acceptable.
+
 ## Notes
 
 This README is intentionally focused on the project as it exists now. The project is a working prototype for a research assistant, and the goal is to continue improving the backend, retrieval quality, and deployment reliability.

@@ -36,6 +36,7 @@ class Settings:
         )
     )
     max_equations_per_page: int = 4
+    max_ocr_equations_per_document: int = 50
     text_chunk_characters: int = 650
     text_chunk_overlap_characters: int = 120
     max_table_characters: int = 8_000

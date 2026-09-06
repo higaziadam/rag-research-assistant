@@ -88,6 +88,81 @@ def test_summary_sentences_skip_formula_corrupted_pdf_text():
     assert summaries == ["The procedure for defining arc length is similar to the procedure used for defining area and volume."]
 
 
+def test_summary_sentences_skip_multiline_untrusted_math():
+    evidence = [
+        {
+            "text": (
+                "The formula is shown below:\n"
+                "s(t) = ∫\n"
+                "a\n"
+                "b\n"
+                "f(u) du."
+            )
+        }
+    ]
+
+    summaries = RAGService._extract_summary_sentences("What is the arc length formula?", evidence, max_sentence_characters=500)
+
+    assert summaries == []
+
+
+def test_grounded_answer_synthesis_uses_claim_level_citations_and_source_math():
+    evidence = [
+        {
+            "source": "calculus.pdf",
+            "page": 106,
+            "text": "The arc length of a parametric curve can be calculated by using the formula s = ∫.",
+            "equations": [{"bounding_box": [72, 72, 300, 140]}],
+        },
+        {
+            "source": "calculus.pdf",
+            "page": 293,
+            "text": "A vector-valued function can define a curve whose arc length is evaluated over the parameter interval.",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer("What is the equation for arc length?", evidence)
+
+    assert "The arc length of a parametric curve can be calculated by using the formula. [calculus.pdf, p. 106]" in answer
+    assert "**Supporting context**" in answer
+    assert "**Mathematical notation**" in answer
+
+
+def test_grounded_answer_synthesis_prefers_a_definition_over_a_related_topic():
+    evidence = [
+        {
+            "source": "calculus.pdf",
+            "page": 295,
+            "text": "An important topic related to arc length is curvature.",
+            "equations": [],
+        },
+        {
+            "source": "calculus.pdf",
+            "page": 293,
+            "text": (
+                "We now have a formula for the arc length of a curve defined by a vector-valued function. "
+                "If a vector-valued function represents the position of a particle in space as a function of time, "
+                "then the arc-length function measures how far that particle travels as a function of time."
+            ),
+            "equations": [{"bounding_box": [72, 72, 300, 140]}],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer("Tell me about arc length", evidence)
+
+    direct_answer = answer.split("**Supporting context**", 1)[0]
+    assert "measures how far that particle travels" in direct_answer
+    assert "curvature" not in direct_answer
+
+
+def test_overview_search_query_requests_foundational_evidence():
+    search_query = RAGService._overview_search_query("Tell me about arc length")
+
+    assert search_query.startswith("Tell me about arc length")
+    assert "introductory definition" in search_query
+
+
 def test_readable_prose_allows_ordinary_numbers():
     sentence = "For a radius of 3, the arc length is 6.28 units along the circle."
 
@@ -148,8 +223,33 @@ def test_local_math_extractor_groups_positioned_formula_fragments(tmp_path):
     assert y0 <= 250 < y1
 
 
+def test_local_math_ocr_uses_a_bounded_document_budget(tmp_path, monkeypatch):
+    document = pymupdf.open()
+    page = document.new_page()
+    page.insert_text((200, 200), "x = 2")
+    page.insert_text((200, 300), "y = 3")
+    pdf_bytes = document.tobytes()
+    document.close()
+    extractor = LocalMathExtractor(
+        enabled=True,
+        checkpoint_path=tmp_path / "weights.pth",
+        max_ocr_equations_per_document=1,
+    )
+    transcriptions = []
+    monkeypatch.setattr(extractor, "_get_model", lambda: object())
+    monkeypatch.setattr(extractor, "_crop_equation", lambda page, rectangle: object())
+    monkeypatch.setattr(extractor, "_transcribe", lambda model, image: transcriptions.append(image) or "x = 2")
+
+    equations = extractor.extract_pages(pdf_bytes)[0].equations
+
+    assert len(equations) == 2
+    assert len(transcriptions) == 1
+    assert equations[0]["status"] == "needs_verification"
+    assert equations[1]["status"] == "source_only"
+
+
 def test_equations_attach_to_the_preceding_explanation():
-    equations = [{"bounding_box": [100, 130, 300, 180]}]
+    equations = [{"bounding_box": [520, 130, 700, 180]}]
 
     attached = RAGService._equations_for_element(equations, [72, 100, 500, 125])
 
@@ -287,7 +387,7 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
     response = service.query(QueryRequest(query="What is organic chemistry?", session_id="test"))
 
     assert "Organic chemistry studies carbon-containing compounds." in response["answer"]
-    assert "Earlier conversation context." in service.embedding_store.last_query
+    assert service.embedding_store.last_query == "What is organic chemistry?"
     assert service.retriever.top_k >= 30
     assert response["retrieval_scores"] == [0.9]
     assert response["sources"] == [
@@ -306,3 +406,10 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
             "quality_flags": [],
         }
     ]
+
+
+def test_follow_up_queries_include_recent_history_for_retrieval():
+    prepared = RAGService._prepare_query("What about that formula?", ["Explain the arc-length formula."])
+
+    assert "Previous questions: Explain the arc-length formula." in prepared
+    assert prepared.endswith("Follow-up question: What about that formula?")

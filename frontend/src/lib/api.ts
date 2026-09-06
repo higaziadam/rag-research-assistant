@@ -13,7 +13,8 @@ export type Source = {
   text: string;
   table?: string;
   figure_caption?: string;
-  type: "text" | "table" | "figure" | "equation";
+  // Older persisted API responses may not include this field.
+  type?: "text" | "table" | "figure" | "equation";
   bounding_box?: number[];
   quality_flags?: string[];
   equations?: Equation[];

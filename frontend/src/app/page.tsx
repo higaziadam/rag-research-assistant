@@ -40,11 +40,16 @@ function equationPreviewUrl(source: Source, equation: Equation) {
 }
 
 function sourceLabel(source: Source) {
-  return source.type.charAt(0).toUpperCase() + source.type.slice(1);
+  const type = source.type ?? "text";
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function sourceContent(source: Source) {
   return source.type === "table" ? source.table || source.text : source.figure_caption || source.text;
+}
+
+function containsUnverifiedMath(content: string) {
+  return /[∫∑√≤≥≈≠±×÷⎛⎝⎞⎠〈〉‖]/.test(content) || (content.split("\n").length >= 3 && /[=+*/^]/.test(content));
 }
 
 function documentContentSummary(document: DocumentInfo) {
@@ -81,10 +86,8 @@ function getOrCreateSessionId() {
 
 function FormattedContent({ content, className = "" }: { content: string; className?: string }) {
   return (
-    <div className={`math-content ${className}`}>
+    <div className={className}>
       <ReactMarkdown
-        remarkPlugins={[remarkMath]}
-        rehypePlugins={[rehypeKatex]}
         components={{
           p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
           ul: ({ children }) => <ul className="mb-3 list-disc space-y-2 pl-5 last:mb-0">{children}</ul>,
@@ -98,6 +101,14 @@ function FormattedContent({ content, className = "" }: { content: string; classN
   );
 }
 
+function VerifiedMathContent({ latex, className = "" }: { latex: string; className?: string }) {
+  return (
+    <div className={`math-content ${className}`}>
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`$$\n${latex}\n$$`}</ReactMarkdown>
+    </div>
+  );
+}
+
 function EquationTranscription({ equation }: { equation: Equation }) {
   if (!equation.latex) {
     return <p className="text-xs text-amber-300">Equation detected. Open the cited PDF page to verify the original notation.</p>;
@@ -106,7 +117,7 @@ function EquationTranscription({ equation }: { equation: Equation }) {
   return (
     <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-3">
       <p className="mb-2 text-xs font-medium text-amber-300">Local OCR transcription — verify against the cited PDF page</p>
-      <FormattedContent content={`$$\n${equation.latex}\n$$`} className="overflow-x-auto text-slate-100" />
+      <VerifiedMathContent latex={equation.latex} className="overflow-x-auto text-slate-100" />
     </div>
   );
 }
@@ -134,7 +145,7 @@ function AnswerMathEvidence({ sources }: { sources: Source[] }) {
         {uniqueEquations.map(({ equation, key, previewUrl, source }) => (
           <div key={key} className="rounded-lg border border-amber-500/30 bg-slate-900/60 p-3">
             {equation.latex ? (
-              <FormattedContent content={`$$\n${equation.latex}\n$$`} className="overflow-x-auto text-slate-100" />
+              <VerifiedMathContent latex={equation.latex} className="overflow-x-auto text-slate-100" />
             ) : previewUrl ? (
               <a href={previewUrl} target="_blank" rel="noreferrer" className="block overflow-x-auto rounded bg-white p-2">
                 {/* This is an authenticated/dynamic API crop, not a static Next.js image asset. */}
@@ -244,6 +255,7 @@ export default function Home() {
       const response = await fetch(`${apiBaseUrl}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({ query, top_k: 5, session_id: getOrCreateSessionId() }),
       });
       const data = await readJson<QueryResponse>(response);
@@ -456,6 +468,10 @@ export default function Home() {
                         <pre className="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
                           {sourceContent(source)}
                         </pre>
+                      ) : containsUnverifiedMath(sourceContent(source)) ? (
+                        <p className="mt-2 text-sm text-amber-200">
+                          This passage contains unverified extracted notation. Preview the cited PDF page to review the original equation.
+                        </p>
                       ) : (
                         <FormattedContent
                           content={`${sourceContent(source).slice(0, 280)}${sourceContent(source).length > 280 ? "..." : ""}`}
@@ -469,6 +485,10 @@ export default function Home() {
                             <pre className="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
                               {sourceContent(source)}
                             </pre>
+                          ) : containsUnverifiedMath(sourceContent(source)) ? (
+                            <p className="mt-2 text-sm text-amber-200">
+                              Unverified mathematical notation is hidden here. Preview the cited PDF page to review the source.
+                            </p>
                           ) : (
                             <FormattedContent content={sourceContent(source)} className="mt-2" />
                           )}

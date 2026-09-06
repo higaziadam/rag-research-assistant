@@ -48,6 +48,10 @@ class StructuredPdfExtractor:
     def extract_pages(self, file_bytes: bytes, equation_extractor: Any | None = None) -> list[ExtractedPage]:
         document = pymupdf.open(stream=file_bytes, filetype="pdf")
         try:
+            if equation_extractor is not None:
+                start_document = getattr(equation_extractor, "start_document", None)
+                if start_document is not None:
+                    start_document()
             extracted_pages = []
             for page_number, page in enumerate(document, start=1):
                 equations = equation_extractor.extract_page(page).equations if equation_extractor else []

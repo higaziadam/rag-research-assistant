@@ -46,6 +46,7 @@ class RAGService:
             enabled=settings.math_ocr_enabled,
             checkpoint_path=settings.math_ocr_checkpoint,
             max_equations_per_page=settings.max_equations_per_page,
+            max_ocr_equations_per_document=settings.max_ocr_equations_per_document,
         )
         self.pdf_extractor = StructuredPdfExtractor(max_table_characters=settings.max_table_characters)
         self.documents: List[Dict[str, Any]] = []
@@ -293,17 +294,30 @@ class RAGService:
                 continue
             ex0, ey0, ex1, ey1 = equation_box
             overlaps = max(x0, ex0) <= min(x1, ex1) and max(y0, ey0) <= min(y1, ey1)
-            follows_explanation = 0 <= ey0 - y1 <= 56 and max(x0, ex0) <= min(x1, ex1)
+            # Display equations are often centered or indented, so their
+            # horizontal bounds need not overlap the preceding paragraph.
+            follows_explanation = 0 <= ey0 - y1 <= 72
             if overlaps or follows_explanation:
                 matching_equations.append(equation)
         return matching_equations
 
     def _index_chunks(self, chunks: List[DocumentChunk]) -> None:
-        searchable_chunks = [chunk for chunk in chunks if chunk.to_text_for_search()]
+        searchable_chunks, embeddings = self._embed_chunks(chunks)
         if not searchable_chunks:
             return
-        embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in searchable_chunks])
         self.retriever.add_chunks(searchable_chunks, embeddings)
+
+    def _embed_chunks(self, chunks: List[DocumentChunk]) -> tuple[List[DocumentChunk], Any]:
+        """Create embeddings without holding the storage lock.
+
+        Embedding a large textbook can take minutes on CPU. Keeping it outside
+        the lock allows new uploads and document-status requests to proceed.
+        """
+        searchable_chunks = [chunk for chunk in chunks if chunk.to_text_for_search()]
+        if not searchable_chunks:
+            return [], None
+        embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in searchable_chunks])
+        return searchable_chunks, embeddings
 
     @staticmethod
     def _content_counts(chunks: List[DocumentChunk]) -> Dict[str, int]:
@@ -396,7 +410,16 @@ class RAGService:
             with self.storage_lock:
                 if not self._update_job(job_id, "embedding", 65, "Creating embeddings and updating the search index."):
                     return
-                self._index_chunks(chunks)
+
+            searchable_chunks, embeddings = self._embed_chunks(chunks)
+            if not searchable_chunks:
+                raise ValueError("No searchable text, table, figure, or equation evidence was found.")
+
+            with self.storage_lock:
+                job = self.jobs.get(job_id)
+                if job is None or job.status == "cancelled":
+                    return
+                self.retriever.add_chunks(searchable_chunks, embeddings)
                 job = self.jobs[job_id]
                 document = self._document_for_filename(filename)
                 if document is None or job.status == "cancelled":
@@ -583,10 +606,13 @@ class RAGService:
         self._schedule_job(job.job_id)
         return job.to_dict()
 
-    def _prepare_query(self, query: str, history: List[str]) -> str:
-        prior = " ".join(history[-4:])
-        if prior:
-            return f"Context: {prior} \nQuestion: {query}"
+    @staticmethod
+    def _prepare_query(query: str, history: List[str]) -> str:
+        """Use history only for a clear follow-up, not every independent question."""
+        follow_up_terms = r"\b(?:it|they|them|that|those|this|these|former|latter|previous|above|same)\b"
+        if history and re.search(follow_up_terms, query, re.IGNORECASE):
+            prior = " ".join(history[-2:])
+            return f"Previous questions: {prior}\nFollow-up question: {query}"
         return query
 
     @staticmethod
@@ -604,6 +630,12 @@ class RAGService:
     @staticmethod
     def _is_readable_prose(sentence: str) -> bool:
         """Reject PDF extraction fragments that are dominated by broken equation tokens."""
+        untrusted_math_glyphs = "∫∑√≤≥≈≠±×÷⎛⎝⎞⎠〈〉‖"
+        if any(glyph in sentence for glyph in untrusted_math_glyphs):
+            return False
+        if sentence.count("\n") >= 2 and re.search(r"[=+*/^]", sentence):
+            return False
+
         tokens = sentence.split()
         if len(tokens) < 5:
             return False
@@ -657,12 +689,158 @@ class RAGService:
             summaries.append(sentence)
         return summaries
 
+    @staticmethod
+    def _citation_label(item: Dict[str, Any]) -> str:
+        return f"[{item['source']}, p. {item['page']}]"
+
+    @staticmethod
+    def _clean_claim(text: str) -> str:
+        """Keep readable prose while removing a following untrusted formula."""
+        normalized = re.sub(r"\s+", " ", text).strip().lstrip("• ")
+        math_start = re.search(r"[∫∑√≤≥≈≠±×÷⎛⎝⎞⎠〈〉‖]", normalized)
+        if math_start:
+            normalized = normalized[: math_start.start()].strip()
+        normalized = re.sub(r"\b(?:[A-Za-z][\w']*|[A-Za-z][\w']*\([^)]*\))\s*=\s*$", "", normalized).strip()
+        first_sentence = re.split(r"(?<=[.!?])\s+", normalized)[0].strip()
+        if first_sentence and first_sentence[0].islower():
+            first_sentence = first_sentence[0].upper() + first_sentence[1:]
+        if first_sentence and first_sentence[-1].isalnum():
+            first_sentence += "."
+        return first_sentence
+
+    @staticmethod
+    def _is_useful_claim(claim: str) -> bool:
+        if len(re.findall(r"[A-Za-z]{2,}", claim)) < 5:
+            return False
+        filler_prefixes = (
+            "then ",
+            "let's ",
+            "at this point",
+            "in particular",
+            "the fundamental theorem",
+            "we now have",
+            "an important topic related to",
+            "which is the formula",
+            "according to the",
+        )
+        return not claim.lower().startswith(filler_prefixes)
+
+    @staticmethod
+    def _is_overview_question(query: str) -> bool:
+        """Identify questions that ask for a topic-level explanation.
+
+        These questions should prefer definitions and core descriptions over
+        related concepts, exercises, or isolated examples.
+        """
+        normalized = re.sub(r"\s+", " ", query.lower()).strip(" ?.")
+        return normalized.startswith((
+            "tell me about ",
+            "give me an overview of ",
+            "give an overview of ",
+            "explain ",
+        ))
+
+    @classmethod
+    def _overview_search_query(cls, query: str) -> str:
+        """Add retrieval intent for broad explanations without changing the user's question."""
+        if not cls._is_overview_question(query):
+            return query
+        return f"{query}\nPrioritize an introductory definition, core idea, and main formula."
+
+    @classmethod
+    def _extract_claims(cls, text: str) -> List[str]:
+        """Return readable sentences from an extracted passage.
+
+        PDF chunks often begin with a heading or transition, while the useful
+        explanation appears in a later sentence.  Treating every sentence as a
+        candidate keeps synthesis grounded without losing that explanation.
+        """
+        normalized = re.sub(r"\s+", " ", text).strip()
+        math_start = re.search(r"[âˆ«âˆ‘âˆšâ‰¤â‰¥â‰ˆâ‰ Â±Ã—Ã·âŽ›âŽâŽžâŽ âŒ©âŒªâ€–]", normalized)
+        if math_start:
+            normalized = normalized[: math_start.start()].strip()
+
+        claims = []
+        for sentence in re.split(r"(?<=[.!?])\s+", normalized):
+            claim = cls._clean_claim(sentence)
+            if claim:
+                claims.append(claim)
+        return claims
+
+    @classmethod
+    def _build_grounded_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str:
+        """Create a compact, citation-per-claim answer without generating new facts."""
+        stop_terms = {"about", "answer", "equation", "find", "formula", "give", "how", "is", "of", "the", "to", "what"}
+        query_terms = {term for term in re.findall(r"[a-zA-Z]{3,}", query.lower()) if term not in stop_terms}
+        is_overview_question = cls._is_overview_question(query)
+        has_math_evidence = any(item.get("equations") for item in evidence)
+        candidates: list[tuple[int, int, int, str, Dict[str, Any]]] = []
+        seen_claims = set()
+
+        for evidence_index, item in enumerate(evidence):
+            for sentence_index, claim in enumerate(cls._extract_claims(item["text"])):
+                normalized_claim = re.sub(r"\W+", " ", claim.lower()).strip()
+                if not cls._is_useful_claim(claim) or normalized_claim in seen_claims:
+                    continue
+                seen_claims.add(normalized_claim)
+                claim_terms = set(re.findall(r"[a-zA-Z]{3,}", claim.lower()))
+                relevance = len(query_terms.intersection(claim_terms))
+                if has_math_evidence and re.search(r"\b(?:arc length|equation|formula|integral|curve)\b", claim, re.IGNORECASE):
+                    relevance += 2
+                if has_math_evidence and "formula" in claim.lower() and "curve" in claim.lower():
+                    relevance += 1
+                if is_overview_question:
+                    if re.search(r"\b(?:measures|is defined)\b", claim, re.IGNORECASE):
+                        relevance += 4
+                    elif re.search(r"\bcalculated\b", claim, re.IGNORECASE):
+                        relevance += 3
+                    elif "formula" in claim.lower() or "is given by" in claim.lower():
+                        relevance += 1
+                    if re.search(r"\b(?:find|example|exercise|problem)\b", claim, re.IGNORECASE):
+                        relevance -= 2
+                candidates.append((relevance, -evidence_index, -sentence_index, claim, item))
+
+        if not candidates:
+            citations = cls._format_citations(evidence)
+            return (
+                "Relevant evidence was found, but its text cannot be summarized safely. "
+                "Review the cited source regions and original notation below."
+                f"\n\nSources: {citations}"
+            )
+
+        candidates.sort(key=lambda candidate: (candidate[0], candidate[1], candidate[2]), reverse=True)
+        direct_claim = candidates[0]
+        answer_lines = ["**Answer**", "", f"{direct_claim[3]} {cls._citation_label(direct_claim[4])}"]
+
+        supporting_claims = []
+        used_pages = {(direct_claim[4]["source"], direct_claim[4]["page"])}
+        for _, _, _, claim, item in candidates[1:]:
+            page_key = (item["source"], item["page"])
+            if page_key in used_pages:
+                continue
+            supporting_claims.append(f"- {claim} {cls._citation_label(item)}")
+            used_pages.add(page_key)
+            if len(supporting_claims) == 2:
+                break
+        if supporting_claims:
+            answer_lines.extend(["", "**Supporting context**", *supporting_claims])
+        if has_math_evidence:
+            answer_lines.extend(
+                [
+                    "",
+                    "**Mathematical notation**",
+                    "The original notation is rendered below from the cited PDF for verification.",
+                ]
+            )
+        return "\n".join(answer_lines)
+
     def query(self, request: QueryRequest) -> Dict[str, Any]:
         start = time.perf_counter()
         with self.storage_lock:
             saved_history = self.session_history.get(request.session_id, [])
             conversation_history = request.history or saved_history
             search_query = self._prepare_query(request.query, conversation_history)
+            search_query = self._overview_search_query(search_query)
         query_embedding = self.embedding_store.encode_single(search_query)
         with self.storage_lock:
             initial_hits = self.retriever.retrieve(
@@ -685,13 +863,26 @@ class RAGService:
             evidence = []
             # Reranker.rerank returns ``((passage, RetrievalResult), score)``.
             # Unpack the candidate before reading its associated result.
-            seen_evidence_types = set()
+            evidence_by_page_and_type: Dict[tuple[str, int, str], Dict[str, Any]] = {}
             for candidate, rerank_score in reranked:
                 _, item = candidate
                 evidence_key = (item.source, item.metadata.get("page", 1), item.type)
-                if evidence_key in seen_evidence_types:
+                existing_evidence = evidence_by_page_and_type.get(evidence_key)
+                if existing_evidence is not None:
+                    # A page can contain a heading in one chunk and its actual
+                    # explanation in the next. Preserve both for synthesis,
+                    # while still exposing one source card per page and type.
+                    for field in ("text", "table", "figure_caption"):
+                        content = getattr(item, field)
+                        if content and content not in existing_evidence[field]:
+                            existing_evidence[field] = f"{existing_evidence[field]} {content}".strip()
+                    for equation in item.equations:
+                        if equation not in existing_evidence["equations"]:
+                            existing_evidence["equations"].append(equation)
+                    existing_evidence["score"] = max(existing_evidence["score"], round(float(rerank_score), 4))
                     continue
-                seen_evidence_types.add(evidence_key)
+                if len(evidence) >= request.top_k:
+                    continue
                 evidence.append(
                     {
                         "chunk_id": item.chunk_id,
@@ -708,8 +899,7 @@ class RAGService:
                         "quality_flags": item.metadata.get("quality_flags", []),
                     }
                 )
-                if len(evidence) >= request.top_k:
-                    break
+                evidence_by_page_and_type[evidence_key] = evidence[-1]
             best_score = float(reranked[0][1])
             confidence = min(1.0, max(0.0, (best_score + 0.5) / 1.5))
             unsupported = confidence < 0.45
@@ -717,29 +907,16 @@ class RAGService:
                 answer = "Unsupported answer: the retrieved evidence is too weak to support a confident response."
             else:
                 answer_evidence = evidence[:settings.max_answer_sentences]
-                summary_sentences = self._extract_summary_sentences(
-                    request.query,
-                    answer_evidence,
-                    settings.max_answer_sentence_characters,
-                )
                 citations = self._format_citations(answer_evidence)
-                if summary_sentences:
-                    bullets = "\n".join(f"- {sentence}" for sentence in summary_sentences)
-                    answer = f"Evidence-based summary:\n{bullets}\n\nSources: {citations}"
+                evidence_types = {item["type"] for item in answer_evidence}
+                if evidence_types.issubset({"table", "figure"}):
+                    answer = (
+                        "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. "
+                        "Open the cited source regions to review the original content."
+                        f"\n\nSources: {citations}"
+                    )
                 else:
-                    evidence_types = {item["type"] for item in answer_evidence}
-                    if evidence_types.intersection({"table", "figure"}):
-                        answer = (
-                            "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. "
-                            "Open the cited source regions to review the original content."
-                            f"\n\nSources: {citations}"
-                        )
-                    else:
-                        answer = (
-                            "Relevant pages were found, but the PDF's equation text could not be extracted reliably. "
-                            "Open the cited PDF pages to view the original mathematical notation."
-                            f"\n\nSources: {citations}"
-                        )
+                    answer = self._build_grounded_answer(request.query, answer_evidence)
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
         with self.storage_lock:

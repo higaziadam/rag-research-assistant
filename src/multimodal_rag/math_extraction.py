@@ -35,19 +35,27 @@ class LocalMathExtractor:
         enabled: bool,
         checkpoint_path: Path,
         max_equations_per_page: int = 4,
+        max_ocr_equations_per_document: int = 50,
     ):
         self.enabled = enabled
         self.checkpoint_path = checkpoint_path
         self.max_equations_per_page = max_equations_per_page
+        self.max_ocr_equations_per_document = max_ocr_equations_per_document
+        self._remaining_ocr_equations = max_ocr_equations_per_document
         self._model: Any | None = None
         self._model_unavailable = False
 
     def extract_pages(self, file_bytes: bytes) -> list[PageMathExtraction]:
         document = pymupdf.open(stream=file_bytes, filetype="pdf")
         try:
+            self.start_document()
             return [self.extract_page(page) for page in document]
         finally:
             document.close()
+
+    def start_document(self) -> None:
+        """Reset the bounded OCR budget before extracting one PDF."""
+        self._remaining_ocr_equations = self.max_ocr_equations_per_document
 
     def extract_page(self, page: pymupdf.Page) -> PageMathExtraction:
         """Extract equation metadata from an already-open page."""
@@ -147,14 +155,12 @@ class LocalMathExtractor:
         return has_math_symbols or has_variable_equation or is_compact_numeric_line
 
     def _transcribe_or_flag(self, page: pymupdf.Page, rectangle: pymupdf.Rect) -> dict[str, Any]:
+        if self._remaining_ocr_equations <= 0:
+            return self._source_only_equation(rectangle)
         model = self._get_model()
         if model is None:
-            return {
-                "latex": "",
-                "status": "source_only",
-                "confidence": 0.0,
-                "bounding_box": [round(value, 2) for value in rectangle],
-            }
+            return self._source_only_equation(rectangle)
+        self._remaining_ocr_equations -= 1
         cropped_image = self._crop_equation(page, rectangle)
         latex = self._transcribe(model, cropped_image)
         if latex and self._is_valid_latex(latex):
@@ -164,6 +170,10 @@ class LocalMathExtractor:
                 "confidence": 0.5,
                 "bounding_box": [round(value, 2) for value in rectangle],
             }
+        return self._source_only_equation(rectangle)
+
+    @staticmethod
+    def _source_only_equation(rectangle: pymupdf.Rect) -> dict[str, Any]:
         return {
             "latex": "",
             "status": "source_only",
