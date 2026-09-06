@@ -131,6 +131,31 @@ def test_local_math_extractor_skips_image_rendering_without_ocr_weights(tmp_path
     assert pages[0].equations[0]["status"] == "source_only"
 
 
+def test_local_math_extractor_groups_positioned_formula_fragments(tmp_path):
+    document = pymupdf.open()
+    page = document.new_page()
+    page.insert_text((220, 250), "x =")
+    page.insert_text((280, 250), "2")
+    pdf_bytes = document.tobytes()
+    document.close()
+    extractor = LocalMathExtractor(enabled=False, checkpoint_path=tmp_path / "weights.pth")
+
+    equations = extractor.extract_pages(pdf_bytes)[0].equations
+
+    assert len(equations) == 1
+    x0, y0, x1, y1 = equations[0]["bounding_box"]
+    assert x0 <= 220 < x1
+    assert y0 <= 250 < y1
+
+
+def test_equations_attach_to_the_preceding_explanation():
+    equations = [{"bounding_box": [100, 130, 300, 180]}]
+
+    attached = RAGService._equations_for_element(equations, [72, 100, 500, 125])
+
+    assert attached == equations
+
+
 def test_structured_pdf_extraction_preserves_text_layout_and_quality_flags():
     document = pymupdf.open()
     page = document.new_page()
@@ -245,6 +270,7 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
 
     class FakeRetriever:
         def retrieve(self, query_embedding, top_k):
+            self.top_k = top_k
             return [result]
 
     class FakeReranker:
@@ -262,6 +288,7 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
 
     assert "Organic chemistry studies carbon-containing compounds." in response["answer"]
     assert "Earlier conversation context." in service.embedding_store.last_query
+    assert service.retriever.top_k >= 30
     assert response["retrieval_scores"] == [0.9]
     assert response["sources"] == [
         {

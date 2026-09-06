@@ -39,9 +39,9 @@ logger = logging.getLogger(__name__)
 
 class RAGService:
     def __init__(self):
-        self.embedding_store = EmbeddingStore(settings.model_name)
+        self.embedding_store = EmbeddingStore(settings.model_name, local_files_only=settings.model_local_files_only)
         self.retriever = FAISSRetriever(embedding_dim=self.embedding_store.embedding_dimension)
-        self.reranker = Reranker(settings.reranker_model)
+        self.reranker = Reranker(settings.reranker_model, local_files_only=settings.model_local_files_only)
         self.math_extractor = LocalMathExtractor(
             enabled=settings.math_ocr_enabled,
             checkpoint_path=settings.math_ocr_checkpoint,
@@ -256,14 +256,35 @@ class RAGService:
                                 "bounding_box": element.bounding_box,
                                 "quality_flags": element.quality_flags,
                             },
-                            equations=self._equations_in_region(layout_page.equations, element.bounding_box),
+                            equations=self._equations_for_element(layout_page.equations, element.bounding_box),
                             type=element.type,
                         )
                     )
+            for equation_index, equation in enumerate(layout_page.equations):
+                bounding_box = equation.get("bounding_box", [])
+                if len(bounding_box) != 4:
+                    continue
+                latex = str(equation.get("latex", "")).strip()
+                chunks.append(
+                    DocumentChunk(
+                        chunk_id=f"{filename}-{layout_page.page_number}-equation-{equation_index}",
+                        text=(f"Mathematical expression: {latex}" if latex else "Mathematical expression in the cited PDF."),
+                        source=filename,
+                        metadata={
+                            "page": layout_page.page_number,
+                            "document_type": "pdf",
+                            "bounding_box": bounding_box,
+                            "quality_flags": ["verify_original_math_notation"],
+                        },
+                        equations=[equation],
+                        type="equation",
+                    )
+                )
         return chunks
 
     @staticmethod
-    def _equations_in_region(equations: List[Dict[str, Any]], bounding_box: List[float]) -> List[Dict[str, Any]]:
+    def _equations_for_element(equations: List[Dict[str, Any]], bounding_box: List[float]) -> List[Dict[str, Any]]:
+        """Attach overlapping or immediately-following equations to explanatory prose."""
         x0, y0, x1, y1 = bounding_box
         matching_equations = []
         for equation in equations:
@@ -271,7 +292,9 @@ class RAGService:
             if len(equation_box) != 4:
                 continue
             ex0, ey0, ex1, ey1 = equation_box
-            if max(x0, ex0) <= min(x1, ex1) and max(y0, ey0) <= min(y1, ey1):
+            overlaps = max(x0, ex0) <= min(x1, ex1) and max(y0, ey0) <= min(y1, ey1)
+            follows_explanation = 0 <= ey0 - y1 <= 56 and max(x0, ex0) <= min(x1, ex1)
+            if overlaps or follows_explanation:
                 matching_equations.append(equation)
         return matching_equations
 
@@ -603,22 +626,36 @@ class RAGService:
         max_sentence_characters: int,
     ) -> List[str]:
         query_terms = set(re.findall(r"[a-zA-Z]{3,}", query.lower()))
-        sentences = []
-        for item in evidence:
-            candidates = [
+        candidates: list[tuple[int, int, int, str]] = []
+        seen_sentences = set()
+        for evidence_index, item in enumerate(evidence):
+            item_candidates = [
                 sentence.strip()
                 for sentence in re.split(r"(?<=[.!?])\s+", item["text"])
-                if len(sentence.strip()) >= 30 and RAGService._is_readable_prose(sentence.strip())
+                if (
+                    len(sentence.strip()) >= 30
+                    and sentence.strip().endswith((".", "!", "?"))
+                    and RAGService._is_readable_prose(sentence.strip())
+                )
             ]
-            if not candidates:
-                continue
-            best = max(candidates, key=lambda sentence: len(query_terms.intersection(re.findall(r"[a-zA-Z]{3,}", sentence.lower()))))
-            if len(best) > max_sentence_characters:
-                shortened = best[:max_sentence_characters].rsplit(" ", 1)[0]
-                sentences.append(f"{shortened}...")
-            else:
-                sentences.append(best)
-        return sentences
+            for position, sentence in enumerate(item_candidates):
+                normalized = re.sub(r"\W+", " ", sentence.lower()).strip()
+                if normalized in seen_sentences:
+                    continue
+                seen_sentences.add(normalized)
+                sentence_terms = set(re.findall(r"[a-zA-Z]{3,}", sentence.lower()))
+                relevance = len(query_terms.intersection(sentence_terms))
+                phrase_bonus = int(any(" ".join(query.lower().split()[start : start + 2]) in sentence.lower() for start in range(len(query.split()) - 1)))
+                candidates.append((relevance + phrase_bonus, -evidence_index, -position, sentence))
+
+        summaries = []
+        for _, _, _, sentence in sorted(candidates, key=lambda candidate: candidate[:3], reverse=True):
+            if len(summaries) >= settings.max_answer_sentences:
+                break
+            if len(sentence) > max_sentence_characters:
+                sentence = f"{sentence[:max_sentence_characters].rsplit(' ', 1)[0]}..."
+            summaries.append(sentence)
+        return summaries
 
     def query(self, request: QueryRequest) -> Dict[str, Any]:
         start = time.perf_counter()
@@ -628,9 +665,16 @@ class RAGService:
             search_query = self._prepare_query(request.query, conversation_history)
         query_embedding = self.embedding_store.encode_single(search_query)
         with self.storage_lock:
-            initial_hits = self.retriever.retrieve(query_embedding, top_k=max(request.top_k, 5))
+            initial_hits = self.retriever.retrieve(
+                query_embedding,
+                top_k=max(request.top_k, settings.retrieval_candidate_k),
+            )
         pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in initial_hits]
-        reranked = self.reranker.rerank(search_query, pairs, top_k=request.top_k)
+        reranked = self.reranker.rerank(
+            search_query,
+            pairs,
+            top_k=max(request.top_k, settings.rerank_candidate_k),
+        )
 
         if not reranked:
             evidence = []
@@ -664,6 +708,8 @@ class RAGService:
                         "quality_flags": item.metadata.get("quality_flags", []),
                     }
                 )
+                if len(evidence) >= request.top_k:
+                    break
             best_score = float(reranked[0][1])
             confidence = min(1.0, max(0.0, (best_score + 0.5) / 1.5))
             unsupported = confidence < 0.45

@@ -9,8 +9,8 @@ from sentence_transformers import SentenceTransformer
 class EmbeddingStore:
     """Lightweight wrapper around sentence-transformers for dense retrieval."""
 
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
-        self.model = SentenceTransformer(model_name)
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2", local_files_only: bool = True):
+        self.model = SentenceTransformer(model_name, local_files_only=local_files_only)
 
     @property
     def embedding_dimension(self) -> int:

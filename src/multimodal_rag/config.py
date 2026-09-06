@@ -12,6 +12,7 @@ class Settings:
     results_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "results")
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    model_local_files_only: bool = field(default_factory=lambda: os.getenv("MODEL_LOCAL_FILES_ONLY", "true").lower() == "true")
     faiss_index_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "faiss_index.index")
     metadata_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "metadata.jsonl")
     documents_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "documents.json")
@@ -21,6 +22,8 @@ class Settings:
     max_upload_files: int = 10
     ingestion_worker_count: int = 1
     max_session_history: int = 10
+    retrieval_candidate_k: int = 30
+    rerank_candidate_k: int = 12
     max_answer_sentences: int = 7
     max_answer_sentence_characters: int = 750
     math_ocr_enabled: bool = field(default_factory=lambda: os.getenv("MATH_OCR_ENABLED", "true").lower() == "true")

@@ -24,10 +24,15 @@ def logits_to_scores(logits: torch.Tensor) -> List[float]:
 class Reranker:
     """Cross-encoder reranker for improving top-k retrieval quality."""
 
-    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2", device: str | None = None):
+    def __init__(
+        self,
+        model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        device: str | None = None,
+        local_files_only: bool = True,
+    ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local_files_only)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, local_files_only=local_files_only)
         self.model.to(self.device)
         self.model.eval()
 

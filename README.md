@@ -90,8 +90,9 @@ Open `http://localhost:3000`. For a deployed environment, set `NEXT_PUBLIC_API_B
 - Show persistent queued/extracting/embedding/indexed/failed status and progress
 - Search over indexed document chunks
 - Return ranked sources with page references
-- Label source evidence as text, table, or figure and show extraction-quality notes
+- Label source evidence as text, table, figure, or equation and show extraction-quality notes
 - Preview the exact extracted PDF region beside the cited page
+- Render original equation crops in the answer when verified LaTeX is unavailable
 - Show evaluation metrics such as Recall@5, MRR, and faithfulness
 - Support unsupported answers when evidence is weak
 - Demo UI for research assistant workflows
@@ -111,7 +112,13 @@ This project is functional as a prototype, but it is not yet a production-grade 
 
 Math regions are detected locally with PyMuPDF and are always linked back to their source page. To keep the system accuracy-first, Pix2Tex transcriptions are labelled **verify against the cited PDF** and are never treated as automatically trusted answer content.
 
-The model never downloads during an upload. To enable local transcription, place a trusted Pix2Tex `weights.pth` checkpoint at `artifacts/math_ocr/checkpoints/weights.pth`, or set `MATH_OCR_CHECKPOINT` to its absolute path. Set `MATH_OCR_ENABLED=true` (the default), restart the backend, then check `http://localhost:8000/math/status`.
+The model never downloads during an upload. Retrieval and reranking also use locally cached model files by default (`MODEL_LOCAL_FILES_ONLY=true`). To enable local transcription, place a trusted Pix2Tex `weights.pth` checkpoint at `artifacts/math_ocr/checkpoints/weights.pth`, or set `MATH_OCR_CHECKPOINT` to its absolute path. The repository includes a one-time setup script that downloads the official Pix2Tex release weights and prints their SHA-256 values:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\download_math_ocr_weights.py
+```
+
+Review the printed hashes before trusting the files. Set `MATH_OCR_ENABLED=true` (the default), restart the backend, then check `http://localhost:8000/math/status`. When OCR is unavailable or its transcription cannot be validated, the interface renders the original equation crop from the cited PDF rather than inventing notation.
 
 ## Notes
 

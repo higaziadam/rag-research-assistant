@@ -30,6 +30,15 @@ function sourceRegionPreviewUrl(source: Source) {
   return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/page-preview?${parameters}`;
 }
 
+function equationPreviewUrl(source: Source, equation: Equation) {
+  if (equation.bounding_box.length !== 4) {
+    return null;
+  }
+  const [x0, y0, x1, y1] = equation.bounding_box;
+  const parameters = new URLSearchParams({ page: String(source.page), x0: String(x0), y0: String(y0), x1: String(x1), y1: String(y1) });
+  return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/page-preview?${parameters}`;
+}
+
 function sourceLabel(source: Source) {
   return source.type.charAt(0).toUpperCase() + source.type.slice(1);
 }
@@ -99,6 +108,47 @@ function EquationTranscription({ equation }: { equation: Equation }) {
       <p className="mb-2 text-xs font-medium text-amber-300">Local OCR transcription — verify against the cited PDF page</p>
       <FormattedContent content={`$$\n${equation.latex}\n$$`} className="overflow-x-auto text-slate-100" />
     </div>
+  );
+}
+
+function AnswerMathEvidence({ sources }: { sources: Source[] }) {
+  const equationSources = sources.flatMap((source) =>
+    (source.equations ?? []).map((equation, index) => ({
+      equation,
+      key: `${source.source}-${source.page}-${equation.bounding_box.join("-")}-${index}`,
+      previewUrl: equationPreviewUrl(source, equation),
+      source,
+    })),
+  );
+  const uniqueEquations = equationSources.filter((entry, index, entries) => entries.findIndex((candidate) => candidate.key === entry.key) === index).slice(0, 3);
+
+  if (uniqueEquations.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="mt-5 border-t border-slate-800 pt-4" aria-label="Mathematical evidence">
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300">Original mathematical notation</p>
+      <p className="mt-1 text-xs text-slate-400">Rendered directly from the cited PDF. Verify notation against the source page.</p>
+      <div className="mt-3 grid gap-3">
+        {uniqueEquations.map(({ equation, key, previewUrl, source }) => (
+          <div key={key} className="rounded-lg border border-amber-500/30 bg-slate-900/60 p-3">
+            {equation.latex ? (
+              <FormattedContent content={`$$\n${equation.latex}\n$$`} className="overflow-x-auto text-slate-100" />
+            ) : previewUrl ? (
+              <a href={previewUrl} target="_blank" rel="noreferrer" className="block overflow-x-auto rounded bg-white p-2">
+                {/* This is an authenticated/dynamic API crop, not a static Next.js image asset. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewUrl} alt={`Original equation from ${source.source}, page ${source.page}`} className="mx-auto max-h-44 max-w-full" />
+              </a>
+            ) : (
+              <p className="text-sm text-amber-200">Equation detected. Open the cited PDF page to review it.</p>
+            )}
+            <p className="mt-2 text-xs text-slate-400">{source.source}, page {source.page}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -371,6 +421,7 @@ export default function Home() {
             <div className={`mt-8 rounded-xl border p-4 ${unsupported ? "border-amber-500/40 bg-amber-950/20" : "border-slate-800 bg-slate-950"}`} aria-live="polite">
               <p className="mb-2 text-xs uppercase tracking-[0.25em] text-slate-400">Answer</p>
               <FormattedContent content={answer} className="leading-7 text-slate-200" />
+              <AnswerMathEvidence sources={sources} />
             </div>
           </section>
 

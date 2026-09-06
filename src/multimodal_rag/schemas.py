@@ -65,7 +65,7 @@ class SourceResponse(BaseModel):
     figure_caption: str = ""
     section: str = ""
     equations: List[EquationResponse] = Field(default_factory=list)
-    type: Literal["text", "table", "figure"] = "text"
+    type: Literal["text", "table", "figure", "equation"] = "text"
     bounding_box: Optional[List[float]] = Field(default=None, min_length=4, max_length=4)
     quality_flags: List[str] = Field(default_factory=list)
 

@@ -13,7 +13,7 @@ export type Source = {
   text: string;
   table?: string;
   figure_caption?: string;
-  type: "text" | "table" | "figure";
+  type: "text" | "table" | "figure" | "equation";
   bounding_box?: number[];
   quality_flags?: string[];
   equations?: Equation[];
