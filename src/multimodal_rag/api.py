@@ -236,9 +236,8 @@ class RAGService:
 
     def _parse_pdf_to_chunks(self, filename: str, file_bytes: bytes) -> List[DocumentChunk]:
         chunks: List[DocumentChunk] = []
-        layout_pages = self.pdf_extractor.extract_pages(file_bytes)
-        math_pages = self.math_extractor.extract_pages(file_bytes)
-        for layout_page, math_page in zip(layout_pages, math_pages):
+        layout_pages = self.pdf_extractor.extract_pages(file_bytes, equation_extractor=self.math_extractor)
+        for layout_page in layout_pages:
             for element_index, element in enumerate(layout_page.elements):
                 text_parts = [element.text] if element.type != "text" else self._split_text(element.text)
                 for part_index, text in enumerate(text_parts):
@@ -257,7 +256,7 @@ class RAGService:
                                 "bounding_box": element.bounding_box,
                                 "quality_flags": element.quality_flags,
                             },
-                            equations=self._equations_in_region(math_page.equations, element.bounding_box),
+                            equations=self._equations_in_region(layout_page.equations, element.bounding_box),
                             type=element.type,
                         )
                     )

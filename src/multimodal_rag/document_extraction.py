@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -31,6 +32,7 @@ class ExtractedPage:
     page_number: int
     elements: list[ExtractedElement]
     quality_flags: list[str]
+    equations: list[dict[str, Any]] = field(default_factory=list)
 
 
 class StructuredPdfExtractor:
@@ -43,16 +45,25 @@ class StructuredPdfExtractor:
     def __init__(self, max_table_characters: int = 8_000):
         self.max_table_characters = max_table_characters
 
-    def extract_pages(self, file_bytes: bytes) -> list[ExtractedPage]:
+    def extract_pages(self, file_bytes: bytes, equation_extractor: Any | None = None) -> list[ExtractedPage]:
         document = pymupdf.open(stream=file_bytes, filetype="pdf")
         try:
-            return [self._extract_page(page, page_number) for page_number, page in enumerate(document, start=1)]
+            extracted_pages = []
+            for page_number, page in enumerate(document, start=1):
+                equations = equation_extractor.extract_page(page).equations if equation_extractor else []
+                extracted_pages.append(self._extract_page(page, page_number, equations))
+            return extracted_pages
         finally:
             document.close()
 
-    def _extract_page(self, page: pymupdf.Page, page_number: int) -> ExtractedPage:
+    def _extract_page(
+        self,
+        page: pymupdf.Page,
+        page_number: int,
+        equations: list[dict[str, Any]],
+    ) -> ExtractedPage:
         blocks = self._text_blocks(page)
-        table_elements = self._table_elements(page)
+        table_elements = self._table_elements(page, blocks)
         image_regions = self._image_regions(page)
         caption_blocks = [block for block in blocks if self._figure_caption_pattern.match(block[4])]
         table_regions = [pymupdf.Rect(*element.bounding_box) for element in table_elements]
@@ -97,7 +108,7 @@ class StructuredPdfExtractor:
         page_flags = self._page_quality_flags(blocks, image_regions)
         for element in elements:
             element.quality_flags = sorted(set([*page_flags, *element.quality_flags]))
-        return ExtractedPage(page_number=page_number, elements=elements, quality_flags=page_flags)
+        return ExtractedPage(page_number=page_number, elements=elements, quality_flags=page_flags, equations=equations)
 
     @staticmethod
     def _text_blocks(page: pymupdf.Page) -> list[tuple[float, float, float, float, str]]:
@@ -108,7 +119,13 @@ class StructuredPdfExtractor:
                 blocks.append((x0, y0, x1, y1, normalized_text))
         return blocks
 
-    def _table_elements(self, page: pymupdf.Page) -> list[ExtractedElement]:
+    def _table_elements(
+        self,
+        page: pymupdf.Page,
+        blocks: list[tuple[float, float, float, float, str]],
+    ) -> list[ExtractedElement]:
+        if not self._may_contain_table(blocks):
+            return []
         try:
             tables = page.find_tables().tables
         except Exception:
@@ -130,6 +147,15 @@ class StructuredPdfExtractor:
                 )
             )
         return elements
+
+    def _may_contain_table(self, blocks: list[tuple[float, float, float, float, str]]) -> bool:
+        if any(self._table_caption_pattern.match(block[4]) for block in blocks):
+            return True
+        if len(blocks) < 4:
+            return len(blocks) >= 2 and sum(len(block[4]) for block in blocks) <= 200
+
+        row_positions = Counter(round((y0 + y1) / 16) for _, y0, _, y1, _ in blocks)
+        return any(block_count >= 2 for block_count in row_positions.values())
 
     def _figure_element(
         self,

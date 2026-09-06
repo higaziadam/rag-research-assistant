@@ -45,11 +45,12 @@ class LocalMathExtractor:
     def extract_pages(self, file_bytes: bytes) -> list[PageMathExtraction]:
         document = pymupdf.open(stream=file_bytes, filetype="pdf")
         try:
-            return [self._extract_page(page) for page in document]
+            return [self.extract_page(page) for page in document]
         finally:
             document.close()
 
-    def _extract_page(self, page: pymupdf.Page) -> PageMathExtraction:
+    def extract_page(self, page: pymupdf.Page) -> PageMathExtraction:
+        """Extract equation metadata from an already-open page."""
         equations = []
         for block in page.get_text("blocks", sort=True):
             x0, y0, x1, y1, text, *_ = block
@@ -73,8 +74,16 @@ class LocalMathExtractor:
         return has_math_symbols or has_variable_equation or is_compact_numeric_line
 
     def _transcribe_or_flag(self, page: pymupdf.Page, rectangle: pymupdf.Rect) -> dict[str, Any]:
+        model = self._get_model()
+        if model is None:
+            return {
+                "latex": "",
+                "status": "source_only",
+                "confidence": 0.0,
+                "bounding_box": [round(value, 2) for value in rectangle],
+            }
         cropped_image = self._crop_equation(page, rectangle)
-        latex = self._transcribe(cropped_image)
+        latex = self._transcribe(model, cropped_image)
         if latex and self._is_valid_latex(latex):
             return {
                 "latex": latex,
@@ -101,10 +110,7 @@ class LocalMathExtractor:
         pixmap = page.get_pixmap(matrix=pymupdf.Matrix(2, 2), clip=padded_rectangle, alpha=False)
         return Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
 
-    def _transcribe(self, image: Image.Image) -> str:
-        model = self._get_model()
-        if model is None:
-            return ""
+    def _transcribe(self, model: Any, image: Image.Image) -> str:
         try:
             return str(model(image)).strip()
         except Exception:

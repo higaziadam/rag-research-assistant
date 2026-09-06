@@ -117,6 +117,7 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
   const [retryingFilename, setRetryingFilename] = useState<string | null>(null);
+  const hasActiveIngestion = documents.some((document) => ["queued", "extracting", "embedding"].includes(document.status));
 
   useEffect(() => {
     getOrCreateSessionId();
@@ -136,15 +137,22 @@ export default function Home() {
     }
 
     void loadDashboardData();
-    const documentPoller = window.setInterval(() => {
+  }, []);
+
+  useEffect(() => {
+    if (!hasActiveIngestion) {
+      return undefined;
+    }
+
+    const refreshDocuments = () => {
       void fetch(`${apiBaseUrl}/documents`)
         .then(readJson<DocumentInfo[]>)
         .then(setDocuments)
         .catch(() => undefined);
-    }, 2_000);
-
+    };
+    const documentPoller = window.setInterval(refreshDocuments, 2_000);
     return () => window.clearInterval(documentPoller);
-  }, []);
+  }, [hasActiveIngestion]);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
     setFiles(Array.from(event.target.files ?? []));

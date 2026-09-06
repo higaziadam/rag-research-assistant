@@ -118,6 +118,19 @@ def test_local_math_extractor_marks_equations_as_source_only_without_a_checkpoin
     ]
 
 
+def test_local_math_extractor_skips_image_rendering_without_ocr_weights(tmp_path, monkeypatch):
+    document = pymupdf.open()
+    document.new_page().insert_text((200, 300), "x = 2")
+    pdf_bytes = document.tobytes()
+    document.close()
+    extractor = LocalMathExtractor(enabled=True, checkpoint_path=tmp_path / "weights.pth")
+    monkeypatch.setattr(extractor, "_crop_equation", lambda page, rectangle: pytest.fail("OCR crop should not be rendered"))
+
+    pages = extractor.extract_pages(pdf_bytes)
+
+    assert pages[0].equations[0]["status"] == "source_only"
+
+
 def test_structured_pdf_extraction_preserves_text_layout_and_quality_flags():
     document = pymupdf.open()
     page = document.new_page()
@@ -132,6 +145,27 @@ def test_structured_pdf_extraction_preserves_text_layout_and_quality_flags():
     assert text_element.section == "1 Introduction"
     assert text_element.bounding_box[0] >= 0
     assert "Layout-aware extraction" in text_element.text
+
+
+def test_structured_pdf_extraction_uses_an_injected_equation_extractor_in_one_pass():
+    document = pymupdf.open()
+    document.new_page().insert_text((72, 72), "x = 2")
+    pdf_bytes = document.tobytes()
+    document.close()
+
+    class FakeEquationExtractor:
+        def __init__(self):
+            self.page_count = 0
+
+        def extract_page(self, page):
+            self.page_count += 1
+            return type("Extraction", (), {"equations": []})()
+
+    equation_extractor = FakeEquationExtractor()
+    pages = StructuredPdfExtractor().extract_pages(pdf_bytes, equation_extractor=equation_extractor)
+
+    assert len(pages) == 1
+    assert equation_extractor.page_count == 1
 
 
 def test_structured_pdf_extraction_marks_scanned_style_pages_as_low_quality():
