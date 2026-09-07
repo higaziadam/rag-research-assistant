@@ -45,6 +45,19 @@ def compute_ndcg_at_k(relevance: Iterable[Iterable[int]], k: int = 5) -> float:
     return float(np.mean(scores)) if scores else 0.0
 
 
+def compute_mrr(relevance: Iterable[Iterable[int]]) -> float:
+    """Compute mean reciprocal rank for ranked binary relevance labels."""
+    scores = []
+    for rankings in relevance:
+        reciprocal_rank = 0.0
+        for rank, item in enumerate(rankings, start=1):
+            if item > 0:
+                reciprocal_rank = 1.0 / rank
+                break
+        scores.append(reciprocal_rank)
+    return float(np.mean(scores)) if scores else 0.0
+
+
 def evaluate_ranking_predictions(predictions_path: str, ground_truth_path: str, k: int = 5) -> Dict[str, float]:
     with open(predictions_path, "r", encoding="utf-8") as f:
         predictions = json.load(f)
@@ -64,6 +77,7 @@ def evaluate_ranking_predictions(predictions_path: str, ground_truth_path: str, 
     return {
         f"recall@{k}": compute_recall_at_k(relevance_list, k=k),
         f"ndcg@{k}": compute_ndcg_at_k(relevance_list, k=k),
+        "mrr": compute_mrr(relevance_list),
     }
 
 

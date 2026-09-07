@@ -10,7 +10,7 @@ import multimodal_rag.api as api
 from multimodal_rag.api import QueryRequest, RAGService
 from multimodal_rag.data_models import DocumentChunk, RetrievalResult
 from multimodal_rag.document_extraction import StructuredPdfExtractor, render_pdf_region
-from multimodal_rag.evaluation import compute_ndcg_at_k, compute_recall_at_k
+from multimodal_rag.evaluation import compute_mrr, compute_ndcg_at_k, compute_recall_at_k
 from multimodal_rag.math_extraction import LocalMathExtractor
 from multimodal_rag.jobs import IngestionJob
 from multimodal_rag.retrieval import FAISSRetriever
@@ -70,6 +70,7 @@ def test_retriever_persists_and_loads_with_an_explicit_metadata_path(tmp_path):
 def test_empty_evaluation_inputs_return_zero_instead_of_nan():
     assert compute_recall_at_k([]) == 0.0
     assert compute_ndcg_at_k([]) == 0.0
+    assert compute_mrr([]) == 0.0
 
 
 def test_ingestion_job_persists_its_status_and_progress():
