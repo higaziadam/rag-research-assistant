@@ -29,8 +29,12 @@ class Reranker:
         model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
         device: str | None = None,
         local_files_only: bool = True,
+        batch_size: int = 16,
     ):
+        if batch_size < 1:
+            raise ValueError("batch_size must be at least 1")
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.batch_size = batch_size
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local_files_only)
         self.model = AutoModelForSequenceClassification.from_pretrained(model_name, local_files_only=local_files_only)
         self.model.to(self.device)
@@ -39,17 +43,19 @@ class Reranker:
     def score_pairs(self, query: str, passages: Sequence[str]) -> List[float]:
         if not passages:
             return []
-        features = self.tokenizer(
-            [(query, passage) for passage in passages],
-            padding=True,
-            truncation=True,
-            return_tensors="pt",
-            max_length=512,
-        ).to(self.device)
-
-        with torch.no_grad():
-            logits = self.model(**features).logits
-            scores = logits_to_scores(logits)
+        scores = []
+        for start in range(0, len(passages), self.batch_size):
+            batch = passages[start : start + self.batch_size]
+            features = self.tokenizer(
+                [(query, passage) for passage in batch],
+                padding=True,
+                truncation=True,
+                return_tensors="pt",
+                max_length=512,
+            ).to(self.device)
+            with torch.no_grad():
+                logits = self.model(**features).logits
+                scores.extend(logits_to_scores(logits))
         return scores
 
     def rerank(self, query: str, candidates: Sequence[Tuple[str, Any]], top_k: int = 5) -> List[Tuple[Tuple[str, Any], float]]:

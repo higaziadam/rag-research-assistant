@@ -10,6 +10,7 @@ class QueryRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=20)
     session_id: str = Field(default="default", min_length=1, max_length=100)
     history: List[str] = Field(default_factory=list, max_length=10)
+    document_names: List[str] = Field(default_factory=list, max_length=10)
 
 
 class DocumentInfo(BaseModel):
@@ -72,6 +73,7 @@ class SourceResponse(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
+    answer_intent: Literal["definition", "explanation", "procedure", "comparison", "summary", "visual"] = "explanation"
     unsupported: bool
     confidence: float
     sources: List[SourceResponse]

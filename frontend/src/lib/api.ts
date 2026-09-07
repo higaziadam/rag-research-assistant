@@ -42,7 +42,14 @@ export type IngestionJob = {
   updated_at: string;
   error?: string;
 };
-export type QueryResponse = { answer?: string; sources?: Source[]; latency_ms?: number; unsupported?: boolean; detail?: string };
+export type QueryResponse = {
+  answer?: string;
+  answer_intent?: "definition" | "explanation" | "procedure" | "comparison" | "summary" | "visual";
+  sources?: Source[];
+  latency_ms?: number;
+  unsupported?: boolean;
+  detail?: string;
+};
 export type UploadResponse = { uploaded?: string[]; total_chunks?: number; documents?: DocumentInfo[]; jobs?: IngestionJob[]; detail?: string };
 export type DeleteDocumentResponse = { deleted: string; documents: DocumentInfo[] };
 export type MetricsResponse = {

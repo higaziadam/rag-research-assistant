@@ -178,7 +178,28 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [deletingFilename, setDeletingFilename] = useState<string | null>(null);
   const [retryingFilename, setRetryingFilename] = useState<string | null>(null);
-  const hasActiveIngestion = documents.some((document) => ["queued", "extracting", "embedding"].includes(document.status));
+  const [browserDocumentNames, setBrowserDocumentNames] = useState<string[]>(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+    const storedDocumentNames = window.sessionStorage.getItem("rag-document-names");
+    if (!storedDocumentNames) {
+      return [];
+    }
+    try {
+      const parsedNames = JSON.parse(storedDocumentNames);
+      return Array.isArray(parsedNames) && parsedNames.every((name) => typeof name === "string") ? parsedNames : [];
+    } catch {
+      window.sessionStorage.removeItem("rag-document-names");
+      return [];
+    }
+  });
+  const scopedDocuments = documents.filter((document) => browserDocumentNames.includes(document.filename));
+  const hasActiveIngestion = (scopedDocuments.length > 0 ? scopedDocuments : documents)
+    .some((document) => ["queued", "extracting", "embedding"].includes(document.status));
+  const indexedBrowserDocumentNames = scopedDocuments
+    .filter((document) => document.status === "indexed")
+    .map((document) => document.filename);
 
   useEffect(() => {
     getOrCreateSessionId();
@@ -220,6 +241,14 @@ export default function Home() {
     event.target.value = "";
   }
 
+  function rememberBrowserDocuments(filenames: string[]) {
+    setBrowserDocumentNames((currentNames) => {
+      const nextNames = [...new Set([...currentNames, ...filenames])];
+      window.sessionStorage.setItem("rag-document-names", JSON.stringify(nextNames));
+      return nextNames;
+    });
+  }
+
   async function handleUpload() {
     if (files.length === 0) {
       setUploadStatus("Choose at least one PDF before indexing.");
@@ -234,6 +263,7 @@ export default function Home() {
       const response = await fetch(`${apiBaseUrl}/upload`, { method: "POST", body: formData });
       const data = await readJson<UploadResponse>(response);
       setDocuments(data.documents ?? []);
+      rememberBrowserDocuments(data.uploaded ?? []);
       setUploadStatus(`Queued ${data.uploaded?.join(", ") ?? "PDFs"}. Progress updates below automatically.`);
       setFiles([]);
     } catch (error) {
@@ -249,6 +279,13 @@ export default function Home() {
       setAnswer("Enter a question before asking the research assistant.");
       return;
     }
+    if (hasActiveIngestion) {
+      setAnswer("Your PDF is still being indexed. Wait until its status is Indexed before asking a document-grounded question.");
+      setSources([]);
+      setUnsupported(false);
+      setQueryLatency(null);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -256,7 +293,12 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
-        body: JSON.stringify({ query, top_k: 5, session_id: getOrCreateSessionId() }),
+        body: JSON.stringify({
+          query,
+          top_k: 5,
+          session_id: getOrCreateSessionId(),
+          document_names: indexedBrowserDocumentNames,
+        }),
       });
       const data = await readJson<QueryResponse>(response);
       if (!data.answer) {
@@ -289,6 +331,11 @@ export default function Home() {
       const response = await fetch(`${apiBaseUrl}/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
       const data = await readJson<DeleteDocumentResponse>(response);
       setDocuments(data.documents);
+      setBrowserDocumentNames((currentNames) => {
+        const nextNames = currentNames.filter((currentFilename) => currentFilename !== filename);
+        window.sessionStorage.setItem("rag-document-names", JSON.stringify(nextNames));
+        return nextNames;
+      });
       setSources((currentSources) => currentSources.filter((source) => source.source !== filename));
       if (selectedSource?.source === filename) {
         setSelectedSource(null);
@@ -425,10 +472,15 @@ export default function Home() {
               type="button"
               onClick={handleAsk}
               className="mt-4 rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={loading}
+              disabled={loading || hasActiveIngestion}
             >
-              {loading ? "Thinking..." : "Ask research assistant"}
+              {loading ? "Thinking..." : hasActiveIngestion ? "Indexing PDFs..." : "Ask research assistant"}
             </button>
+            {hasActiveIngestion && (
+              <p className="mt-2 text-sm text-amber-300" role="status">
+                Wait for indexing to finish before querying. This prevents incomplete documents from producing weak answers.
+              </p>
+            )}
 
             <div className={`mt-8 rounded-xl border p-4 ${unsupported ? "border-amber-500/40 bg-amber-950/20" : "border-slate-800 bg-slate-950"}`} aria-live="polite">
               <p className="mb-2 text-xs uppercase tracking-[0.25em] text-slate-400">Answer</p>

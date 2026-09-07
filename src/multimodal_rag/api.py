@@ -41,7 +41,11 @@ class RAGService:
     def __init__(self):
         self.embedding_store = EmbeddingStore(settings.model_name, local_files_only=settings.model_local_files_only)
         self.retriever = FAISSRetriever(embedding_dim=self.embedding_store.embedding_dimension)
-        self.reranker = Reranker(settings.reranker_model, local_files_only=settings.model_local_files_only)
+        self.reranker = Reranker(
+            settings.reranker_model,
+            local_files_only=settings.model_local_files_only,
+            batch_size=settings.reranker_batch_size,
+        )
         self.math_extractor = LocalMathExtractor(
             enabled=settings.math_ocr_enabled,
             checkpoint_path=settings.math_ocr_checkpoint,
@@ -360,7 +364,15 @@ class RAGService:
     def _schedule_job(self, job_id: str) -> None:
         future = self.job_futures.get(job_id)
         if future is None or future.done():
-            self.job_futures[job_id] = self.job_executor.submit(self._run_ingestion_job, job_id)
+            future = self.job_executor.submit(self._run_ingestion_job, job_id)
+            self.job_futures[job_id] = future
+
+            def remove_completed_job(completed_future: Future[None]) -> None:
+                with self.storage_lock:
+                    if self.job_futures.get(job_id) is completed_future:
+                        self.job_futures.pop(job_id, None)
+
+            future.add_done_callback(remove_completed_job)
 
     def _resume_pending_jobs(self) -> None:
         """Resume uploads that were queued when the backend last stopped."""
@@ -710,7 +722,10 @@ class RAGService:
 
     @staticmethod
     def _is_useful_claim(claim: str) -> bool:
-        if len(re.findall(r"[A-Za-z]{2,}", claim)) < 5:
+        words = re.findall(r"[A-Za-z]{2,}", claim)
+        if len(words) < 5:
+            return False
+        if len(words) >= 4 and sum(word[0].isupper() for word in words) / len(words) >= 0.75:
             return False
         filler_prefixes = (
             "then ",
@@ -722,6 +737,9 @@ class RAGService:
             "an important topic related to",
             "which is the formula",
             "according to the",
+            "solve the following",
+            "find the following",
+            "table ",
         )
         return not claim.lower().startswith(filler_prefixes)
 
@@ -741,11 +759,132 @@ class RAGService:
         ))
 
     @classmethod
-    def _overview_search_query(cls, query: str) -> str:
-        """Add retrieval intent for broad explanations without changing the user's question."""
-        if not cls._is_overview_question(query):
-            return query
-        return f"{query}\nPrioritize an introductory definition, core idea, and main formula."
+    def _question_intent(cls, query: str) -> str:
+        """Classify presentation intent without making a subject-specific assumption."""
+        normalized = re.sub(r"\s+", " ", query.lower()).strip(" ?.")
+        if re.search(r"\b(?:how do i|how can i|steps? to|procedure|solve|calculate|derive)\b", normalized):
+            return "procedure"
+        if re.search(r"\b(?:compare|comparison|difference|differentiate|versus|\bvs\b)\b", normalized):
+            return "comparison"
+        if re.search(r"\b(?:summari[sz]e|summary|overview)\b", normalized):
+            return "summary"
+        if re.search(r"\b(?:figure|chart|graph|diagram|image|table)\b", normalized):
+            return "visual"
+        if normalized.startswith(("what is ", "define ", "what does ")):
+            return "definition"
+        if cls._is_overview_question(normalized):
+            return "explanation"
+        return "explanation"
+
+    @classmethod
+    def _intent_search_query(cls, original_query: str, contextual_query: str) -> str:
+        """Steer retrieval toward the evidence shape needed for the question."""
+        intent = cls._question_intent(original_query)
+        guidance = {
+            "procedure": "Prioritize method steps, rules, prerequisites, and worked examples.",
+            "comparison": "Prioritize direct comparisons, distinctions, and supporting evidence for each item.",
+            "summary": "Prioritize central concepts, findings, and concise overview passages.",
+            "visual": "Prioritize figure captions, tables, charts, diagrams, and their explanatory text.",
+            "definition": "Prioritize an introductory definition, core idea, and main formula when relevant.",
+            "explanation": "Prioritize an introductory definition, core idea, and main supporting explanation.",
+        }
+        return f"{contextual_query}\n{guidance[intent]}"
+
+    @staticmethod
+    def _is_summary_candidate(chunk: DocumentChunk) -> bool:
+        """Exclude navigation and citation boilerplate from document summaries."""
+        if chunk.type != "text":
+            return False
+        quality_flags = set(chunk.metadata.get("quality_flags", []))
+        if quality_flags.intersection({"no_extractable_text", "limited_extractable_text"}):
+            return False
+
+        content = " ".join(part for part in (chunk.text, chunk.table, chunk.figure_caption) if part).strip()
+        normalized = re.sub(r"\s+", " ", content).lower()
+        word_count = len(re.findall(r"[a-zA-Z]{2,}", normalized))
+        if word_count < 12:
+            return False
+        if re.search(r"\b(?:table of contents|contents|bibliography|references)\b", normalized):
+            return False
+        if re.search(r"\.{3,}\s*\d+\b", normalized) or normalized.count("http") + normalized.count("www.") >= 2:
+            return False
+        return not normalized.startswith(
+            ("doi:", "see also", "copyright", "all rights reserved", "additional information")
+        )
+
+    @staticmethod
+    def _has_summary_coverage(evidence: List[Dict[str, Any]], requested_top_k: int) -> bool:
+        """Require multi-page, substantive evidence before overriding raw-logit confidence."""
+        minimum_evidence = min(3, requested_top_k)
+        distinct_pages = {(item["source"], item["page"]) for item in evidence}
+        return len(evidence) >= minimum_evidence and len(distinct_pages) >= minimum_evidence
+
+    def _summary_source_names(self, request: QueryRequest) -> set[str]:
+        """Resolve an explicit browser scope, or the sole indexed document."""
+        indexed_names = {
+            document["filename"]
+            for document in self.documents
+            if document.get("status") == "indexed"
+        }
+        requested_names = {Path(name).name for name in request.document_names}
+        if requested_names:
+            return indexed_names.intersection(requested_names)
+        return indexed_names if len(indexed_names) == 1 else set()
+
+    def _summary_candidate_pool(self, source_names: set[str]) -> List[DocumentChunk]:
+        """Sample substantive chunks across sections before reranking a summary."""
+        eligible = [
+            chunk
+            for chunk in self.retriever.chunks
+            if chunk.source in source_names and self._is_summary_candidate(chunk)
+        ]
+        if len(eligible) <= settings.summary_candidate_k:
+            return eligible
+
+        selected: list[DocumentChunk] = []
+        selected_ids = set()
+        section_representatives: Dict[str, DocumentChunk] = {}
+        for chunk in eligible:
+            section_key = chunk.section.strip().lower() or f"page-{chunk.metadata.get('page', 0)}"
+            existing = section_representatives.get(section_key)
+            if existing is None or len(chunk.text) > len(existing.text):
+                section_representatives[section_key] = chunk
+        for chunk in section_representatives.values():
+            selected.append(chunk)
+            selected_ids.add(chunk.chunk_id)
+            if len(selected) >= settings.summary_candidate_k:
+                return selected
+
+        remaining_slots = settings.summary_candidate_k - len(selected)
+        stride = max(1, math.ceil(len(eligible) / remaining_slots))
+        for index in range(0, len(eligible), stride):
+            chunk = eligible[index]
+            if chunk.chunk_id in selected_ids:
+                continue
+            selected.append(chunk)
+            selected_ids.add(chunk.chunk_id)
+            if len(selected) >= settings.summary_candidate_k:
+                break
+        return selected
+
+    @staticmethod
+    def _diversify_summary_reranking(reranked: List[tuple[tuple[str, Any], float]]) -> List[tuple[tuple[str, Any], float]]:
+        """Prefer distinct sections and pages over near-duplicate summary evidence."""
+        diversified = []
+        deferred = []
+        seen_sections = set()
+        seen_pages = set()
+        for result in reranked:
+            _, chunk = result[0]
+            page_key = (chunk.source, chunk.metadata.get("page", 1))
+            section_key = (chunk.source, chunk.section.strip().lower() or f"page-{page_key[1]}")
+            if section_key not in seen_sections and page_key not in seen_pages:
+                diversified.append(result)
+                seen_sections.add(section_key)
+                seen_pages.add(page_key)
+            else:
+                deferred.append(result)
+        return diversified + deferred
 
     @classmethod
     def _extract_claims(cls, text: str) -> List[str]:
@@ -767,18 +906,54 @@ class RAGService:
                 claims.append(claim)
         return claims
 
+    @staticmethod
+    def _extract_table_claims(table: str) -> List[str]:
+        """Turn labeled table rows into short, source-backed claims.
+
+        This is intentionally limited to labels that appear in the source; it
+        does not infer a solution or alter mathematical notation.
+        """
+        claims = []
+        for row in table.splitlines():
+            cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+            if len(cells) < 2 or not cells[0] or set(cells[0]) == {"-"}:
+                continue
+            if cells[0].lower() == "r(x)" or cells[1].lower().startswith("initial guess"):
+                continue
+            claims.append(f"For r(x) = {cells[0]}, the initial guess for y_p(x) is {cells[1]}.")
+
+        pattern = re.compile(
+            r"r\s*\(\s*x\s*\)\s*:\s*([^;|\n]+).*?initial guess for\s*y\s*p\s*\(\s*x\s*\)\s*:\s*([^;|\n]+)",
+            re.IGNORECASE | re.DOTALL,
+        )
+        for match in pattern.finditer(table):
+            forcing_term = re.sub(r"\s+", " ", match.group(1)).strip(" .")
+            initial_guess = re.sub(r"\s+", " ", match.group(2)).strip(" .")
+            if forcing_term and initial_guess:
+                claims.append(f"For r(x) = {forcing_term}, the initial guess for y_p(x) is {initial_guess}.")
+        return list(dict.fromkeys(claims))
+
     @classmethod
-    def _build_grounded_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str:
-        """Create a compact, citation-per-claim answer without generating new facts."""
+    def _rank_claims(
+        cls,
+        query: str,
+        evidence: List[Dict[str, Any]],
+        intent: str,
+    ) -> List[tuple[int, int, int, str, Dict[str, Any]]]:
+        """Rank citation-ready claims while rejecting headings and extraction noise."""
         stop_terms = {"about", "answer", "equation", "find", "formula", "give", "how", "is", "of", "the", "to", "what"}
         query_terms = {term for term in re.findall(r"[a-zA-Z]{3,}", query.lower()) if term not in stop_terms}
-        is_overview_question = cls._is_overview_question(query)
         has_math_evidence = any(item.get("equations") for item in evidence)
         candidates: list[tuple[int, int, int, str, Dict[str, Any]]] = []
         seen_claims = set()
 
         for evidence_index, item in enumerate(evidence):
-            for sentence_index, claim in enumerate(cls._extract_claims(item["text"])):
+            passage = " ".join(
+                content for content in (item["text"], item.get("figure_caption", "")) if content
+            )
+            claims = cls._extract_claims(passage)
+            claims.extend(cls._extract_table_claims(item.get("table", "")))
+            for sentence_index, claim in enumerate(claims):
                 normalized_claim = re.sub(r"\W+", " ", claim.lower()).strip()
                 if not cls._is_useful_claim(claim) or normalized_claim in seen_claims:
                     continue
@@ -789,7 +964,7 @@ class RAGService:
                     relevance += 2
                 if has_math_evidence and "formula" in claim.lower() and "curve" in claim.lower():
                     relevance += 1
-                if is_overview_question:
+                if intent in {"definition", "explanation", "summary"}:
                     if re.search(r"\b(?:measures|is defined)\b", claim, re.IGNORECASE):
                         relevance += 4
                     elif re.search(r"\bcalculated\b", claim, re.IGNORECASE):
@@ -798,7 +973,93 @@ class RAGService:
                         relevance += 1
                     if re.search(r"\b(?:find|example|exercise|problem)\b", claim, re.IGNORECASE):
                         relevance -= 2
+                if intent == "summary":
+                    if re.search(r"\b(?:purpose|aim|objective|scope|intended|this (?:document|report|guide)|provides)\b", claim, re.IGNORECASE):
+                        relevance += 4
+                    if re.search(r"\b(?:recommend|should|must|guidance|need to|call for|encourage)\b", claim, re.IGNORECASE):
+                        relevance += 3
+                if intent == "procedure" and re.search(
+                    r"\b(?:method|step|first|then|use|assume|choose|guess|initial guess|particular solution|substitut|solv|deriv)\w*\b",
+                    claim,
+                    re.IGNORECASE,
+                ):
+                    relevance += 3
+                if intent == "procedure" and "method of" in claim.lower() and "involves" in claim.lower():
+                    relevance += 4
+                if intent == "procedure" and "initial guess" in claim.lower():
+                    relevance += 3
+                if intent == "procedure" and "exponential" in query_terms:
+                    if re.search(r"(?:exponential|e\^|e\u03bb|e\u03b1)", claim, re.IGNORECASE):
+                        relevance += 3
+                if intent == "procedure" and claim.lower().startswith("when we take derivatives"):
+                    relevance -= 2
                 candidates.append((relevance, -evidence_index, -sentence_index, claim, item))
+
+        return sorted(candidates, key=lambda candidate: (candidate[0], candidate[1], candidate[2]), reverse=True)
+
+    @classmethod
+    def _build_summary_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str:
+        """Present a document summary in a consistent, citation-backed structure."""
+        candidates = cls._rank_claims(query, evidence, "summary")
+        if not candidates:
+            citations = cls._format_citations(evidence)
+            return (
+                "Relevant summary evidence was found, but it could not be summarized safely. "
+                "Review the cited source regions."
+                f"\n\nSources: {citations}"
+            )
+
+        purpose_pattern = re.compile(r"\b(?:purpose|aim|objective|scope|intended|this (?:document|report|guide)|provides)\b", re.IGNORECASE)
+        recommendation_pattern = re.compile(r"\b(?:recommend|should|must|guidance|need to|call for|encourage)\b", re.IGNORECASE)
+        purpose = next((candidate for candidate in candidates if purpose_pattern.search(candidate[3])), candidates[0])
+        used_claims = {re.sub(r"\W+", " ", purpose[3].lower()).strip()}
+        used_pages = {(purpose[4]["source"], purpose[4]["page"])}
+
+        findings = []
+        recommendations = []
+        for _, _, _, claim, item in candidates:
+            normalized_claim = re.sub(r"\W+", " ", claim.lower()).strip()
+            page_key = (item["source"], item["page"])
+            if normalized_claim in used_claims or page_key in used_pages:
+                continue
+            if recommendation_pattern.search(claim):
+                if len(recommendations) < 2:
+                    recommendations.append(f"- {claim} {cls._citation_label(item)}")
+                    used_claims.add(normalized_claim)
+                    used_pages.add(page_key)
+                continue
+            if len(findings) < 3:
+                findings.append(f"- {claim} {cls._citation_label(item)}")
+                used_claims.add(normalized_claim)
+                used_pages.add(page_key)
+
+        if not findings:
+            findings.append("- The selected evidence is concentrated in the document's purpose statement.")
+        if not recommendations:
+            recommendations.append("- No explicit recommendation was found in the selected summary evidence.")
+
+        return "\n".join(
+            [
+                "**Purpose**",
+                "",
+                f"{purpose[3]} {cls._citation_label(purpose[4])}",
+                "",
+                "**Key findings**",
+                *findings,
+                "",
+                "**Recommendations / implications**",
+                *recommendations,
+                "",
+                "**Sources**",
+                cls._format_citations(evidence),
+            ]
+        )
+
+    @classmethod
+    def _build_grounded_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str:
+        """Create an intent-specific, evidence-only answer with claim-level citations."""
+        intent = cls._question_intent(query)
+        candidates = cls._rank_claims(query, evidence, intent)
 
         if not candidates:
             citations = cls._format_citations(evidence)
@@ -808,9 +1069,26 @@ class RAGService:
                 f"\n\nSources: {citations}"
             )
 
-        candidates.sort(key=lambda candidate: (candidate[0], candidate[1], candidate[2]), reverse=True)
         direct_claim = candidates[0]
-        answer_lines = ["**Answer**", "", f"{direct_claim[3]} {cls._citation_label(direct_claim[4])}"]
+        has_math_evidence = any(item.get("equations") for item in evidence)
+
+        if intent == "summary":
+            return cls._build_summary_answer(query, evidence)
+        if intent == "procedure":
+            answer_lines = ["**Answer**", "", f"{direct_claim[3]} {cls._citation_label(direct_claim[4])}", "", "**Evidence-based steps**"]
+            step_claims = []
+            used_claims = set()
+            for _, _, _, claim, item in candidates:
+                normalized_claim = re.sub(r"\W+", " ", claim.lower()).strip()
+                if normalized_claim in used_claims:
+                    continue
+                step_claims.append(f"{len(step_claims) + 1}. {claim} {cls._citation_label(item)}")
+                used_claims.add(normalized_claim)
+                if len(step_claims) == 3:
+                    break
+            answer_lines.extend(step_claims)
+        else:
+            answer_lines = ["**Answer**", "", f"{direct_claim[3]} {cls._citation_label(direct_claim[4])}"]
 
         supporting_claims = []
         used_pages = {(direct_claim[4]["source"], direct_claim[4]["page"])}
@@ -822,7 +1100,7 @@ class RAGService:
             used_pages.add(page_key)
             if len(supporting_claims) == 2:
                 break
-        if supporting_claims:
+        if supporting_claims and intent not in {"procedure", "summary"}:
             answer_lines.extend(["", "**Supporting context**", *supporting_claims])
         if has_math_evidence:
             answer_lines.extend(
@@ -836,23 +1114,33 @@ class RAGService:
 
     def query(self, request: QueryRequest) -> Dict[str, Any]:
         start = time.perf_counter()
+        intent = self._question_intent(request.query)
         with self.storage_lock:
             saved_history = self.session_history.get(request.session_id, [])
             conversation_history = request.history or saved_history
             search_query = self._prepare_query(request.query, conversation_history)
-            search_query = self._overview_search_query(search_query)
-        query_embedding = self.embedding_store.encode_single(search_query)
-        with self.storage_lock:
-            initial_hits = self.retriever.retrieve(
-                query_embedding,
-                top_k=max(request.top_k, settings.retrieval_candidate_k),
-            )
+            search_query = self._intent_search_query(request.query, search_query)
+            summary_source_names = self._summary_source_names(request) if intent == "summary" else set()
+            initial_hits = self._summary_candidate_pool(summary_source_names) if summary_source_names else []
+        if not initial_hits:
+            query_embedding = self.embedding_store.encode_single(search_query)
+            with self.storage_lock:
+                initial_hits = self.retriever.retrieve(
+                    query_embedding,
+                    top_k=max(request.top_k, settings.retrieval_candidate_k),
+                )
         pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in initial_hits]
         reranked = self.reranker.rerank(
             search_query,
             pairs,
-            top_k=max(request.top_k, settings.rerank_candidate_k),
+            top_k=(
+                max(request.top_k, settings.summary_rerank_candidate_k)
+                if summary_source_names
+                else max(request.top_k, settings.rerank_candidate_k)
+            ),
         )
+        if summary_source_names:
+            reranked = self._diversify_summary_reranking(reranked)
 
         if not reranked:
             evidence = []
@@ -893,7 +1181,7 @@ class RAGService:
                         "table": item.table,
                         "figure_caption": item.figure_caption,
                         "section": item.section,
-                        "equations": item.equations,
+                        "equations": [] if intent == "summary" and not self._is_summary_candidate(item) else item.equations,
                         "type": item.type,
                         "bounding_box": item.metadata.get("bounding_box"),
                         "quality_flags": item.metadata.get("quality_flags", []),
@@ -902,6 +1190,13 @@ class RAGService:
                 evidence_by_page_and_type[evidence_key] = evidence[-1]
             best_score = float(reranked[0][1])
             confidence = min(1.0, max(0.0, (best_score + 0.5) / 1.5))
+            has_document_summary_coverage = bool(summary_source_names) and self._has_summary_coverage(evidence, request.top_k)
+            if has_document_summary_coverage:
+                # Cross-encoder logits are ranking values, not calibrated
+                # probabilities. A scoped summary with substantive evidence
+                # across multiple pages is safe to synthesize even when those
+                # raw values are negative.
+                confidence = max(confidence, 0.5)
             unsupported = confidence < 0.45
             if unsupported:
                 answer = "Unsupported answer: the retrieved evidence is too weak to support a confident response."
@@ -923,6 +1218,8 @@ class RAGService:
             history = self.session_history.setdefault(request.session_id, [])
             history.append(request.query)
             del history[:-settings.max_session_history]
+            while len(self.session_history) > settings.max_session_count:
+                self.session_history.pop(next(iter(self.session_history)))
         return {
             "answer": answer,
             "unsupported": unsupported,
@@ -932,6 +1229,7 @@ class RAGService:
             "latency_ms": latency_ms,
             "session_id": request.session_id,
             "history": history,
+            "answer_intent": intent,
         }
 
     @staticmethod

@@ -2,6 +2,7 @@ import numpy as np
 import pymupdf
 import pytest
 import torch
+from concurrent.futures import Future
 from threading import RLock
 from fastapi.testclient import TestClient
 
@@ -28,6 +29,26 @@ def test_retriever_returns_matching_chunk_for_query_embedding():
     results = retriever.retrieve(np.asarray([0.0, 1.0], dtype=np.float32), top_k=1)
 
     assert results[0].chunk_id == "second"
+
+
+def test_completed_ingestion_jobs_do_not_accumulate_future_references():
+    class ImmediateExecutor:
+        @staticmethod
+        def submit(function, *args):
+            future = Future()
+            function(*args)
+            future.set_result(None)
+            return future
+
+    service = RAGService.__new__(RAGService)
+    service.job_futures = {}
+    service.job_executor = ImmediateExecutor()
+    service.storage_lock = RLock()
+    service._run_ingestion_job = lambda job_id: None
+
+    service._schedule_job("completed-job")
+
+    assert service.job_futures == {}
 
 
 def test_retriever_persists_and_loads_with_an_explicit_metadata_path(tmp_path):
@@ -156,11 +177,120 @@ def test_grounded_answer_synthesis_prefers_a_definition_over_a_related_topic():
     assert "curvature" not in direct_answer
 
 
-def test_overview_search_query_requests_foundational_evidence():
-    search_query = RAGService._overview_search_query("Tell me about arc length")
+def test_intent_search_query_requests_foundational_evidence():
+    search_query = RAGService._intent_search_query("Tell me about arc length", "Tell me about arc length")
 
     assert search_query.startswith("Tell me about arc length")
     assert "introductory definition" in search_query
+
+
+def test_procedure_synthesis_uses_numbered_evidence_backed_steps():
+    evidence = [
+        {
+            "source": "differential-equations.pdf",
+            "page": 858,
+            "text": "The method of undetermined coefficients uses the form of r(x) to choose a guess for the particular solution.",
+            "equations": [],
+        },
+        {
+            "source": "differential-equations.pdf",
+            "page": 859,
+            "text": "When r(x) is an exponential function, the particular solution can have the form y_p(x) = A e^(3x).",
+            "equations": [{"bounding_box": [72, 72, 300, 140]}],
+        },
+        {
+            "source": "differential-equations.pdf",
+            "page": 862,
+            "text": "Substitute the guess into the differential equation and solve for the unknown coefficient.",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer(
+        "How do I solve undetermined coefficients when r(x) is exponential?",
+        evidence,
+    )
+
+    assert "**Evidence-based steps**" in answer
+    assert "1. " in answer
+    assert "2. " in answer
+    assert "[differential-equations.pdf, p." in answer
+
+
+def test_table_claims_preserve_labeled_source_values_for_procedures():
+    table = "| r(x) | Initial guess for y p(x) |\n| --- | --- |\n| aeλx | Aeλx |"
+
+    claims = RAGService._extract_table_claims(table)
+
+    assert claims == ["For r(x) = aeλx, the initial guess for y_p(x) is Aeλx."]
+
+
+def test_question_intent_covers_general_research_question_types():
+    assert RAGService._question_intent("What is organic chemistry?") == "definition"
+    assert RAGService._question_intent("How do I calculate arc length?") == "procedure"
+    assert RAGService._question_intent("Compare the two experimental methods") == "comparison"
+    assert RAGService._question_intent("Summarize the report") == "summary"
+    assert RAGService._question_intent("What does Figure 2 show?") == "visual"
+
+
+def test_summary_synthesis_has_purpose_findings_recommendations_and_sources():
+    evidence = [
+        {
+            "source": "ai-report.pdf",
+            "page": 2,
+            "text": "The purpose of this report is to provide a practical framework for managing AI risks.",
+            "equations": [],
+        },
+        {
+            "source": "ai-report.pdf",
+            "page": 18,
+            "text": "The report identifies documentation, testing, and governance as key controls for AI systems.",
+            "equations": [],
+        },
+        {
+            "source": "ai-report.pdf",
+            "page": 42,
+            "text": "Organizations should document model limitations and monitor deployed systems for changing risks.",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer("Summarize this document", evidence)
+
+    assert "**Purpose**" in answer
+    assert "**Key findings**" in answer
+    assert "**Recommendations / implications**" in answer
+    assert "**Sources**" in answer
+    assert "[ai-report.pdf, p. 2]" in answer
+
+
+def test_summary_candidate_filter_excludes_contents_and_reference_boilerplate():
+    contents = DocumentChunk(
+        chunk_id="contents",
+        source="report.pdf",
+        text="1. Introduction ........ 1 2. Scope ........ 3",
+        metadata={"page": 1},
+    )
+    substantive = DocumentChunk(
+        chunk_id="substantive",
+        source="report.pdf",
+        text="This report provides practical guidance for organizations that manage risks throughout the lifecycle of AI systems.",
+        metadata={"page": 2},
+    )
+
+    assert not RAGService._is_summary_candidate(contents)
+    assert RAGService._is_summary_candidate(substantive)
+
+
+def test_summary_coverage_requires_substantive_evidence_from_multiple_pages():
+    evidence = [
+        {"source": "report.pdf", "page": 2},
+        {"source": "report.pdf", "page": 8},
+        {"source": "report.pdf", "page": 21},
+    ]
+
+    assert RAGService._has_summary_coverage(evidence, requested_top_k=5)
+    assert not RAGService._has_summary_coverage(evidence[:2], requested_top_k=5)
 
 
 def test_readable_prose_allows_ordinary_numbers():
@@ -221,6 +351,14 @@ def test_local_math_extractor_groups_positioned_formula_fragments(tmp_path):
     x0, y0, x1, y1 = equations[0]["bounding_box"]
     assert x0 <= 220 < x1
     assert y0 <= 250 < y1
+
+
+def test_local_math_extractor_rejects_table_of_contents_lines(tmp_path):
+    extractor = LocalMathExtractor(enabled=False, checkpoint_path=tmp_path / "weights.pth")
+    rectangle = pymupdf.Rect(200, 200, 400, 220)
+
+    assert not extractor._looks_like_equation("1. Introduction ........ 1", rectangle, page_width=600)
+    assert extractor._looks_like_equation("x = 2", rectangle, page_width=600)
 
 
 def test_local_math_ocr_uses_a_bounded_document_budget(tmp_path, monkeypatch):
@@ -387,7 +525,9 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
     response = service.query(QueryRequest(query="What is organic chemistry?", session_id="test"))
 
     assert "Organic chemistry studies carbon-containing compounds." in response["answer"]
-    assert service.embedding_store.last_query == "What is organic chemistry?"
+    assert service.embedding_store.last_query.startswith("What is organic chemistry?")
+    assert "introductory definition" in service.embedding_store.last_query
+    assert response["answer_intent"] == "definition"
     assert service.retriever.top_k >= 30
     assert response["retrieval_scores"] == [0.9]
     assert response["sources"] == [

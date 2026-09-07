@@ -139,18 +139,23 @@ class LocalMathExtractor:
     def _looks_like_equation(self, text: str, rectangle: pymupdf.Rect, page_width: float) -> bool:
         if len(text) < 3 or len(text) > 500:
             return False
-        words = re.findall(r"[A-Za-z]{2,}", text)
+        normalized_text = re.sub(r"\s+", " ", text).strip()
+        if re.search(r"\.{3,}\s*\d+\b", normalized_text):
+            return False
+        if re.search(r"\b(?:table of contents|contents|bibliography|references|index)\b", normalized_text, re.IGNORECASE):
+            return False
+        words = re.findall(r"[A-Za-z]{2,}", normalized_text)
         if len(words) > 16:
             return False
         is_centered = abs(rectangle.x0 + rectangle.width / 2 - page_width / 2) <= page_width * 0.2
-        has_math_symbols = bool(self._math_characters.search(text))
-        has_variable_equation = bool(self._variable_equation.search(text))
+        has_math_symbols = bool(self._math_characters.search(normalized_text))
+        has_variable_equation = bool(self._variable_equation.search(normalized_text))
         is_compact_numeric_line = (
             is_centered
             and len(words) <= 3
-            and "|" not in text
-            and not re.match(r"^(?:chapter|theorem|example)\b", text, re.IGNORECASE)
-            and bool(re.search(r"\d", text))
+            and "|" not in normalized_text
+            and not re.match(r"^(?:chapter|theorem|example)\b", normalized_text, re.IGNORECASE)
+            and bool(re.search(r"\d", normalized_text))
         )
         return has_math_symbols or has_variable_equation or is_compact_numeric_line
 
