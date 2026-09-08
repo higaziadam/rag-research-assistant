@@ -1,127 +1,273 @@
 # Multimodal RAG Research Assistant
 
-A full-stack research assistant for PDF-based document Q&A. The app uses a Python FastAPI backend with FAISS retrieval and reranking, plus a Next.js frontend for asking questions and viewing sources.
+Document-grounded research assistant for local PDF corpora. The system performs background ingestion, layout-aware extraction, dense FAISS retrieval, cross-encoder reranking, evidence-constrained synthesis, page-level citations, and source-region verification for tables, figures, and mathematical notation.
 
-## What is included right now
+The current implementation is a single-user, local-first prototype with reproducible retrieval evaluation. It is intentionally explicit about the boundary between implemented behavior and production roadmap items.
 
-- PDF upload with persistent background indexing and live progress status
-- Layout-aware text chunking with section, page, bounding-box, and extraction-quality metadata
-- Local table extraction and figure/caption evidence records
-- Dense vector search using FAISS
-- Persistent FAISS index, chunk metadata, ingestion jobs, and uploaded PDFs under `artifacts/`
-- Cross-encoder reranking on retrieved chunks
-- Local math-region detection with optional Pix2Tex transcription and source verification
-- Query endpoint with answer generation flow and unsupported-answer handling
-- Frontend dashboard for asking questions, showing typed evidence, and previewing cited PDF regions
-- API docs via FastAPI at /docs
-- Docker setup and pytest smoke tests
+## Architecture
 
-## Tech stack
+```mermaid
+flowchart LR
+    U[Browser: Next.js / React] -->|multipart PDF upload| API[FastAPI API]
+    U -->|query + session history| API
 
-- Python
-- FastAPI
-- FAISS
-- SentenceTransformers / embeddings
-- PyMuPDF
-- Next.js + TypeScript
-- Docker
+    API --> JOB[Background ingestion worker]
+    JOB --> PDF[PyMuPDF layout-aware extraction]
+    PDF --> TXT[Text chunks + section/page metadata]
+    PDF --> TAB[Table records]
+    PDF --> FIG[Figure captions + source regions]
+    PDF --> MATH[Math-region detection\noptional local Pix2Tex OCR]
 
-## Project structure
+    TXT --> EMB[all-MiniLM-L6-v2 embeddings]
+    TAB --> EMB
+    FIG --> EMB
+    EMB --> IDX[FAISS IndexFlatIP]
+    IDX --> ART[(artifacts/\nFAISS + JSONL metadata + PDFs + jobs)]
+
+    API --> QEMB[Query embedding]
+    QEMB --> IDX
+    IDX --> CAND[Top dense candidates]
+    CAND --> RERANK[ms-marco-MiniLM-L6-v2\ncross-encoder reranker]
+    RERANK --> GUARD[Evidence threshold + claim extraction]
+    GUARD --> ANSWER[Cited answer + source cards\npage/region preview]
+    ANSWER --> U
+```
+
+### Retrieval path
+
+1. A PDF is persisted, queued, extracted, chunked, embedded, and added to the persistent FAISS index by one background worker.
+2. A query is encoded using `sentence-transformers/all-MiniLM-L6-v2`.
+3. FAISS inner-product search returns a dense candidate pool (default: 30 chunks).
+4. `cross-encoder/ms-marco-MiniLM-L-6-v2` reranks the candidate pool (default: 12 candidates, batched).
+5. The answer builder selects readable, evidence-backed claims; every substantive claim is associated with a document and page citation.
+6. When evidence is weak, the system returns an explicit unsupported-answer fallback rather than synthesizing an ungrounded response.
+
+## Key technical features
+
+- **Asynchronous ingestion:** PDF uploads return after persistence; a background job reports `queued`, `extracting`, `embedding`, `indexed`, `failed`, or `cancelled` state.
+- **Persistent local corpus:** Uploaded PDFs, FAISS index, JSONL chunk metadata, document manifest, and job state are stored under `artifacts/` and restored after restart.
+- **Layout-aware evidence:** Text, tables, figures, section labels, pages, bounding boxes, extraction-quality flags, and equation regions remain associated with their source page.
+- **Two-stage neural retrieval:** Dense semantic retrieval followed by a local transformer cross-encoder reranker.
+- **Intent-aware synthesis:** Definitions, explanations, procedures, comparisons, document summaries, and visual questions receive evidence-specific response structures.
+- **Summary controls:** Document summaries filter navigation, reference, URL, and boilerplate content; evidence is diversified across substantive sections and pages.
+- **Mathematics accuracy controls:** Equations are treated as source-verification artifacts. When extracted notation is unreliable, the interface renders the original PDF crop rather than inventing LaTeX.
+- **Citation and source viewer:** Source cards expose document, page, typed evidence, PDF-page preview, and original-file access.
+- **Conversation continuity:** Short, bounded session history supports follow-up queries while each response still performs fresh retrieval.
+- **API validation:** Pydantic constrains query length, history length, document names, top-k, file count, and upload size.
+- **Local model policy:** Hugging Face models default to `MODEL_LOCAL_FILES_ONLY=true`; uploads do not trigger model downloads.
+
+## Evaluation and benchmark results
+
+The checked-in benchmark contains **66 manually labelled questions** over six indexed PDFs:
+
+- NIST AI risk-management guidance
+- *Attention Is All You Need*
+- IPCC AR6 Synthesis Report
+- U.S. Census *Poverty in the United States: 2024*
+- USGS remote-sensing report
+- OpenStax *Calculus Volume 3*
+
+It includes definitions, procedures, summaries, tables, figures, mathematical concepts, multi-document comparisons, and four deliberate unsupported questions. Ground-truth relevance labels use persisted chunk IDs and source pages.
+
+| Retrieval configuration | Recall@1 | Recall@3 | Recall@5 | MRR | nDCG@5 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Dense FAISS | 0.165 | 0.324 | 0.405 | 0.425 | 0.320 |
+| Dense FAISS + cross-encoder reranker | 0.426 | 0.534 | 0.574 | 0.688 | 0.555 |
+
+The cross-encoder improves Recall@5 by **16.9 percentage points** and MRR by **0.263** on the current corpus. The evaluation also identifies remaining weaknesses: large mathematical corpora and multi-document comparison require source-aware candidate selection and cross-source diversification. The scores are intentionally reported as measured prototype results, not inflated production claims.
+
+Run the benchmark locally after indexing the evaluation corpus:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.\.venv\Scripts\python.exe scripts\run_evaluation.py
+```
+
+Outputs:
 
 ```text
-.
-├── README.md
-├── requirements.txt
-├── pytest.ini
-├── docker/
-│   ├── Dockerfile
-│   └── docker-compose.yml
-├── src/
-│   └── multimodal_rag/
-│       ├── api.py
-│       ├── config.py
-│       ├── data_models.py
-│       ├── embeddings.py
-│       ├── retrieval.py
-│       ├── reranker.py
-│       ├── evaluation.py
-│       └── train_reranker.py
-├── frontend/
-│   └── src/
-├── data/
-├── tests/
-└── .github/workflows/
+evaluation/questions.json
+evaluation/ground_truth.json
+evaluation/rubric.md
+evaluation/predictions/baseline.json
+evaluation/predictions/reranked.json
+evaluation/predictions/metrics.json
 ```
 
-## Run locally
+## Technology stack
 
-### 1. Backend
+| Layer | Implemented components | Responsibility |
+| --- | --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS, KaTeX | Upload workflow, job status, query UI, citations, PDF previews, safe math display |
+| API | FastAPI, Pydantic, Uvicorn, CORS middleware | HTTP contract, request validation, job and document endpoints |
+| Parsing | PyMuPDF, Pillow | Layout-aware PDF text, table/figure records, page and region rendering |
+| Math verification | PyMuPDF region detection, optional Pix2Tex | Local equation-region handling with source-first verification |
+| Embeddings | PyTorch, SentenceTransformers `all-MiniLM-L6-v2` | Normalized dense document and query embeddings |
+| Reranking | Hugging Face Transformers, `ms-marco-MiniLM-L6-v2` | Cross-encoder relevance ordering |
+| Index and storage | FAISS `IndexFlatIP`, JSONL, JSON manifests, local PDF files | In-process dense search and persistent single-node artifacts |
+| Delivery | Docker Compose, GitHub Actions, pytest, ESLint | Reproducible local runtime, validation, container build checks |
 
-```powershell
-cd "C:\Users\Uploa\Documents\RAG"
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-$env:PYTHONPATH = "$PWD\src"
-uvicorn multimodal_rag.api:app --host 0.0.0.0 --port 8000
-```
+## Quickstart: Docker Compose
 
-### 2. Frontend
+### Prerequisites
 
-```powershell
-cd "C:\Users\Uploa\Documents\RAG\frontend"
-npm install
-npm run dev
-```
+- Docker Desktop with Compose V2
+- Cached local model artifacts when operating offline. The backend defaults to local-only Hugging Face model loading.
 
-Then open the frontend in the browser, upload one or more text-based PDFs, and ask questions. Uploads return after the PDF is saved; the document list reports queued, extracting, embedding, indexed, or failed status as the local worker processes it. Use **×** to cancel queued work or remove a completed document, and **Retry** if parsing fails. The app expects the backend to be running on port 8000. To use a different API address, create `frontend/.env.local` with `NEXT_PUBLIC_API_BASE_URL=http://your-host:8000`.
-
-### Run the full stack with Docker
+### Start the stack
 
 ```powershell
+git clone <your-repository-url>
+cd RAG
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-Open `http://localhost:3000`. For a deployed environment, set `NEXT_PUBLIC_API_BASE_URL` to the browser-accessible backend URL and set `CORS_ORIGINS` to the frontend URL before building the images. The frontend API URL is embedded during its Docker build.
+Services:
 
-## Current features in the app
+- Frontend: `http://localhost:3000`
+- FastAPI documentation: `http://localhost:8000/docs`
+- Backend health: `http://localhost:8000/health`
 
-- Upload PDF documents without blocking on indexing
-- Show persistent queued/extracting/embedding/indexed/failed status and progress
-- Search over indexed document chunks
-- Return ranked sources with page references
-- Label source evidence as text, table, figure, or equation and show extraction-quality notes
-- Preview the exact extracted PDF region beside the cited page
-- Render original equation crops in the answer when verified LaTeX is unavailable
-- Show evaluation metrics such as Recall@5, MRR, and faithfulness
-- Support unsupported answers when evidence is weak
-- Demo UI for research assistant workflows
+The Compose volume persists backend state in `artifacts/`. Do not copy PDFs directly into `artifacts/uploads`; upload them through the UI or API so that indexing metadata remains consistent.
 
-## Important gaps / next work
+### Local development without Docker
 
-This project is functional as a prototype, but it is not yet a production-grade system. Important next steps are:
-
-- Add a database or object store for multi-user persistent document storage
-- Improve PDF parsing and chunk quality for real documents
-- Add a real multimodal workflow for images/tables/figures, not only text extraction
-- Connect the reranker to a real dataset and evaluate with stronger metrics
-- Add user authentication, session management, and database storage
-- Clean up deployment and production configuration for real-world use
-
-## Local math OCR
-
-Math regions are detected locally with PyMuPDF and are always linked back to their source page. To keep the system accuracy-first, Pix2Tex transcriptions are labelled **verify against the cited PDF** and are never treated as automatically trusted answer content.
-
-The model never downloads during an upload. Retrieval and reranking also use locally cached model files by default (`MODEL_LOCAL_FILES_ONLY=true`). To enable local transcription, place a trusted Pix2Tex `weights.pth` checkpoint at `artifacts/math_ocr/checkpoints/weights.pth`, or set `MATH_OCR_CHECKPOINT` to its absolute path. The repository includes a one-time setup script that downloads the official Pix2Tex release weights and prints their SHA-256 values:
+Backend:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\download_math_ocr_weights.py
+cd "C:\Users\Uploa\Documents\RAG"
+.\.venv\Scripts\Activate.ps1
+$env:PYTHONPATH = "$PWD\src"
+.\.venv\Scripts\python.exe -m uvicorn multimodal_rag.api:app --host 127.0.0.1 --port 8000
 ```
 
-Review the printed hashes before trusting the files. Set `MATH_OCR_ENABLED=true` (the default), restart the backend, then check `http://localhost:8000/math/status`. When OCR is unavailable or its transcription cannot be validated, the interface renders the original equation crop from the cited PDF rather than inventing notation.
+Frontend:
 
-OCR is capped at 50 equation regions per document by default to keep large textbooks responsive. Remaining detected equations still appear as exact PDF crops; change `max_ocr_equations_per_document` in `config.py` only when the extra processing time is acceptable.
+```powershell
+cd "C:\Users\Uploa\Documents\RAG\frontend"
+npm run dev
+```
 
-## Notes
+The first upload or query initializes the embedding and reranking models. `/health` remains lightweight and should respond immediately after Uvicorn starts.
 
-This README is intentionally focused on the project as it exists now. The project is a working prototype for a research assistant, and the goal is to continue improving the backend, retrieval quality, and deployment reliability.
+## API usage
+
+Upload one or more PDFs:
+
+```powershell
+curl.exe -X POST "http://localhost:8000/upload" `
+  -F "files=@C:/absolute/path/to/document.pdf;type=application/pdf"
+```
+
+Poll the document list until a job reaches `indexed`:
+
+```powershell
+Invoke-RestMethod "http://localhost:8000/documents"
+```
+
+Query the corpus:
+
+```powershell
+curl.exe -X POST "http://localhost:8000/query" `
+  -H "Content-Type: application/json" `
+  -d '{"query":"What does the report conclude about climate-resilient development?","top_k":5,"session_id":"demo"}'
+```
+
+Representative response shape:
+
+```json
+{
+  "answer": "... [IPCC_AR6_SYR_FullVolume.pdf, p. 40]",
+  "answer_intent": "explanation",
+  "unsupported": false,
+  "confidence": 0.73,
+  "sources": [
+    {
+      "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-40-text-2-0",
+      "source": "IPCC_AR6_SYR_FullVolume.pdf",
+      "page": 40,
+      "type": "text",
+      "text": "..."
+    }
+  ],
+  "latency_ms": 0.0,
+  "session_id": "demo"
+}
+```
+
+Key endpoints:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Liveness probe |
+| `POST` | `/upload` | Persist and queue PDF ingestion |
+| `GET` | `/documents` | List persisted document state |
+| `GET` | `/jobs/{job_id}` | Read ingestion progress |
+| `POST` | `/query` | Retrieve and answer from evidence |
+| `GET` | `/documents/{filename}/page-preview` | Render a cited page or source region |
+| `DELETE` | `/documents/{filename}` | Remove a document and its indexed chunks |
+| `GET` | `/math/status` | Inspect local math-OCR availability |
+
+## System governance and reliability
+
+### Evidence and hallucination controls
+
+- Query answers are generated only from reranked evidence records.
+- Substantive output claims retain document/page citations.
+- The system applies a confidence gate; weak retrieval returns an explicit unsupported-answer response.
+- Summary retrieval rejects table-of-contents pages, references, URL-heavy content, headers, and other boilerplate before synthesis.
+- Mathematical OCR output is never treated as automatically authoritative. Original PDF regions remain the verification source.
+
+### Data controls
+
+- Upload limits: **100 MB per file**, **10 files per request**.
+- Query validation: non-empty query, 2,000-character maximum, `top_k` constrained to 1–20, bounded session history.
+- Local artifacts are persisted under `artifacts/`; source PDFs for evaluation can be kept in `local_data/`, which is ignored by Git.
+- Document deletion removes managed files, metadata, and indexed chunks through the API rather than leaving orphaned state.
+
+### Operational controls
+
+- A Docker health check probes `/health`.
+- Background ingestion uses a bounded executor (`ingestion_worker_count=1`) to avoid concurrent large-PDF contention.
+- Reranker inference runs in batches (`reranker_batch_size=16`) with `torch.no_grad()` to constrain inference memory.
+- Session history and completed job references are bounded to prevent unbounded in-process growth.
+- GitHub Actions runs backend tests, frontend lint/build, backend/frontend image builds, and Compose configuration validation.
+
+Run the complete validation suite:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.\.venv\Scripts\python.exe -m pytest -p no:cacheprovider
+
+cd frontend
+npm run lint
+npm run build
+```
+
+## Production roadmap
+
+The following are not current repository capabilities and should not be represented as benchmarked or deployed features:
+
+- Hybrid dense + sparse retrieval using BM25.
+- Multimodal CLIP or SigLIP embeddings.
+- Qdrant or Milvus as a distributed vector database.
+- PyTesseract, pdfplumber, or OpenCV ingestion stages.
+- ONNX Runtime or TensorRT model acceleration.
+- Prometheus/Grafana metrics, GPU telemetry, and p95/p99 latency SLO dashboards.
+- Hierarchical parent-child chunk retrieval, tenant isolation, authentication, and distributed job execution.
+
+The next retrieval milestone is source-aware candidate selection with per-document diversification, followed by hybrid lexical retrieval. Only after that work is implemented and measured should targets such as sub-40 ms p95 vector search, 0.91 Recall@5, or sub-12 ms reranking overhead be published as performance claims.
+
+## Repository layout
+
+```text
+.
+├── src/multimodal_rag/       # API, ingestion, retrieval, reranking, schemas
+├── frontend/                 # Next.js client
+├── docker/                   # Backend Dockerfile and Compose definition
+├── evaluation/               # Questions, ground truth, rubric, predictions
+├── scripts/                  # Evaluation and local setup utilities
+├── tests/                    # API, retrieval, persistence, and regression tests
+├── artifacts/                # Runtime-only PDFs, FAISS index, metadata, job state
+└── .github/workflows/        # CI pipeline
+```

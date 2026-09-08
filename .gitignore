@@ -4,6 +4,7 @@ __pycache__/
 .env
 artifacts/
 results/
+local_data/
 .ipynb_checkpoints/
 .DS_Store
 *.log

@@ -17,6 +17,8 @@ import {
   type UploadResponse,
 } from "@/lib/api";
 
+const sourcePreviewCharacterLimit = 500;
+
 function sourceFileUrl(source: Source) {
   return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/file#page=${source.page}`;
 }
@@ -46,6 +48,13 @@ function sourceLabel(source: Source) {
 
 function sourceContent(source: Source) {
   return source.type === "table" ? source.table || source.text : source.figure_caption || source.text;
+}
+
+function sourcePreviewContent(source: Source) {
+  const content = sourceContent(source);
+  return content.length > sourcePreviewCharacterLimit
+    ? `${content.slice(0, sourcePreviewCharacterLimit)}...`
+    : content;
 }
 
 function containsUnverifiedMath(content: string) {
@@ -385,8 +394,8 @@ export default function Home() {
           </button>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-cyan-950/40">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[1.4fr_0.9fr]">
+          <section className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl shadow-cyan-950/40">
             <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="pdf-upload">Documents</label>
             <div className="flex flex-col gap-3 rounded-xl border border-dashed border-slate-700 bg-slate-950 p-4 sm:flex-row sm:items-center">
               <input
@@ -489,7 +498,7 @@ export default function Home() {
             </div>
           </section>
 
-          <aside className="space-y-6">
+          <aside className="min-w-0 space-y-6">
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <p className="mb-4 text-xs uppercase tracking-[0.25em] text-slate-400">Evaluation</p>
               <div className="space-y-3 text-sm">
@@ -508,7 +517,7 @@ export default function Home() {
               ) : (
                 <ul className="space-y-3 text-sm text-slate-200">
                   {sources.map((source, index) => (
-                    <li key={`${source.chunk_id}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <li key={`${source.chunk_id}-${index}`} className="min-w-0 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="break-all text-xs uppercase tracking-[0.2em] text-cyan-400">{source.source}</div>
                         <span className="rounded-full border border-cyan-800 bg-cyan-950/50 px-2 py-0.5 text-xs font-medium text-cyan-200">
@@ -517,8 +526,8 @@ export default function Home() {
                       </div>
                       <div className="mt-1 text-slate-300">Page {source.page}</div>
                       {source.type === "table" ? (
-                        <pre className="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
-                          {sourceContent(source)}
+                        <pre className="mt-2 max-w-full overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
+                          {sourcePreviewContent(source)}
                         </pre>
                       ) : containsUnverifiedMath(sourceContent(source)) ? (
                         <p className="mt-2 text-sm text-amber-200">
@@ -526,15 +535,15 @@ export default function Home() {
                         </p>
                       ) : (
                         <FormattedContent
-                          content={`${sourceContent(source).slice(0, 280)}${sourceContent(source).length > 280 ? "..." : ""}`}
+                          content={sourcePreviewContent(source)}
                           className="mt-2 text-slate-400"
                         />
                       )}
-                      {sourceContent(source).length > 280 && (
+                      {sourceContent(source).length > sourcePreviewCharacterLimit && (
                         <details className="mt-2 text-slate-400">
                           <summary className="cursor-pointer text-cyan-300">View full passage</summary>
                           {source.type === "table" ? (
-                            <pre className="mt-2 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
+                            <pre className="mt-2 max-h-80 max-w-full overflow-auto rounded-lg border border-slate-800 bg-slate-900/60 p-3 font-mono text-xs leading-5 text-slate-300">
                               {sourceContent(source)}
                             </pre>
                           ) : containsUnverifiedMath(sourceContent(source)) ? (
