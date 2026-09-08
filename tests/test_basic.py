@@ -508,8 +508,9 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
             return query
 
     class FakeRetriever:
-        def retrieve(self, query_embedding, top_k):
+        def retrieve(self, query_embedding, top_k, sources=None):
             self.top_k = top_k
+            self.sources = sources
             return [result]
 
     class FakeReranker:
@@ -530,6 +531,7 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
     assert "introductory definition" in service.embedding_store.last_query
     assert response["answer_intent"] == "definition"
     assert service.retriever.top_k >= 30
+    assert service.retriever.sources is None
     assert response["retrieval_scores"] == [0.9]
     assert response["sources"] == [
         {
@@ -547,6 +549,66 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
             "quality_flags": [],
         }
     ]
+
+
+def test_query_limits_normal_retrieval_to_requested_indexed_documents():
+    allowed = RetrievalResult(
+        chunk_id="allowed-1",
+        score=0.4,
+        text="The selected document contains supported evidence.",
+        source="allowed.pdf",
+        metadata={"page": 2},
+    )
+
+    class FakeEmbeddings:
+        def encode_single(self, query):
+            return query
+
+    class FakeRetriever:
+        def retrieve(self, query_embedding, top_k, sources=None):
+            self.sources = sources
+            return [allowed] if sources == {"allowed.pdf"} else []
+
+    class FakeReranker:
+        def rerank(self, query, candidates, top_k):
+            return [(candidates[0], 0.9)] if candidates else []
+
+    service = RAGService.__new__(RAGService)
+    service.embedding_store = FakeEmbeddings()
+    service.retriever = FakeRetriever()
+    service.reranker = FakeReranker()
+    service.documents = [{"filename": "allowed.pdf", "status": "indexed"}]
+    service.session_history = {}
+    service.storage_lock = RLock()
+
+    response = service.query(QueryRequest(query="What is in the selected document?", document_names=["allowed.pdf"]))
+
+    assert service.retriever.sources == {"allowed.pdf"}
+    assert response["sources"][0]["source"] == "allowed.pdf"
+
+
+def test_comparison_diversification_keeps_the_best_result_from_each_source():
+    def result(source, page, score):
+        item = RetrievalResult(
+            chunk_id=f"{source}-{page}",
+            score=score,
+            text="Evidence",
+            source=source,
+            metadata={"page": page},
+        )
+        return ((item.text, item), score)
+
+    reranked = [
+        result("first.pdf", 1, 0.95),
+        result("first.pdf", 2, 0.90),
+        result("second.pdf", 4, 0.70),
+        result("second.pdf", 5, 0.60),
+    ]
+
+    diversified = RAGService._diversify_comparison_reranking(reranked, {"first.pdf", "second.pdf"}, limit=3)
+
+    assert [entry[0][1].source for entry in diversified[:2]] == ["first.pdf", "second.pdf"]
+    assert len(diversified) == 3
 
 
 def test_follow_up_queries_include_recent_history_for_retrieval():

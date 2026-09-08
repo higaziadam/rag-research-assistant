@@ -37,7 +37,7 @@ flowchart LR
 
 1. A PDF is persisted, queued, extracted, chunked, embedded, and added to the persistent FAISS index by one background worker.
 2. A query is encoded using `sentence-transformers/all-MiniLM-L6-v2`.
-3. FAISS inner-product search returns a dense candidate pool (default: 30 chunks).
+3. FAISS inner-product search returns a dense candidate pool (default: 30 chunks); an explicit document scope ranks only that document's vector rows before reranking.
 4. `cross-encoder/ms-marco-MiniLM-L-6-v2` reranks the candidate pool (default: 12 candidates, batched).
 5. The answer builder selects readable, evidence-backed claims; every substantive claim is associated with a document and page citation.
 6. When evidence is weak, the system returns an explicit unsupported-answer fallback rather than synthesizing an ungrounded response.
@@ -48,6 +48,7 @@ flowchart LR
 - **Persistent local corpus:** Uploaded PDFs, FAISS index, JSONL chunk metadata, document manifest, and job state are stored under `artifacts/` and restored after restart.
 - **Layout-aware evidence:** Text, tables, figures, section labels, pages, bounding boxes, extraction-quality flags, and equation regions remain associated with their source page.
 - **Two-stage neural retrieval:** Dense semantic retrieval followed by a local transformer cross-encoder reranker.
+- **Source-aware comparisons:** Explicit document scopes are enforced before reranking; comparison questions allocate candidates to each requested document and diversify the final evidence by source and page.
 - **Intent-aware synthesis:** Definitions, explanations, procedures, comparisons, document summaries, and visual questions receive evidence-specific response structures.
 - **Summary controls:** Document summaries filter navigation, reference, URL, and boilerplate content; evidence is diversified across substantive sections and pages.
 - **Mathematics accuracy controls:** Equations are treated as source-verification artifacts. When extracted notation is unreliable, the interface renders the original PDF crop rather than inventing LaTeX.
@@ -74,7 +75,7 @@ It includes definitions, procedures, summaries, tables, figures, mathematical co
 | Dense FAISS | 0.165 | 0.324 | 0.405 | 0.425 | 0.320 |
 | Dense FAISS + cross-encoder reranker | 0.426 | 0.534 | 0.574 | 0.688 | 0.555 |
 
-The cross-encoder improves Recall@5 by **16.9 percentage points** and MRR by **0.263** on the current corpus. The evaluation also identifies remaining weaknesses: large mathematical corpora and multi-document comparison require source-aware candidate selection and cross-source diversification. The scores are intentionally reported as measured prototype results, not inflated production claims.
+The cross-encoder improves Recall@5 by **16.9 percentage points** and MRR by **0.263** on the current corpus. The evaluation also identifies remaining weaknesses: large mathematical corpora and exact multi-document relevance labels remain challenging. Source-aware candidate selection and cross-source diversification are enforced in the serving path; future benchmark iterations should measure their impact with expanded comparison labels. The scores are intentionally reported as measured prototype results, not inflated production claims.
 
 Run the benchmark locally after indexing the evaluation corpus:
 
@@ -256,7 +257,7 @@ The following are not current repository capabilities and should not be represen
 - Prometheus/Grafana metrics, GPU telemetry, and p95/p99 latency SLO dashboards.
 - Hierarchical parent-child chunk retrieval, tenant isolation, authentication, and distributed job execution.
 
-The next retrieval milestone is source-aware candidate selection with per-document diversification, followed by hybrid lexical retrieval. Only after that work is implemented and measured should targets such as sub-40 ms p95 vector search, 0.91 Recall@5, or sub-12 ms reranking overhead be published as performance claims.
+The next retrieval milestone is hybrid lexical retrieval with BM25, followed by measured vector-store and inference optimization. Only after that work is implemented and measured should targets such as sub-40 ms p95 vector search, 0.91 Recall@5, or sub-12 ms reranking overhead be published as performance claims.
 
 ## Repository layout
 

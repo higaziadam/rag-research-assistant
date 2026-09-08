@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -24,9 +25,38 @@ def load_json(path: Path) -> list[dict[str, Any]]:
 
 
 def scoped_candidates(retriever: FAISSRetriever, query_embedding: Any, sources: set[str], candidate_k: int):
-    """Retrieve dense candidates and retain only documents in the question scope."""
-    candidates = retriever.retrieve(query_embedding, top_k=candidate_k)
-    return [candidate for candidate in candidates if not sources or candidate.source in sources]
+    """Use the production source filter before candidates reach the reranker."""
+    return retriever.retrieve(query_embedding, top_k=candidate_k, sources=sources or None)
+
+
+def comparison_candidates(retriever: FAISSRetriever, query_embedding: Any, sources: set[str], candidate_k: int):
+    """Mirror API candidate allocation for cross-document comparisons."""
+    if len(sources) < 2:
+        return scoped_candidates(retriever, query_embedding, sources, candidate_k)
+    return retriever.retrieve_diversified(
+        query_embedding,
+        sources=sources,
+        per_source_k=math.ceil(candidate_k / len(sources)),
+    )
+
+
+def diversify_comparison_reranking(reranked: list[tuple[tuple[str, Any], float]], sources: set[str], limit: int):
+    """Guarantee at least one top-ranked result from each comparison source."""
+    by_source: dict[str, list[tuple[tuple[str, Any], float]]] = {}
+    for result in reranked:
+        source = result[0][1].source
+        if source in sources:
+            by_source.setdefault(source, []).append(result)
+
+    selected = sorted((items[0] for items in by_source.values() if items), key=lambda item: item[1], reverse=True)
+    selected_ids = {result[0][1].chunk_id for result in selected}
+    for result in reranked:
+        if result[0][1].chunk_id not in selected_ids:
+            selected.append(result)
+            selected_ids.add(result[0][1].chunk_id)
+        if len(selected) >= limit:
+            break
+    return selected[:limit]
 
 
 def prediction_record(query_id: str, ranked_chunk_ids: list[str]) -> dict[str, Any]:
@@ -86,7 +116,8 @@ def main() -> None:
 
         query = str(question["query"])
         source_scope = set(question.get("document_scope", []))
-        dense_candidates = scoped_candidates(
+        candidate_selector = comparison_candidates if question.get("category") == "comparison" else scoped_candidates
+        dense_candidates = candidate_selector(
             retriever,
             embeddings.encode_single(query),
             source_scope,
@@ -98,7 +129,13 @@ def main() -> None:
 
         rerank_candidates = dense_candidates[: args.rerank_candidate_k]
         rerank_input = [(reranker_text(candidate), candidate) for candidate in rerank_candidates]
-        reranked = reranker.rerank(query, rerank_input, top_k=args.top_k)
+        reranked = reranker.rerank(
+            query,
+            rerank_input,
+            top_k=len(rerank_input) if question.get("category") == "comparison" else args.top_k,
+        )
+        if question.get("category") == "comparison":
+            reranked = diversify_comparison_reranking(reranked, source_scope, args.top_k)
         reranked_predictions.append(
             prediction_record(question["query_id"], [candidate.chunk_id for (_, candidate), _score in reranked])
         )

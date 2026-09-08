@@ -49,6 +49,45 @@ def test_retriever_can_remove_chunks_for_a_document_source():
     assert filtered.retrieve(np.asarray([0.0, 1.0], dtype=np.float32), top_k=1)[0].chunk_id == "second"
 
 
+def test_retriever_expands_dense_window_for_a_source_scoped_query():
+    retriever = FAISSRetriever(embedding_dim=2)
+    chunks = [
+        DocumentChunk(chunk_id="dominant-1", text="first", source="dominant.pdf"),
+        DocumentChunk(chunk_id="dominant-2", text="second", source="dominant.pdf"),
+        DocumentChunk(chunk_id="scoped-1", text="target", source="scoped.pdf"),
+    ]
+    retriever.add_chunks(
+        chunks,
+        np.asarray([[1.0, 0.0], [0.9, 0.0], [0.8, 0.0]], dtype=np.float32),
+    )
+
+    scoped = retriever.retrieve(np.asarray([1.0, 0.0], dtype=np.float32), top_k=1, sources={"scoped.pdf"})
+
+    assert [result.chunk_id for result in scoped] == ["scoped-1"]
+
+
+def test_retriever_diversifies_candidates_across_requested_sources():
+    retriever = FAISSRetriever(embedding_dim=2)
+    chunks = [
+        DocumentChunk(chunk_id="first-1", text="first", source="first.pdf"),
+        DocumentChunk(chunk_id="first-2", text="first", source="first.pdf"),
+        DocumentChunk(chunk_id="second-1", text="second", source="second.pdf"),
+        DocumentChunk(chunk_id="second-2", text="second", source="second.pdf"),
+    ]
+    retriever.add_chunks(
+        chunks,
+        np.asarray([[1.0, 0.0], [0.9, 0.0], [0.8, 0.0], [0.7, 0.0]], dtype=np.float32),
+    )
+
+    diversified = retriever.retrieve_diversified(
+        np.asarray([1.0, 0.0], dtype=np.float32),
+        sources={"first.pdf", "second.pdf"},
+        per_source_k=2,
+    )
+
+    assert [result.source for result in diversified] == ["first.pdf", "second.pdf", "first.pdf", "second.pdf"]
+
+
 def test_retriever_requires_metadata_when_loading_an_index(tmp_path):
     retriever = FAISSRetriever(embedding_dim=2)
     retriever.add_chunks([DocumentChunk(chunk_id="chunk", text="text")], np.asarray([[1.0, 0.0]], dtype=np.float32))

@@ -831,6 +831,41 @@ class RAGService:
             return indexed_names.intersection(requested_names)
         return indexed_names if len(indexed_names) == 1 else set()
 
+    def _requested_source_names(self, request: QueryRequest) -> set[str] | None:
+        """Resolve an explicit document scope without broadening invalid requests.
+
+        ``None`` means the caller did not request a scope.  An empty set means
+        it did request one, but none of those documents are currently indexed;
+        callers must return no evidence rather than silently searching every
+        document in the corpus.
+        """
+        requested_names = {Path(name).name for name in request.document_names}
+        if not requested_names:
+            return None
+        indexed_names = {
+            document["filename"]
+            for document in self.documents
+            if document.get("status") == "indexed"
+        }
+        return indexed_names.intersection(requested_names)
+
+    def _comparison_candidate_pool(
+        self,
+        query_embedding: Any,
+        source_names: set[str],
+        requested_top_k: int,
+    ) -> List[Any]:
+        """Allocate a candidate budget to every document in a comparison."""
+        per_source_k = max(
+            requested_top_k,
+            math.ceil(settings.retrieval_candidate_k / len(source_names)),
+        )
+        return self.retriever.retrieve_diversified(
+            query_embedding,
+            sources=source_names,
+            per_source_k=per_source_k,
+        )
+
     def _summary_candidate_pool(self, source_names: set[str]) -> List[DocumentChunk]:
         """Sample substantive chunks across sections before reranking a summary."""
         eligible = [
@@ -885,6 +920,47 @@ class RAGService:
             else:
                 deferred.append(result)
         return diversified + deferred
+
+    @staticmethod
+    def _diversify_comparison_reranking(
+        reranked: List[tuple[tuple[str, Any], float]],
+        source_names: set[str],
+        limit: int,
+    ) -> List[tuple[tuple[str, Any], float]]:
+        """Keep the strongest evidence from each comparison source near the top."""
+        by_source: Dict[str, List[tuple[tuple[str, Any], float]]] = defaultdict(list)
+        for result in reranked:
+            _, chunk = result[0]
+            if chunk.source in source_names:
+                by_source[chunk.source].append(result)
+
+        selected: List[tuple[tuple[str, Any], float]] = []
+        selected_ids = set()
+        for result in sorted(
+            (candidates[0] for candidates in by_source.values() if candidates),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
+            _, chunk = result[0]
+            selected.append(result)
+            selected_ids.add(chunk.chunk_id)
+
+        seen_pages = {
+            (result[0][1].source, result[0][1].metadata.get("page", 1))
+            for result in selected
+        }
+        for prefer_new_page in (True, False):
+            for result in reranked:
+                _, chunk = result[0]
+                page_key = (chunk.source, chunk.metadata.get("page", 1))
+                if chunk.chunk_id in selected_ids or (prefer_new_page and page_key in seen_pages):
+                    continue
+                selected.append(result)
+                selected_ids.add(chunk.chunk_id)
+                seen_pages.add(page_key)
+                if len(selected) >= limit:
+                    return selected
+        return selected[:limit]
 
     @classmethod
     def _extract_claims(cls, text: str) -> List[str]:
@@ -1120,27 +1196,51 @@ class RAGService:
             conversation_history = request.history or saved_history
             search_query = self._prepare_query(request.query, conversation_history)
             search_query = self._intent_search_query(request.query, search_query)
+            requested_source_names = self._requested_source_names(request)
             summary_source_names = self._summary_source_names(request) if intent == "summary" else set()
             initial_hits = self._summary_candidate_pool(summary_source_names) if summary_source_names else []
         if not initial_hits:
             query_embedding = self.embedding_store.encode_single(search_query)
             with self.storage_lock:
-                initial_hits = self.retriever.retrieve(
-                    query_embedding,
-                    top_k=max(request.top_k, settings.retrieval_candidate_k),
-                )
+                if requested_source_names == set():
+                    initial_hits = []
+                elif intent == "comparison" and requested_source_names and len(requested_source_names) > 1:
+                    initial_hits = self._comparison_candidate_pool(
+                        query_embedding,
+                        requested_source_names,
+                        request.top_k,
+                    )
+                else:
+                    initial_hits = self.retriever.retrieve(
+                        query_embedding,
+                        top_k=max(request.top_k, settings.retrieval_candidate_k),
+                        sources=requested_source_names,
+                    )
         pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in initial_hits]
+        rerank_limit = (
+            max(request.top_k, settings.summary_rerank_candidate_k)
+            if summary_source_names
+            else max(request.top_k, settings.rerank_candidate_k)
+        )
+        is_multi_document_comparison = (
+            intent == "comparison" and requested_source_names is not None and len(requested_source_names) > 1
+        )
         reranked = self.reranker.rerank(
             search_query,
             pairs,
-            top_k=(
-                max(request.top_k, settings.summary_rerank_candidate_k)
-                if summary_source_names
-                else max(request.top_k, settings.rerank_candidate_k)
-            ),
+            # The reranker scores the full input either way.  Keep its complete
+            # ordering for comparisons so the diversification step can retain
+            # evidence from every requested document.
+            top_k=len(pairs) if is_multi_document_comparison else rerank_limit,
         )
         if summary_source_names:
             reranked = self._diversify_summary_reranking(reranked)
+        elif is_multi_document_comparison:
+            reranked = self._diversify_comparison_reranking(
+                reranked,
+                requested_source_names,
+                rerank_limit,
+            )
 
         if not reranked:
             evidence = []
