@@ -1,6 +1,6 @@
 # Multimodal RAG Research Assistant
 
-Document-grounded research assistant for local PDF corpora. The system performs background ingestion, layout-aware extraction, dense FAISS retrieval, cross-encoder reranking, evidence-constrained synthesis, page-level citations, and source-region verification for tables, figures, and mathematical notation.
+Document-grounded research assistant for local PDF corpora. The system performs background ingestion, layout-aware extraction, hybrid BM25 + dense FAISS retrieval, cross-encoder reranking, evidence-constrained synthesis, page-level citations, and source-region verification for tables, figures, and mathematical notation.
 
 The current implementation is a single-user, local-first prototype with reproducible retrieval evaluation. It is intentionally explicit about the boundary between implemented behavior and production roadmap items.
 
@@ -22,14 +22,25 @@ flowchart LR
     TAB --> EMB
     FIG --> EMB
     EMB --> IDX[FAISS IndexFlatIP]
+    TXT --> BM25[Local BM25 inverted index]
+    TAB --> BM25
+    FIG --> BM25
     IDX --> ART[(artifacts/\nFAISS + JSONL metadata + PDFs + jobs)]
 
     API --> QEMB[Query embedding]
     QEMB --> IDX
-    IDX --> CAND[Top dense candidates]
-    CAND --> RERANK[ms-marco-MiniLM-L6-v2\ncross-encoder reranker]
+    API --> QTERMS[Normalized query terms]
+    QTERMS --> BM25
+    IDX --> DENSE[Dense candidates]
+    BM25 --> SPARSE[Sparse candidates]
+    DENSE --> FUSE[Reciprocal Rank Fusion]
+    SPARSE --> FUSE
+    FUSE --> RERANK[ms-marco-MiniLM-L-6-v2\ncross-encoder reranker]
     RERANK --> GUARD[Evidence threshold + claim extraction]
-    GUARD --> ANSWER[Cited answer + source cards\npage/region preview]
+    GUARD --> SYNTH[Optional local Ollama\nevidence-bounded synthesis]
+    SYNTH --> VALID[Citation validation]
+    VALID --> ANSWER[Cited answer + source cards\npage/region preview]
+    GUARD --> ANSWER
     ANSWER --> U
 ```
 
@@ -37,25 +48,29 @@ flowchart LR
 
 1. A PDF is persisted, queued, extracted, chunked, embedded, and added to the persistent FAISS index by one background worker.
 2. A query is encoded using `sentence-transformers/all-MiniLM-L6-v2`.
-3. FAISS inner-product search returns a dense candidate pool (default: 30 chunks); an explicit document scope ranks only that document's vector rows before reranking.
-4. `cross-encoder/ms-marco-MiniLM-L-6-v2` reranks the candidate pool (default: 12 candidates, batched).
-5. The answer builder selects readable, evidence-backed claims; every substantive claim is associated with a document and page citation.
-6. When evidence is weak, the system returns an explicit unsupported-answer fallback rather than synthesizing an ungrounded response.
+3. FAISS inner-product search and a local BM25 inverted index each return a candidate pool (default: 30 chunks); an explicit document scope is applied to both.
+4. Reciprocal Rank Fusion merges dense and sparse rankings without comparing incompatible score scales.
+5. `cross-encoder/ms-marco-MiniLM-L-6-v2` reranks fused candidates plus a bounded dense-recall backfill (default: 12 + up to 12 candidates, batched).
+6. The deterministic answer builder selects readable, evidence-backed claims; every substantive claim is associated with a document and page citation.
+7. When explicitly enabled, a local Ollama model rewrites only the selected evidence into intent-aware prose. The response is accepted only when every factual Markdown block uses an exact retrieved document/page citation; otherwise the deterministic answer is returned.
+8. When evidence is weak, the system returns an explicit unsupported-answer fallback rather than synthesizing an ungrounded response.
 
 ## Key technical features
 
 - **Asynchronous ingestion:** PDF uploads return after persistence; a background job reports `queued`, `extracting`, `embedding`, `indexed`, `failed`, or `cancelled` state.
 - **Persistent local corpus:** Uploaded PDFs, FAISS index, JSONL chunk metadata, document manifest, and job state are stored under `artifacts/` and restored after restart.
 - **Layout-aware evidence:** Text, tables, figures, section labels, pages, bounding boxes, extraction-quality flags, and equation regions remain associated with their source page.
-- **Two-stage neural retrieval:** Dense semantic retrieval followed by a local transformer cross-encoder reranker.
+- **Hybrid retrieval:** Dense FAISS semantic search and local BM25 lexical search fused with Reciprocal Rank Fusion, followed by transformer cross-encoder reranking.
 - **Source-aware comparisons:** Explicit document scopes are enforced before reranking; comparison questions allocate candidates to each requested document and diversify the final evidence by source and page.
 - **Intent-aware synthesis:** Definitions, explanations, procedures, comparisons, document summaries, and visual questions receive evidence-specific response structures.
+- **Optional local answer synthesis:** A local Ollama provider can transform selected evidence into concise, citation-required research prose. A citation validator and a short failure cooldown preserve deterministic retrieval behavior when the provider is unavailable or returns invalid output.
 - **Summary controls:** Document summaries filter navigation, reference, URL, and boilerplate content; evidence is diversified across substantive sections and pages.
 - **Mathematics accuracy controls:** Equations are treated as source-verification artifacts. When extracted notation is unreliable, the interface renders the original PDF crop rather than inventing LaTeX.
 - **Citation and source viewer:** Source cards expose document, page, typed evidence, PDF-page preview, and original-file access.
 - **Conversation continuity:** Short, bounded session history supports follow-up queries while each response still performs fresh retrieval.
 - **API validation:** Pydantic constrains query length, history length, document names, top-k, file count, and upload size.
 - **Local model policy:** Hugging Face models default to `MODEL_LOCAL_FILES_ONLY=true`; uploads do not trigger model downloads.
+- **Local synthesis policy:** Ollama synthesis is disabled by default. It remains local when enabled and never broadens the answer beyond the supplied reranked passages.
 
 ## Evaluation and benchmark results
 
@@ -74,8 +89,10 @@ It includes definitions, procedures, summaries, tables, figures, mathematical co
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Dense FAISS | 0.165 | 0.324 | 0.405 | 0.425 | 0.320 |
 | Dense FAISS + cross-encoder reranker | 0.426 | 0.534 | 0.574 | 0.688 | 0.555 |
+| Hybrid BM25 + FAISS (RRF) | 0.219 | 0.413 | 0.477 | 0.505 | 0.395 |
+| Hybrid BM25 + FAISS + cross-encoder reranker | **0.442** | **0.558** | **0.590** | **0.699** | **0.571** |
 
-The cross-encoder improves Recall@5 by **16.9 percentage points** and MRR by **0.263** on the current corpus. The evaluation also identifies remaining weaknesses: large mathematical corpora and exact multi-document relevance labels remain challenging. Source-aware candidate selection and cross-source diversification are enforced in the serving path; future benchmark iterations should measure their impact with expanded comparison labels. The scores are intentionally reported as measured prototype results, not inflated production claims.
+BM25 increases candidate Recall@5 by **7.3 percentage points** over dense-only retrieval. Hybrid retrieval plus reranking increases Recall@5 by **1.6 percentage points** and MRR by **0.011** over the dense+reranker baseline. Large mathematical corpora and exact multi-document relevance labels remain challenging. The scores are intentionally reported as measured prototype results, not inflated production claims.
 
 Run the benchmark locally after indexing the evaluation corpus:
 
@@ -92,6 +109,8 @@ evaluation/ground_truth.json
 evaluation/rubric.md
 evaluation/predictions/baseline.json
 evaluation/predictions/reranked.json
+evaluation/predictions/hybrid.json
+evaluation/predictions/hybrid_reranked.json
 evaluation/predictions/metrics.json
 ```
 
@@ -105,7 +124,7 @@ evaluation/predictions/metrics.json
 | Math verification | PyMuPDF region detection, optional Pix2Tex | Local equation-region handling with source-first verification |
 | Embeddings | PyTorch, SentenceTransformers `all-MiniLM-L6-v2` | Normalized dense document and query embeddings |
 | Reranking | Hugging Face Transformers, `ms-marco-MiniLM-L6-v2` | Cross-encoder relevance ordering |
-| Index and storage | FAISS `IndexFlatIP`, JSONL, JSON manifests, local PDF files | In-process dense search and persistent single-node artifacts |
+| Index and storage | FAISS `IndexFlatIP`, local BM25 inverted index, JSONL, JSON manifests, local PDF files | Hybrid in-process search and persistent single-node artifacts |
 | Delivery | Docker Compose, GitHub Actions, pytest, ESLint | Reproducible local runtime, validation, container build checks |
 
 ## Quickstart: Docker Compose
@@ -151,6 +170,22 @@ npm run dev
 
 The first upload or query initializes the embedding and reranking models. `/health` remains lightweight and should respond immediately after Uvicorn starts.
 
+### Optional local answer synthesis
+
+The deterministic, citation-backed answer builder is always available. To enable clearer research-style prose, install and run Ollama locally, then enable the provider before starting the backend:
+
+```powershell
+winget install Ollama.Ollama
+ollama pull qwen2.5:7b-instruct
+
+$env:ANSWER_SYNTHESIS_ENABLED = "true"
+$env:OLLAMA_MODEL = "qwen2.5:7b-instruct"
+$env:PYTHONPATH = "$PWD\src"
+.\.venv\Scripts\python.exe -m uvicorn multimodal_rag.api:app --host 127.0.0.1 --port 8000
+```
+
+For a lower-memory machine, pull a smaller local instruct model and set `OLLAMA_MODEL` to its exact tag. The service calls only `http://127.0.0.1:11434` in local development. If Ollama is stopped, times out, or returns uncited text, the backend automatically returns the deterministic answer instead. Docker Compose uses `http://host.docker.internal:11434` by default when synthesis is enabled.
+
 ## API usage
 
 Upload one or more PDFs:
@@ -192,6 +227,7 @@ Representative response shape:
     }
   ],
   "latency_ms": 0.0,
+  "synthesis_mode": "deterministic",
   "session_id": "demo"
 }
 ```
@@ -215,6 +251,7 @@ Key endpoints:
 
 - Query answers are generated only from reranked evidence records.
 - Substantive output claims retain document/page citations.
+- Optional local synthesis treats retrieved passages as untrusted data, requires exact source/page citations for each factual block, and rejects uncited or unknown citations before returning a response.
 - The system applies a confidence gate; weak retrieval returns an explicit unsupported-answer response.
 - Summary retrieval rejects table-of-contents pages, references, URL-heavy content, headers, and other boilerplate before synthesis.
 - Mathematical OCR output is never treated as automatically authoritative. Original PDF regions remain the verification source.
@@ -249,7 +286,6 @@ npm run build
 
 The following are not current repository capabilities and should not be represented as benchmarked or deployed features:
 
-- Hybrid dense + sparse retrieval using BM25.
 - Multimodal CLIP or SigLIP embeddings.
 - Qdrant or Milvus as a distributed vector database.
 - PyTesseract, pdfplumber, or OpenCV ingestion stages.
@@ -257,7 +293,7 @@ The following are not current repository capabilities and should not be represen
 - Prometheus/Grafana metrics, GPU telemetry, and p95/p99 latency SLO dashboards.
 - Hierarchical parent-child chunk retrieval, tenant isolation, authentication, and distributed job execution.
 
-The next retrieval milestone is hybrid lexical retrieval with BM25, followed by measured vector-store and inference optimization. Only after that work is implemented and measured should targets such as sub-40 ms p95 vector search, 0.91 Recall@5, or sub-12 ms reranking overhead be published as performance claims.
+The next retrieval milestones are hierarchical parent-child chunk retrieval and measured vector-store/inference optimization. Only after that work is implemented and measured should targets such as sub-40 ms p95 vector search, 0.91 Recall@5, or sub-12 ms reranking overhead be published as performance claims.
 
 ## Repository layout
 

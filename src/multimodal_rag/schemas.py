@@ -81,6 +81,7 @@ class QueryResponse(BaseModel):
     latency_ms: float
     session_id: str
     history: List[str]
+    synthesis_mode: Literal["deterministic", "ollama"] = "deterministic"
 
 
 class EvaluationSummary(BaseModel):

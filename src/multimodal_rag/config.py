@@ -24,12 +24,32 @@ class Settings:
     max_session_history: int = 10
     max_session_count: int = 100
     retrieval_candidate_k: int = 30
+    sparse_candidate_k: int = 30
+    reciprocal_rank_fusion_constant: int = 60
     rerank_candidate_k: int = 12
+    hybrid_dense_backfill_k: int = 12
     reranker_batch_size: int = 16
     summary_candidate_k: int = 80
     summary_rerank_candidate_k: int = 32
     max_answer_sentences: int = 7
     max_answer_sentence_characters: int = 750
+    # Synthesis is opt-in so a missing local model never prevents grounded
+    # retrieval from returning an answer. Set ANSWER_SYNTHESIS_ENABLED=true
+    # after Ollama and the configured model are available locally.
+    answer_synthesis_enabled: bool = field(
+        default_factory=lambda: os.getenv("ANSWER_SYNTHESIS_ENABLED", "false").lower() == "true"
+    )
+    ollama_base_url: str = field(default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"))
+    ollama_model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwen2.5:7b-instruct"))
+    answer_synthesis_timeout_seconds: float = field(
+        default_factory=lambda: float(os.getenv("ANSWER_SYNTHESIS_TIMEOUT_SECONDS", "20"))
+    )
+    answer_synthesis_max_evidence: int = field(
+        default_factory=lambda: int(os.getenv("ANSWER_SYNTHESIS_MAX_EVIDENCE", "5"))
+    )
+    answer_synthesis_max_evidence_characters: int = field(
+        default_factory=lambda: int(os.getenv("ANSWER_SYNTHESIS_MAX_EVIDENCE_CHARACTERS", "1400"))
+    )
     math_ocr_enabled: bool = field(default_factory=lambda: os.getenv("MATH_OCR_ENABLED", "true").lower() == "true")
     math_ocr_checkpoint: Path = field(
         default_factory=lambda: Path(

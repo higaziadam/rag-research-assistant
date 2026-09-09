@@ -13,6 +13,7 @@ from multimodal_rag.embeddings import EmbeddingStore
 from multimodal_rag.evaluation import evaluate_ranking_predictions
 from multimodal_rag.reranker import Reranker
 from multimodal_rag.retrieval import FAISSRetriever
+from multimodal_rag.sparse_retrieval import BM25Retriever, reciprocal_rank_fusion
 
 
 def load_json(path: Path) -> list[dict[str, Any]]:
@@ -40,6 +41,22 @@ def comparison_candidates(retriever: FAISSRetriever, query_embedding: Any, sourc
     )
 
 
+def sparse_scoped_candidates(retriever: BM25Retriever, query: str, sources: set[str], candidate_k: int):
+    """Apply the same document scope to lexical BM25 retrieval."""
+    return retriever.retrieve(query, top_k=candidate_k, sources=sources or None)
+
+
+def sparse_comparison_candidates(retriever: BM25Retriever, query: str, sources: set[str], candidate_k: int):
+    """Allocate lexical candidates to every document in a comparison."""
+    if len(sources) < 2:
+        return sparse_scoped_candidates(retriever, query, sources, candidate_k)
+    return retriever.retrieve_diversified(
+        query,
+        sources=sources,
+        per_source_k=math.ceil(candidate_k / len(sources)),
+    )
+
+
 def diversify_comparison_reranking(reranked: list[tuple[tuple[str, Any], float]], sources: set[str], limit: int):
     """Guarantee at least one top-ranked result from each comparison source."""
     by_source: dict[str, list[tuple[tuple[str, Any], float]]] = {}
@@ -57,6 +74,39 @@ def diversify_comparison_reranking(reranked: list[tuple[tuple[str, Any], float]]
         if len(selected) >= limit:
             break
     return selected[:limit]
+
+
+def reranked_ids(
+    reranker: Reranker,
+    query: str,
+    candidates: list[Any],
+    top_k: int,
+    is_comparison: bool,
+    source_scope: set[str],
+) -> list[str]:
+    """Rerank one candidate configuration using the API's comparison policy."""
+    rerank_input = [(reranker_text(candidate), candidate) for candidate in candidates]
+    reranked = reranker.rerank(query, rerank_input, top_k=len(rerank_input) if is_comparison else top_k)
+    if is_comparison:
+        reranked = diversify_comparison_reranking(reranked, source_scope, top_k)
+    return [candidate.chunk_id for (_, candidate), _score in reranked]
+
+
+def hybrid_rerank_candidates(
+    fused_candidates: list[Any],
+    dense_candidates: list[Any],
+    fused_limit: int,
+    dense_backfill_limit: int,
+) -> list[Any]:
+    """Retain dense-retrieval recall while adding BM25-discovered evidence."""
+    selected = []
+    selected_ids = set()
+    for candidates, limit in ((fused_candidates, fused_limit), (dense_candidates, dense_backfill_limit)):
+        for candidate in candidates[:limit]:
+            if candidate.chunk_id not in selected_ids:
+                selected.append(candidate)
+                selected_ids.add(candidate.chunk_id)
+    return selected
 
 
 def prediction_record(query_id: str, ranked_chunk_ids: list[str]) -> dict[str, Any]:
@@ -80,11 +130,17 @@ def main() -> None:
     parser.add_argument("--dataset-dir", type=Path, default=Path("evaluation"))
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--candidate-k", type=int, default=settings.retrieval_candidate_k)
+    parser.add_argument("--sparse-candidate-k", type=int, default=settings.sparse_candidate_k)
     parser.add_argument("--rerank-candidate-k", type=int, default=settings.rerank_candidate_k)
     args = parser.parse_args()
 
-    if args.top_k < 1 or args.candidate_k < args.top_k or args.rerank_candidate_k < args.top_k:
-        raise ValueError("candidate-k and rerank-candidate-k must be at least top-k, and all values must be positive.")
+    if (
+        args.top_k < 1
+        or args.candidate_k < args.top_k
+        or args.sparse_candidate_k < args.top_k
+        or args.rerank_candidate_k < args.top_k
+    ):
+        raise ValueError("Candidate counts must be at least top-k, and all values must be positive.")
 
     questions = load_json(args.dataset_dir / "questions.json")
     ground_truth = load_json(args.dataset_dir / "ground_truth.json")
@@ -106,9 +162,12 @@ def main() -> None:
         local_files_only=settings.model_local_files_only,
         batch_size=settings.reranker_batch_size,
     )
+    sparse_retriever = BM25Retriever(retriever.chunks)
 
     baseline_predictions = []
     reranked_predictions = []
+    hybrid_predictions = []
+    hybrid_reranked_predictions = []
     for question in questions:
         # Unsupported questions are exercised by answer-level review, not retrieval metrics.
         if not question.get("expected_supported", True):
@@ -116,35 +175,74 @@ def main() -> None:
 
         query = str(question["query"])
         source_scope = set(question.get("document_scope", []))
-        candidate_selector = comparison_candidates if question.get("category") == "comparison" else scoped_candidates
-        dense_candidates = candidate_selector(
+        is_comparison = question.get("category") == "comparison"
+        dense_selector = comparison_candidates if is_comparison else scoped_candidates
+        sparse_selector = sparse_comparison_candidates if is_comparison else sparse_scoped_candidates
+        query_embedding = embeddings.encode_single(query)
+        dense_candidates = dense_selector(
             retriever,
-            embeddings.encode_single(query),
+            query_embedding,
             source_scope,
             args.candidate_k,
+        )
+        sparse_candidates = sparse_selector(
+            sparse_retriever,
+            query,
+            source_scope,
+            args.sparse_candidate_k,
+        )
+        hybrid_candidates = reciprocal_rank_fusion(
+            [dense_candidates, sparse_candidates],
+            top_k=args.candidate_k,
+            rank_constant=settings.reciprocal_rank_fusion_constant,
         )
         baseline_predictions.append(
             prediction_record(question["query_id"], [candidate.chunk_id for candidate in dense_candidates[: args.top_k]])
         )
-
-        rerank_candidates = dense_candidates[: args.rerank_candidate_k]
-        rerank_input = [(reranker_text(candidate), candidate) for candidate in rerank_candidates]
-        reranked = reranker.rerank(
-            query,
-            rerank_input,
-            top_k=len(rerank_input) if question.get("category") == "comparison" else args.top_k,
+        hybrid_predictions.append(
+            prediction_record(question["query_id"], [candidate.chunk_id for candidate in hybrid_candidates[: args.top_k]])
         )
-        if question.get("category") == "comparison":
-            reranked = diversify_comparison_reranking(reranked, source_scope, args.top_k)
         reranked_predictions.append(
-            prediction_record(question["query_id"], [candidate.chunk_id for (_, candidate), _score in reranked])
+            prediction_record(
+                question["query_id"],
+                reranked_ids(
+                    reranker,
+                    query,
+                    dense_candidates[: args.rerank_candidate_k],
+                    args.top_k,
+                    is_comparison,
+                    source_scope,
+                ),
+            )
+        )
+        hybrid_reranked_predictions.append(
+            prediction_record(
+                question["query_id"],
+                reranked_ids(
+                    reranker,
+                    query,
+                    hybrid_rerank_candidates(
+                        hybrid_candidates,
+                        dense_candidates,
+                        args.rerank_candidate_k,
+                        settings.hybrid_dense_backfill_k,
+                    ),
+                    args.top_k,
+                    is_comparison,
+                    source_scope,
+                ),
+            )
         )
 
     predictions_dir = args.dataset_dir / "predictions"
     baseline_path = predictions_dir / "baseline.json"
     reranked_path = predictions_dir / "reranked.json"
+    hybrid_path = predictions_dir / "hybrid.json"
+    hybrid_reranked_path = predictions_dir / "hybrid_reranked.json"
     write_json(baseline_path, baseline_predictions)
     write_json(reranked_path, reranked_predictions)
+    write_json(hybrid_path, hybrid_predictions)
+    write_json(hybrid_reranked_path, hybrid_reranked_predictions)
 
     ground_truth_path = args.dataset_dir / "ground_truth.json"
     metrics = {
@@ -153,9 +251,15 @@ def main() -> None:
         "excluded_unsupported_queries": len(questions) - len(baseline_predictions),
         "top_k": args.top_k,
         "candidate_k": args.candidate_k,
+        "sparse_candidate_k": args.sparse_candidate_k,
         "rerank_candidate_k": args.rerank_candidate_k,
         "baseline": {str(k): evaluate_ranking_predictions(str(baseline_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
         "reranked": {str(k): evaluate_ranking_predictions(str(reranked_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
+        "hybrid": {str(k): evaluate_ranking_predictions(str(hybrid_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
+        "hybrid_reranked": {
+            str(k): evaluate_ranking_predictions(str(hybrid_reranked_path), str(ground_truth_path), k=k)
+            for k in (1, 3, args.top_k)
+        },
     }
     metrics_path = predictions_dir / "metrics.json"
     write_json(metrics_path, metrics)

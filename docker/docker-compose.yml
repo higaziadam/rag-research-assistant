@@ -8,6 +8,10 @@ services:
     environment:
       - PYTHONPATH=/app/src
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      # Ollama is optional and runs on the local host, not in this container.
+      - ANSWER_SYNTHESIS_ENABLED=${ANSWER_SYNTHESIS_ENABLED:-false}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b-instruct}
     volumes:
       - ../artifacts:/app/artifacts
     restart: unless-stopped

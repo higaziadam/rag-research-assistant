@@ -551,6 +551,197 @@ def test_query_unpacks_reranked_candidate_before_building_evidence():
     ]
 
 
+def test_query_accepts_directly_supported_evidence_with_a_negative_reranker_logit():
+    result = RetrievalResult(
+        chunk_id="nist-1",
+        score=0.4,
+        text="The National Institute of Standards and Technology (NIST) develops standards.",
+        source="nist.pdf",
+        metadata={"page": 3},
+    )
+
+    class FakeEmbeddings:
+        def encode_single(self, query):
+            return query
+
+    class FakeRetriever:
+        def retrieve(self, query_embedding, top_k, sources=None):
+            return [result]
+
+    class FakeReranker:
+        def rerank(self, query, candidates, top_k):
+            return [(candidates[0], -1.2)]
+
+    service = RAGService.__new__(RAGService)
+    service.embedding_store = FakeEmbeddings()
+    service.retriever = FakeRetriever()
+    service.reranker = FakeReranker()
+    service.session_history = {}
+    service.storage_lock = RLock()
+
+    response = service.query(QueryRequest(query="What does NIST stand for?"))
+
+    assert response["unsupported"] is False
+    assert response["confidence"] >= 0.5
+    assert "National Institute of Standards and Technology" in response["answer"]
+
+
+def test_table_identifier_is_prioritized_and_counts_as_direct_support():
+    matching_table = DocumentChunk(
+        chunk_id="govern-1-2",
+        source="nist.pdf",
+        type="table",
+        text="GOVERN 1.2 recommends documented training-data provenance.",
+        table="| GV-1.2-001 | Establish transparency policies |",
+        metadata={"page": 18},
+    )
+    adjacent_table = DocumentChunk(
+        chunk_id="govern-1-3",
+        source="nist.pdf",
+        type="table",
+        text="GOVERN 1.3 describes risk tolerance.",
+        metadata={"page": 18},
+    )
+
+    class FakeRetriever:
+        chunks = [adjacent_table, matching_table]
+
+    service = RAGService.__new__(RAGService)
+    service.retriever = FakeRetriever()
+
+    candidates = service._exact_identifier_candidates("What recommendations does GOVERN 1.2 make?", {"nist.pdf"})
+    evidence = [{"source": "nist.pdf", "text": matching_table.text, "table": matching_table.table, "figure_caption": ""}]
+
+    assert [candidate.chunk_id for candidate in candidates] == ["govern-1-2"]
+    assert service._evidence_supports_query("What recommendations does GOVERN 1.2 make?", evidence, "visual")
+
+
+def test_table_recommendation_answer_uses_structured_action_rows_not_flattened_prose():
+    evidence = [
+        {
+            "source": "nist.pdf",
+            "page": 18,
+            "type": "table",
+            "text": "Table: GOVERN 1.2: Trustworthy AI characteristics are integrated into organizational practices.. : Action ID",
+            "table": (
+                "| Action ID | Suggested Action | GAI Risks |\n"
+                "| --- | --- | --- |\n"
+                "| GV-1.2-001 | Establish transparency policies for training data provenance. | Data Privacy; Information Integrity |\n"
+                "| GV-1.2-002 | Evaluate safety capabilities before and after deployment. | Information Security |"
+            ),
+            "figure_caption": "",
+            "equations": [],
+        }
+    ]
+
+    answer = RAGService._build_grounded_answer("What recommendations does the GOVERN 1.2 table make?", evidence)
+
+    assert "**GOVERN 1.2 recommendations**" in answer
+    assert "**GV-1.2-001**" in answer
+    assert "**GV-1.2-002**" in answer
+    assert "Related risks: Data Privacy; Information Integrity" in answer
+    assert "Table:" not in answer
+
+
+def test_acronym_question_returns_the_explicit_source_expansion():
+    evidence = [
+        {
+            "source": "nist.pdf",
+            "page": 3,
+            "text": "The National Institute of Standards and Technology (NIST) develops standards.",
+            "table": "",
+            "figure_caption": "",
+            "equations": [],
+        }
+    ]
+
+    answer = RAGService._build_grounded_answer("What does NIST stand for?", evidence)
+
+    assert "**NIST** stands for **National Institute of Standards and Technology**" in answer
+
+
+def test_document_purpose_answer_prefers_an_introductory_scope_statement_over_a_disclaimer():
+    evidence = [
+        {
+            "source": "report.pdf",
+            "page": 3,
+            "text": "Disclaimer: Commercial entities may be identified in this document.",
+            "table": "",
+            "figure_caption": "",
+            "equations": [],
+        },
+        {
+            "source": "report.pdf",
+            "page": 5,
+            "text": "This document is a companion resource for an AI risk management framework.",
+            "table": "",
+            "figure_caption": "",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer("What is the purpose of this document?", evidence)
+
+    assert "**Purpose**" in answer
+    assert "companion resource" in answer
+    assert "Disclaimer" not in answer
+
+
+def test_document_purpose_pool_prioritizes_scope_over_front_matter():
+    service = RAGService.__new__(RAGService)
+    service.retriever = type(
+        "Retriever",
+        (),
+        {
+            "chunks": [
+                DocumentChunk(
+                    chunk_id="front-matter",
+                    source="report.pdf",
+                    text="Such identification is not intended to imply recommendation or endorsement.",
+                    metadata={"page": 3},
+                ),
+                DocumentChunk(
+                    chunk_id="scope",
+                    source="report.pdf",
+                    text="This document is a companion resource for an AI risk management framework.",
+                    metadata={"page": 5},
+                ),
+            ]
+        },
+    )()
+
+    candidates = service._document_purpose_candidate_pool({"report.pdf"})
+
+    assert [candidate.chunk_id for candidate in candidates] == ["scope"]
+
+
+def test_claim_cleanup_removes_a_stray_pdf_page_number():
+    assert RAGService._clean_claim("13 As this document was focused on the primary considerations.") == "As this document was focused on the primary considerations."
+
+
+def test_current_information_query_is_not_supported_by_a_historical_document_example():
+    evidence = [{"source": "calculus.pdf", "text": "The price per apple is fifty cents.", "table": "", "figure_caption": ""}]
+
+    assert not RAGService._evidence_supports_query("What is today's stock price for Apple?", evidence, "explanation")
+
+
+def test_common_themes_across_documents_is_classified_as_a_comparison():
+    assert RAGService._question_intent("What common themes appear in both IPCC and NIST reports?") == "comparison"
+
+
+def test_common_themes_comparison_requires_and_accepts_evidence_from_both_documents():
+    evidence = [
+        {"source": "nist.pdf", "text": "NIST recommends risk management practices.", "table": "", "figure_caption": ""},
+        {"source": "ipcc.pdf", "text": "The IPCC assesses climate risk management.", "table": "", "figure_caption": ""},
+    ]
+
+    assert RAGService._evidence_supports_query(
+        "What common themes appear in both IPCC and NIST reports?",
+        evidence,
+        "comparison",
+    )
+
+
 def test_query_limits_normal_retrieval_to_requested_indexed_documents():
     allowed = RetrievalResult(
         chunk_id="allowed-1",
@@ -609,6 +800,21 @@ def test_comparison_diversification_keeps_the_best_result_from_each_source():
 
     assert [entry[0][1].source for entry in diversified[:2]] == ["first.pdf", "second.pdf"]
     assert len(diversified) == 3
+
+
+def test_hybrid_rerank_candidates_keep_dense_results_missing_from_fusion_head():
+    fused = [
+        RetrievalResult(chunk_id="lexical", score=0.8, text="lexical"),
+        RetrievalResult(chunk_id="shared", score=0.7, text="shared"),
+    ]
+    dense = [
+        RetrievalResult(chunk_id="dense", score=0.9, text="dense"),
+        RetrievalResult(chunk_id="shared", score=0.7, text="shared"),
+    ]
+
+    candidates = RAGService._hybrid_rerank_candidates(fused, dense, fused_limit=2, dense_backfill_limit=2)
+
+    assert [candidate.chunk_id for candidate in candidates] == ["lexical", "shared", "dense"]
 
 
 def test_follow_up_queries_include_recent_history_for_retrieval():

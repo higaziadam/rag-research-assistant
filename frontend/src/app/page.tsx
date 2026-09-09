@@ -131,41 +131,73 @@ function EquationTranscription({ equation }: { equation: Equation }) {
   );
 }
 
-function AnswerMathEvidence({ sources }: { sources: Source[] }) {
-  const equationSources = sources.flatMap((source) =>
-    (source.equations ?? []).map((equation, index) => ({
-      equation,
-      key: `${source.source}-${source.page}-${equation.bounding_box.join("-")}-${index}`,
-      previewUrl: equationPreviewUrl(source, equation),
+function AnswerEvidencePreviews({
+  sources,
+  onPreview,
+}: {
+  sources: Source[];
+  onPreview: (source: Source) => void;
+}) {
+  const evidenceEntries = sources.map((source) => {
+    const equation = source.equations?.find((candidate) => candidate.bounding_box.length === 4);
+    const previewUrl = equation ? equationPreviewUrl(source, equation) : sourceRegionPreviewUrl(source);
+    const label = equation ? "Equation" : sourceLabel(source);
+    return {
+      key: `${source.source}-${source.page}-${source.type ?? "text"}-${equation?.bounding_box.join("-") ?? source.bounding_box?.join("-") ?? source.chunk_id}`,
+      label,
+      previewUrl,
       source,
-    })),
-  );
-  const uniqueEquations = equationSources.filter((entry, index, entries) => entries.findIndex((candidate) => candidate.key === entry.key) === index).slice(0, 3);
+    };
+  });
+  const uniqueEvidence = evidenceEntries
+    .filter((entry, index, entries) => entries.findIndex((candidate) => candidate.key === entry.key) === index)
+    .slice(0, 3);
 
-  if (uniqueEquations.length === 0) {
+  if (uniqueEvidence.length === 0) {
     return null;
   }
 
   return (
-    <section className="mt-5 border-t border-slate-800 pt-4" aria-label="Mathematical evidence">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300">Original mathematical notation</p>
-      <p className="mt-1 text-xs text-slate-400">Rendered directly from the cited PDF. Verify notation against the source page.</p>
-      <div className="mt-3 grid gap-3">
-        {uniqueEquations.map(({ equation, key, previewUrl, source }) => (
-          <div key={key} className="rounded-lg border border-amber-500/30 bg-slate-900/60 p-3">
-            {equation.latex ? (
-              <VerifiedMathContent latex={equation.latex} className="overflow-x-auto text-slate-100" />
-            ) : previewUrl ? (
-              <a href={previewUrl} target="_blank" rel="noreferrer" className="block overflow-x-auto rounded bg-white p-2">
-                {/* This is an authenticated/dynamic API crop, not a static Next.js image asset. */}
+    <section className="mt-5 border-t border-slate-800 pt-4" aria-label="Supporting evidence">
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-300">Supporting evidence</p>
+      <p className="mt-1 text-xs text-slate-400">Original regions rendered locally from the cited PDFs. Select a preview to inspect its full source page.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {uniqueEvidence.map(({ key, label, previewUrl, source }) => (
+          <article key={key} className="min-w-0 overflow-hidden rounded-lg border border-cyan-900/70 bg-slate-900/60 p-3">
+            {previewUrl ? (
+              <button
+                type="button"
+                onClick={() => onPreview(source)}
+                className="block w-full overflow-hidden rounded border border-slate-700 bg-white text-left transition hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                aria-label={`Preview ${label.toLowerCase()} evidence from ${source.source}, page ${source.page}`}
+              >
+                {/* This is a dynamic crop from a local PDF API, not a static Next.js image asset. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt={`Original equation from ${source.source}, page ${source.page}`} className="mx-auto max-h-44 max-w-full" />
-              </a>
+                <img
+                  src={previewUrl}
+                  alt={`Cited ${label.toLowerCase()} evidence from ${source.source}, page ${source.page}`}
+                  loading="lazy"
+                  className="max-h-48 w-full object-contain"
+                />
+              </button>
             ) : (
-              <p className="text-sm text-amber-200">Equation detected. Open the cited PDF page to review it.</p>
+              <div className="rounded border border-slate-700 bg-slate-950/70 p-3 text-xs text-slate-400">
+                A precise crop is unavailable for this older indexed source. Open the cited page to verify the original evidence.
+              </div>
             )}
-            <p className="mt-2 text-xs text-slate-400">{source.source}, page {source.page}</p>
-          </div>
+            <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+              <span className="rounded-full border border-cyan-800 bg-cyan-950/50 px-2 py-0.5 font-medium text-cyan-200">{label}</span>
+              <span className="shrink-0 text-slate-400">Page {source.page}</span>
+            </div>
+            <p className="mt-2 break-all text-xs text-slate-400">{source.source}</p>
+            <button
+              type="button"
+              onClick={() => onPreview(source)}
+              className="mt-2 text-xs font-medium text-cyan-300 transition hover:text-cyan-100"
+            >
+              Preview cited page
+            </button>
+          </article>
         ))}
       </div>
     </section>
@@ -253,6 +285,16 @@ export default function Home() {
   function rememberBrowserDocuments(filenames: string[]) {
     setBrowserDocumentNames((currentNames) => {
       const nextNames = [...new Set([...currentNames, ...filenames])];
+      window.sessionStorage.setItem("rag-document-names", JSON.stringify(nextNames));
+      return nextNames;
+    });
+  }
+
+  function toggleDocumentScope(filename: string) {
+    setBrowserDocumentNames((currentNames) => {
+      const nextNames = currentNames.includes(filename)
+        ? currentNames.filter((currentFilename) => currentFilename !== filename)
+        : [...currentNames, filename];
       window.sessionStorage.setItem("rag-document-names", JSON.stringify(nextNames));
       return nextNames;
     });
@@ -416,6 +458,13 @@ export default function Home() {
               </button>
             </div>
             <p className="mt-2 text-sm text-slate-400" aria-live="polite">{uploadStatus}</p>
+            {documents.length > 1 && (
+              <p className="mt-2 text-xs text-slate-500">
+                Search scope: {indexedBrowserDocumentNames.length > 0
+                  ? `${indexedBrowserDocumentNames.length} selected document${indexedBrowserDocumentNames.length === 1 ? "" : "s"}`
+                  : "all indexed documents"}. Select documents below to focus a query or comparison.
+              </p>
+            )}
             {documents.length > 0 && (
               <ul className="mt-3 space-y-2 text-sm text-slate-300">
                 {documents.map((document, index) => (
@@ -443,6 +492,17 @@ export default function Home() {
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
+                      {document.status === "indexed" && (
+                        <label className="flex cursor-pointer items-center gap-1 rounded-md px-1 py-1 text-xs text-slate-400 hover:bg-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={browserDocumentNames.includes(document.filename)}
+                            onChange={() => toggleDocumentScope(document.filename)}
+                            className="accent-cyan-400"
+                          />
+                          Search
+                        </label>
+                      )}
                       {document.status === "failed" && (
                         <button
                           type="button"
@@ -494,7 +554,7 @@ export default function Home() {
             <div className={`mt-8 rounded-xl border p-4 ${unsupported ? "border-amber-500/40 bg-amber-950/20" : "border-slate-800 bg-slate-950"}`} aria-live="polite">
               <p className="mb-2 text-xs uppercase tracking-[0.25em] text-slate-400">Answer</p>
               <FormattedContent content={answer} className="leading-7 text-slate-200" />
-              <AnswerMathEvidence sources={sources} />
+              {!unsupported && <AnswerEvidencePreviews sources={sources} onPreview={setSelectedSource} />}
             </div>
           </section>
 

@@ -4,10 +4,11 @@ from threading import RLock
 import numpy as np
 import pytest
 
-from multimodal_rag.data_models import DocumentChunk
+from multimodal_rag.data_models import DocumentChunk, RetrievalResult
 from multimodal_rag.evaluation import evaluate_ranking_predictions
 from multimodal_rag.jobs import IngestionJob
 from multimodal_rag.retrieval import FAISSRetriever
+from multimodal_rag.sparse_retrieval import BM25Retriever, reciprocal_rank_fusion
 from multimodal_rag.train_reranker import prepare_dataset
 import multimodal_rag.api as api
 
@@ -86,6 +87,40 @@ def test_retriever_diversifies_candidates_across_requested_sources():
     )
 
     assert [result.source for result in diversified] == ["first.pdf", "second.pdf", "first.pdf", "second.pdf"]
+
+
+def test_bm25_retrieves_exact_terms_and_honors_source_scope():
+    chunks = [
+        DocumentChunk(chunk_id="dense", text="Dense vector search uses embeddings.", source="dense.pdf"),
+        DocumentChunk(chunk_id="sparse", text="BM25 ranks exact lexical terms.", source="sparse.pdf"),
+    ]
+    retriever = BM25Retriever(chunks)
+
+    results = retriever.retrieve("How does BM25 rank lexical terms?", top_k=2, sources={"sparse.pdf"})
+
+    assert [result.chunk_id for result in results] == ["sparse"]
+
+
+def test_bm25_ignores_numeric_fragments_when_a_report_term_is_available():
+    chunks = [
+        DocumentChunk(chunk_id="numeric", text="Exercise 1.2 evaluates an integral.", source="math.pdf"),
+        DocumentChunk(chunk_id="govern", text="GOVERN 1.2 recommends documented risk controls.", source="report.pdf"),
+    ]
+    retriever = BM25Retriever(chunks)
+
+    results = retriever.retrieve("What does the GOVERN 1.2 table recommend?", top_k=2)
+
+    assert results[0].chunk_id == "govern"
+
+
+def test_reciprocal_rank_fusion_rewards_candidates_found_by_both_retrievers():
+    first = RetrievalResult(chunk_id="first", score=0.9, text="first")
+    shared = RetrievalResult(chunk_id="shared", score=0.8, text="shared")
+    third = RetrievalResult(chunk_id="third", score=0.7, text="third")
+
+    fused = reciprocal_rank_fusion([[first, shared], [shared, third]], top_k=3)
+
+    assert [result.chunk_id for result in fused] == ["shared", "first", "third"]
 
 
 def test_retriever_requires_metadata_when_loading_an_index(tmp_path):

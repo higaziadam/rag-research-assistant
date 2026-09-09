@@ -16,13 +16,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 
 from .config import settings
-from .data_models import DocumentChunk
+from .data_models import DocumentChunk, RetrievalResult
 from .document_extraction import StructuredPdfExtractor, render_pdf_region
 from .embeddings import EmbeddingStore
 from .math_extraction import LocalMathExtractor
 from .jobs import ACTIVE_JOB_STATUSES, IngestionJob
 from .retrieval import FAISSRetriever
 from .reranker import Reranker
+from .sparse_retrieval import BM25Retriever, reciprocal_rank_fusion
+from .synthesis import OllamaSynthesisClient
 from .schemas import (
     DeleteDocumentResponse,
     DocumentInfo,
@@ -41,10 +43,19 @@ class RAGService:
     def __init__(self):
         self.embedding_store = EmbeddingStore(settings.model_name, local_files_only=settings.model_local_files_only)
         self.retriever = FAISSRetriever(embedding_dim=self.embedding_store.embedding_dimension)
+        self.sparse_retriever = BM25Retriever([])
         self.reranker = Reranker(
             settings.reranker_model,
             local_files_only=settings.model_local_files_only,
             batch_size=settings.reranker_batch_size,
+        )
+        self.synthesizer = OllamaSynthesisClient(
+            enabled=settings.answer_synthesis_enabled,
+            base_url=settings.ollama_base_url,
+            model=settings.ollama_model,
+            timeout_seconds=settings.answer_synthesis_timeout_seconds,
+            max_evidence=settings.answer_synthesis_max_evidence,
+            max_evidence_characters=settings.answer_synthesis_max_evidence_characters,
         )
         self.math_extractor = LocalMathExtractor(
             enabled=settings.math_ocr_enabled,
@@ -68,6 +79,7 @@ class RAGService:
             self._restore_documents_without_index()
         else:
             self._bootstrap_demo_docs()
+        self._rebuild_sparse_retriever()
         self._resume_pending_jobs()
 
     @staticmethod
@@ -154,6 +166,10 @@ class RAGService:
         self.retriever.save(str(settings.faiss_index_path), str(settings.metadata_path))
         self._persist_documents()
         self._persist_jobs()
+
+    def _rebuild_sparse_retriever(self) -> None:
+        """Rebuild the local BM25 postings from the authoritative chunk list."""
+        self.sparse_retriever = BM25Retriever(self.retriever.chunks)
 
     @staticmethod
     def _persist_upload(filename: str, data: bytes) -> None:
@@ -310,6 +326,7 @@ class RAGService:
         if not searchable_chunks:
             return
         self.retriever.add_chunks(searchable_chunks, embeddings)
+        self._rebuild_sparse_retriever()
 
     def _embed_chunks(self, chunks: List[DocumentChunk]) -> tuple[List[DocumentChunk], Any]:
         """Create embeddings without holding the storage lock.
@@ -432,6 +449,7 @@ class RAGService:
                 if job is None or job.status == "cancelled":
                     return
                 self.retriever.add_chunks(searchable_chunks, embeddings)
+                self._rebuild_sparse_retriever()
                 job = self.jobs[job_id]
                 document = self._document_for_filename(filename)
                 if document is None or job.status == "cancelled":
@@ -554,6 +572,7 @@ class RAGService:
                 return {"deleted": safe_filename, "documents": self._documents_with_file_sizes(self.documents)}
 
             previous_retriever = self.retriever
+            previous_sparse_retriever = self.sparse_retriever
             previous_documents = self.documents
             remaining_documents = [document for document in self.documents if document["filename"] != safe_filename]
             filtered_retriever = self.retriever.without_sources({safe_filename})
@@ -564,11 +583,13 @@ class RAGService:
                 upload_path.replace(temporary_upload_path)
 
             self.retriever = filtered_retriever
+            self._rebuild_sparse_retriever()
             self.documents = remaining_documents
             try:
                 self._persist_state()
             except Exception:
                 self.retriever = previous_retriever
+                self.sparse_retriever = previous_sparse_retriever
                 self.documents = previous_documents
                 if temporary_upload_path.exists():
                     temporary_upload_path.replace(upload_path)
@@ -712,6 +733,9 @@ class RAGService:
         math_start = re.search(r"[∫∑√≤≥≈≠±×÷⎛⎝⎞⎠〈〉‖]", normalized)
         if math_start:
             normalized = normalized[: math_start.start()].strip()
+        # PDF page numbers can be prepended to a sentence when a text block
+        # crosses a footer. They are not part of the claim itself.
+        normalized = re.sub(r"^\d{1,3}\s+(?=[A-Za-z])", "", normalized)
         normalized = re.sub(r"\b(?:[A-Za-z][\w']*|[A-Za-z][\w']*\([^)]*\))\s*=\s*$", "", normalized).strip()
         first_sentence = re.split(r"(?<=[.!?])\s+", normalized)[0].strip()
         if first_sentence and first_sentence[0].islower():
@@ -741,7 +765,18 @@ class RAGService:
             "find the following",
             "table ",
         )
-        return not claim.lower().startswith(filler_prefixes)
+        boilerplate_markers = (
+            "additional information",
+            "commercial entities",
+            "contact information",
+            "copyright",
+            "disclaimer",
+            "not intended to imply",
+            "recommendation or endorsement",
+            "publication history",
+        )
+        normalized = claim.lower()
+        return not normalized.startswith(filler_prefixes) and not any(marker in normalized for marker in boilerplate_markers)
 
     @staticmethod
     def _is_overview_question(query: str) -> bool:
@@ -764,7 +799,10 @@ class RAGService:
         normalized = re.sub(r"\s+", " ", query.lower()).strip(" ?.")
         if re.search(r"\b(?:how do i|how can i|steps? to|procedure|solve|calculate|derive)\b", normalized):
             return "procedure"
-        if re.search(r"\b(?:compare|comparison|difference|differentiate|versus|\bvs\b)\b", normalized):
+        if re.search(
+            r"\b(?:compare|comparison|difference|differentiate|versus|vs|both|common themes?|similarities)\b",
+            normalized,
+        ):
             return "comparison"
         if re.search(r"\b(?:summari[sz]e|summary|overview)\b", normalized):
             return "summary"
@@ -780,6 +818,16 @@ class RAGService:
     def _intent_search_query(cls, original_query: str, contextual_query: str) -> str:
         """Steer retrieval toward the evidence shape needed for the question."""
         intent = cls._question_intent(original_query)
+        if cls._is_document_purpose_question(original_query):
+            return (
+                f"{contextual_query}\nPrioritize the introduction's explicit purpose, scope, intended use, "
+                "and document overview. Exclude front matter, disclaimers, contact details, and publication metadata."
+            )
+        if cls._asks_for_recommendations(original_query):
+            return (
+                f"{contextual_query}\nPrioritize explicit suggested actions, recommendations, controls, "
+                "and risk-management guidance. Prefer structured recommendation tables when available."
+            )
         guidance = {
             "procedure": "Prioritize method steps, rules, prerequisites, and worked examples.",
             "comparison": "Prioritize direct comparisons, distinctions, and supporting evidence for each item.",
@@ -789,6 +837,20 @@ class RAGService:
             "explanation": "Prioritize an introductory definition, core idea, and main supporting explanation.",
         }
         return f"{contextual_query}\n{guidance[intent]}"
+
+    @staticmethod
+    def _is_document_purpose_question(query: str) -> bool:
+        """Identify requests for a source document's purpose or scope."""
+        normalized = re.sub(r"\s+", " ", query.casefold())
+        return bool(
+            re.search(r"\b(?:purpose|scope|aim|objective)\b", normalized)
+            and re.search(r"\b(?:this|the)?\s*(?:document|report|paper|guide)\b", normalized)
+        )
+
+    @staticmethod
+    def _asks_for_recommendations(query: str) -> bool:
+        """Identify questions that require action-oriented source evidence."""
+        return bool(re.search(r"\b(?:recommend(?:ation|ations|ed)?|suggested actions?|what should|guidance|controls?)\b", query, re.IGNORECASE))
 
     @staticmethod
     def _is_summary_candidate(chunk: DocumentChunk) -> bool:
@@ -808,9 +870,11 @@ class RAGService:
             return False
         if re.search(r"\.{3,}\s*\d+\b", normalized) or normalized.count("http") + normalized.count("www.") >= 2:
             return False
-        return not normalized.startswith(
-            ("doi:", "see also", "copyright", "all rights reserved", "additional information")
-        )
+        if normalized.startswith(
+            ("doi:", "see also", "copyright", "all rights reserved", "additional information", "disclaimer:", "contact information")
+        ):
+            return False
+        return not any(marker in normalized for marker in ("commercial entities", "publication history"))
 
     @staticmethod
     def _has_summary_coverage(evidence: List[Dict[str, Any]], requested_top_k: int) -> bool:
@@ -818,6 +882,270 @@ class RAGService:
         minimum_evidence = min(3, requested_top_k)
         distinct_pages = {(item["source"], item["page"]) for item in evidence}
         return len(evidence) >= minimum_evidence and len(distinct_pages) >= minimum_evidence
+
+    def _document_purpose_candidate_pool(self, source_names: set[str]) -> List[DocumentChunk]:
+        """Retrieve an explicit introduction/scope statement before generic purpose matches.
+
+        Front matter often includes the word ``purpose`` in a disclaimer. A
+        scoped document-purpose query instead needs the first substantive
+        statement explaining what the report is and what it is for.
+        """
+        if len(source_names) != 1:
+            return []
+        purpose_pattern = re.compile(
+            r"\b(?:this (?:document|report|paper|guide) is|purpose of (?:this|the)|companion resource|"
+            r"intended (?:for|to)|provides (?:a|an)|scope of (?:this|the))\b",
+            re.IGNORECASE,
+        )
+        candidates: list[tuple[int, int, DocumentChunk]] = []
+        for chunk in self.retriever.chunks:
+            if chunk.source not in source_names or chunk.type != "text":
+                continue
+            quality_flags = set(chunk.metadata.get("quality_flags", []))
+            if quality_flags.intersection({"no_extractable_text", "limited_extractable_text"}):
+                continue
+            content = " ".join((chunk.text, chunk.table, chunk.figure_caption))
+            normalized = re.sub(r"\s+", " ", content).casefold()
+            if any(
+                marker in normalized
+                for marker in (
+                    "table of contents",
+                    "contents",
+                    "bibliography",
+                    "references",
+                    "commercial entities",
+                    "not intended to imply",
+                    "recommendation or endorsement",
+                    "publication history",
+                )
+            ):
+                continue
+            if not purpose_pattern.search(content):
+                continue
+            score = 0
+            if re.search(r"\bthis (?:document|report|paper|guide) is\b", content, re.IGNORECASE):
+                score += 8
+            if re.search(r"\b(?:purpose|scope|aim|objective|intended)\b", content, re.IGNORECASE):
+                score += 5
+            if re.search(r"\b(?:cross-sectoral|profile|companion resource|framework)\b", content, re.IGNORECASE):
+                score += 3
+            candidates.append((score, -int(chunk.metadata.get("page", 0)), chunk))
+        return [chunk for _, _, chunk in sorted(candidates, key=lambda candidate: candidate[:2], reverse=True)[:16]]
+
+    @staticmethod
+    def _structured_identifier_pattern(query: str) -> str | None:
+        """Return a tolerant pattern for a named report table or control ID."""
+        match = re.search(
+            r"\b(govern|map|measure|manage)\s+(\d+)\s*[.]\s*(\d+)\b",
+            query,
+            re.IGNORECASE,
+        )
+        if not match:
+            return None
+        family, major, minor = match.groups()
+        return rf"\b{re.escape(family)}\s+{major}\s*[.]\s*{minor}\b"
+
+    @staticmethod
+    def _query_named_source_names(query: str, source_names: set[str]) -> set[str]:
+        """Infer an explicit document target from a filename mentioned in a query."""
+        query_terms = set(re.findall(r"[A-Za-z]{4,}", query.casefold()))
+        if not query_terms:
+            return set()
+        return {
+            source
+            for source in source_names
+            if query_terms.intersection(re.findall(r"[A-Za-z]{4,}", Path(source).stem.casefold()))
+        }
+
+    def _exact_identifier_candidates(
+        self,
+        query: str,
+        source_names: set[str] | None,
+    ) -> List[RetrievalResult]:
+        """Find exact report tables before approximate hybrid retrieval.
+
+        Tables such as ``GOVERN 1.2`` contain a precise identifier that should
+        outrank adjacent controls even when all of them share similar language.
+        """
+        pattern = self._structured_identifier_pattern(query)
+        if pattern is None:
+            return []
+
+        candidates = []
+        for chunk in self.retriever.chunks:
+            if source_names is not None and chunk.source not in source_names:
+                continue
+            if chunk.type != "table":
+                continue
+            content = f"{chunk.text}\n{chunk.table}"
+            if re.search(pattern, content, re.IGNORECASE):
+                candidates.append(
+                    RetrievalResult(
+                        chunk_id=chunk.chunk_id,
+                        score=1.0,
+                        text=chunk.text,
+                        table=chunk.table,
+                        figure_caption=chunk.figure_caption,
+                        source=chunk.source,
+                        section=chunk.section,
+                        metadata=chunk.metadata,
+                        equations=chunk.equations,
+                        type=chunk.type,
+                    )
+                )
+        return candidates
+
+    @staticmethod
+    def _merge_unique_candidates(
+        primary: List[RetrievalResult],
+        secondary: List[RetrievalResult],
+        limit: int,
+    ) -> List[RetrievalResult]:
+        """Combine candidate lists while preserving the primary ordering."""
+        merged = []
+        seen_ids = set()
+        for candidate in [*primary, *secondary]:
+            if candidate.chunk_id in seen_ids:
+                continue
+            merged.append(candidate)
+            seen_ids.add(candidate.chunk_id)
+            if len(merged) >= limit:
+                break
+        return merged
+
+    @staticmethod
+    def _support_terms(query: str) -> set[str]:
+        """Extract meaningful terms used to validate retrieved evidence.
+
+        These terms are deliberately separate from the embedding query. They
+        provide a small, deterministic guardrail against answering from a
+        merely adjacent passage after the reranker has ordered the candidates.
+        """
+        stop_terms = {
+            "about",
+            "an",
+            "and",
+            "answer",
+            "appear",
+            "are",
+            "both",
+            "can",
+            "compare",
+            "common",
+            "could",
+            "describe",
+            "did",
+            "do",
+            "does",
+            "document",
+            "explain",
+            "for",
+            "from",
+            "give",
+            "how",
+            "in",
+            "is",
+            "it",
+            "me",
+            "of",
+            "on",
+            "or",
+            "paper",
+            "please",
+            "report",
+            "reports",
+            "stand",
+            "summarize",
+            "table",
+            "tell",
+            "the",
+            "themes",
+            "this",
+            "to",
+            "what",
+            "when",
+            "which",
+            "why",
+            "will",
+            "with",
+            "you",
+            "your",
+        }
+        return {
+            term
+            for term in re.findall(r"[A-Za-z][A-Za-z0-9_-]*", query.casefold())
+            if term not in stop_terms
+        }
+
+    @classmethod
+    def _evidence_supports_query(
+        cls,
+        query: str,
+        evidence: List[Dict[str, Any]],
+        intent: str,
+    ) -> bool:
+        """Decide whether retrieved text supports an answer without logit thresholds.
+
+        Cross-encoder outputs rank candidates but are not calibrated
+        probabilities. This gate instead requires question terminology in the
+        retrieved evidence, and requires evidence from every requested side of
+        a comparison. It intentionally remains conservative for questions that
+        are absent from the local corpus, such as tomorrow's weather.
+        """
+        if not evidence:
+            return False
+
+        evidence_text = " ".join(
+            " ".join(
+                str(item.get(field, ""))
+                for field in ("text", "table", "figure_caption")
+            )
+            for item in evidence
+        ).casefold()
+        acronym_match = re.search(
+            r"\bwhat\s+does\s+([A-Za-z][A-Za-z0-9.-]{1,})\s+stand\s+for\b",
+            query,
+            re.IGNORECASE,
+        )
+        if acronym_match:
+            acronym = re.escape(acronym_match.group(1))
+            return bool(re.search(rf"\(\s*{acronym}\s*\)", evidence_text, re.IGNORECASE))
+
+        identifier_pattern = cls._structured_identifier_pattern(query)
+        if identifier_pattern and re.search(identifier_pattern, evidence_text, re.IGNORECASE):
+            return True
+        if re.search(r"\b(?:today|tomorrow|yesterday|latest|current|live)\b|\bstock\s+price\b", query, re.IGNORECASE):
+            # The assistant is intentionally local-document-grounded and does
+            # not have a live market or weather feed.
+            return False
+
+        if cls._is_document_purpose_question(query):
+            return bool(
+                re.search(
+                    r"\b(?:this (?:document|report|paper|guide) is|purpose|scope|aim|objective|companion resource|intended (?:for|to))\b",
+                    evidence_text,
+                    re.IGNORECASE,
+                )
+            )
+
+        query_terms = cls._support_terms(query)
+        if not query_terms:
+            return False
+        evidence_terms = set(re.findall(r"[A-Za-z][A-Za-z0-9_-]*", evidence_text))
+        matching_terms = query_terms.intersection(evidence_terms)
+        coverage = len(matching_terms) / len(query_terms)
+
+        if intent == "comparison":
+            # A comparison is not grounded if all evidence came from only one
+            # document, even when that document happens to mention both terms.
+            return (
+                len({item["source"] for item in evidence}) >= 2
+                and len(matching_terms) >= 2
+                and coverage >= 0.35
+            )
+
+        required_matches = 1 if len(query_terms) <= 2 else 2
+        return len(matching_terms) >= required_matches and coverage >= 0.5
 
     def _summary_source_names(self, request: QueryRequest) -> set[str]:
         """Resolve an explicit browser scope, or the sole indexed document."""
@@ -849,22 +1177,110 @@ class RAGService:
         }
         return indexed_names.intersection(requested_names)
 
-    def _comparison_candidate_pool(
+    @staticmethod
+    def _diversify_comparison_candidates(
+        candidates: List[RetrievalResult],
+        source_names: set[str],
+        limit: int,
+    ) -> List[RetrievalResult]:
+        """Preserve evidence from each requested source before reranking."""
+        by_source: Dict[str, List[RetrievalResult]] = defaultdict(list)
+        for candidate in candidates:
+            if candidate.source in source_names:
+                by_source[candidate.source].append(candidate)
+
+        selected = [items[0] for items in by_source.values() if items]
+        selected_ids = {candidate.chunk_id for candidate in selected}
+        seen_pages = {(candidate.source, candidate.metadata.get("page", 1)) for candidate in selected}
+        for prefer_new_page in (True, False):
+            for candidate in candidates:
+                page_key = (candidate.source, candidate.metadata.get("page", 1))
+                if candidate.chunk_id in selected_ids or (prefer_new_page and page_key in seen_pages):
+                    continue
+                selected.append(candidate)
+                selected_ids.add(candidate.chunk_id)
+                seen_pages.add(page_key)
+                if len(selected) >= limit:
+                    return selected
+        return selected[:limit]
+
+    def _hybrid_candidate_pool(
         self,
         query_embedding: Any,
-        source_names: set[str],
+        lexical_query: str,
+        source_names: set[str] | None,
+        intent: str,
         requested_top_k: int,
-    ) -> List[Any]:
-        """Allocate a candidate budget to every document in a comparison."""
-        per_source_k = max(
-            requested_top_k,
-            math.ceil(settings.retrieval_candidate_k / len(source_names)),
+    ) -> tuple[List[RetrievalResult], List[RetrievalResult]]:
+        """Fuse dense and BM25 candidates and retain dense backfill evidence."""
+        dense_candidate_k = max(requested_top_k, settings.retrieval_candidate_k)
+        sparse_candidate_k = max(requested_top_k, settings.sparse_candidate_k)
+        is_multi_document_comparison = intent == "comparison" and source_names is not None and len(source_names) > 1
+        sparse_retriever = getattr(self, "sparse_retriever", None)
+
+        if is_multi_document_comparison:
+            per_source_dense_k = math.ceil(dense_candidate_k / len(source_names))
+            per_source_sparse_k = math.ceil(sparse_candidate_k / len(source_names))
+            dense_candidates = self.retriever.retrieve_diversified(
+                query_embedding,
+                sources=source_names,
+                per_source_k=per_source_dense_k,
+            )
+            sparse_candidates = (
+                sparse_retriever.retrieve_diversified(
+                    lexical_query,
+                    sources=source_names,
+                    per_source_k=per_source_sparse_k,
+                )
+                if sparse_retriever is not None
+                else []
+            )
+        else:
+            dense_candidates = self.retriever.retrieve(
+                query_embedding,
+                top_k=dense_candidate_k,
+                sources=source_names,
+            )
+            sparse_candidates = (
+                sparse_retriever.retrieve(
+                    lexical_query,
+                    top_k=sparse_candidate_k,
+                    sources=source_names,
+                )
+                if sparse_retriever is not None
+                else []
+            )
+
+        fused = reciprocal_rank_fusion(
+            [dense_candidates, sparse_candidates],
+            top_k=dense_candidate_k,
+            rank_constant=settings.reciprocal_rank_fusion_constant,
         )
-        return self.retriever.retrieve_diversified(
-            query_embedding,
-            sources=source_names,
-            per_source_k=per_source_k,
-        )
+        exact_identifier_candidates = self._exact_identifier_candidates(lexical_query, source_names)
+        fused = self._merge_unique_candidates(exact_identifier_candidates, fused, dense_candidate_k)
+        if is_multi_document_comparison:
+            fused = self._diversify_comparison_candidates(fused, source_names, dense_candidate_k)
+        return fused, dense_candidates
+
+    @staticmethod
+    def _hybrid_rerank_candidates(
+        fused_candidates: List[RetrievalResult],
+        dense_candidates: List[RetrievalResult],
+        fused_limit: int,
+        dense_backfill_limit: int,
+    ) -> List[RetrievalResult]:
+        """Keep dense recall coverage while introducing lexical hybrid evidence."""
+        selected: List[RetrievalResult] = []
+        selected_ids = set()
+        for candidates, limit in (
+            (fused_candidates, fused_limit),
+            (dense_candidates, dense_backfill_limit),
+        ):
+            for candidate in candidates[:limit]:
+                if candidate.chunk_id not in selected_ids:
+                    selected.append(candidate)
+                    selected_ids.add(candidate.chunk_id)
+        return selected
 
     def _summary_candidate_pool(self, source_names: set[str]) -> List[DocumentChunk]:
         """Sample substantive chunks across sections before reranking a summary."""
@@ -1009,6 +1425,163 @@ class RAGService:
                 claims.append(f"For r(x) = {forcing_term}, the initial guess for y_p(x) is {initial_guess}.")
         return list(dict.fromkeys(claims))
 
+    @staticmethod
+    def _table_rows(table: str) -> List[List[str]]:
+        """Parse the lightweight Markdown tables produced by local extraction."""
+        rows = []
+        for row in table.splitlines():
+            cells = [re.sub(r"\s+", " ", cell.replace("\\|", "|")).strip() for cell in row.strip().strip("|").split("|")]
+            if not cells or all(not cell or set(cell) == {"-"} for cell in cells):
+                continue
+            rows.append(cells)
+        return rows
+
+    @staticmethod
+    def _table_label(cell: str) -> str:
+        """Normalize imperfect OCR headers without changing extracted values."""
+        return re.sub(r"[^a-z0-9]", "", cell.casefold())
+
+    @classmethod
+    def _suggested_action_rows(cls, table: str) -> List[tuple[str, str, str]]:
+        """Extract action ID, recommendation, and risk columns from a report table."""
+        rows = cls._table_rows(table)
+        for header_index, header in enumerate(rows):
+            labels = [cls._table_label(cell) for cell in header]
+            action_id_index = next(
+                (index for index, label in enumerate(labels) if ("action" in label or "actoin" in label) and "id" in label),
+                None,
+            )
+            suggested_action_index = next(
+                (index for index, label in enumerate(labels) if "suggested" in label and ("action" in label or "actoin" in label)),
+                None,
+            )
+            risk_index = next((index for index, label in enumerate(labels) if "risk" in label), None)
+            if action_id_index is None or suggested_action_index is None:
+                continue
+
+            extracted_rows = []
+            for row in rows[header_index + 1 :]:
+                padded = row + [""] * (max(action_id_index, suggested_action_index, risk_index or 0) + 1 - len(row))
+                action_id = padded[action_id_index].strip()
+                action = padded[suggested_action_index].strip()
+                risk = padded[risk_index].strip() if risk_index is not None else ""
+                if not action_id or not action or action_id.casefold().startswith("ai actor"):
+                    continue
+                if re.fullmatch(r"(?:GV|MP|MS|MG)-?\d+(?:\.\d+)?-\d+", action_id, re.IGNORECASE):
+                    extracted_rows.append((action_id, action, risk))
+            return extracted_rows
+        return []
+
+    @classmethod
+    def _build_table_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str | None:
+        """Render report recommendations from structured table rows, not flattened prose."""
+        asks_for_actions = bool(re.search(r"\b(?:recommend|suggested action|actions?|table)\b", query, re.IGNORECASE))
+        if not asks_for_actions:
+            return None
+
+        identifier_pattern = cls._structured_identifier_pattern(query)
+        table_evidence = [item for item in evidence if item.get("type") == "table" and item.get("table")]
+        if identifier_pattern:
+            table_evidence = [
+                item
+                for item in table_evidence
+                if re.search(identifier_pattern, f"{item['text']}\n{item['table']}", re.IGNORECASE)
+            ]
+        if not table_evidence:
+            return None
+
+        # Retrieval can surface a narrative or metadata table before the
+        # action table. Choose the first table that actually exposes action
+        # IDs and suggested-action rows rather than flattening an unrelated
+        # table into a generic response.
+        item = None
+        rows = []
+        for candidate in table_evidence:
+            candidate_rows = cls._suggested_action_rows(candidate["table"])
+            if candidate_rows:
+                item = candidate
+                rows = candidate_rows
+                break
+        if item is None:
+            return None
+
+        title_match = re.search(
+            r"((?:govern|map|measure|manage)\s+\d+\s*[.]\s*\d+)\s*:\s*(.*?)(?=\.{1,2}\s*:?\s*act(?:io|oi)\s*n\s+id|$)",
+            item["text"],
+            re.IGNORECASE,
+        )
+        if title_match:
+            table_title = re.sub(r"\s+", " ", title_match.group(1)).upper()
+            table_purpose = re.sub(r"\s+", " ", title_match.group(2)).strip(" .")
+        else:
+            table_title = "Table recommendations"
+            table_purpose = ""
+
+        citation = cls._citation_label(item)
+        answer_lines = [f"**{table_title} recommendations**", ""]
+        if table_purpose:
+            answer_lines.extend([f"{table_purpose}. {citation}", ""])
+        answer_lines.append("**Recommended actions**")
+        for index, (action_id, action, risk) in enumerate(rows[:5], start=1):
+            answer_lines.append(f"{index}. **{action_id}** — {action} {citation}")
+            if risk:
+                answer_lines.append(f"   - Related risks: {risk}")
+        answer_lines.extend(["", "**Source**", cls._format_citations([item])])
+        return "\n".join(answer_lines)
+
+    @classmethod
+    def _build_acronym_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str | None:
+        """Answer an acronym-expansion question from an explicit source expansion."""
+        acronym_match = re.search(
+            r"\bwhat\s+does\s+([A-Za-z][A-Za-z0-9.-]{1,})\s+stand\s+for\b",
+            query,
+            re.IGNORECASE,
+        )
+        if not acronym_match:
+            return None
+
+        acronym = acronym_match.group(1)
+        expansion_pattern = re.compile(
+            rf"(?<![A-Za-z])((?:The\s+)?[A-Z][A-Za-z]+(?:\s+(?:[A-Z][A-Za-z]+|of|and|the)){{1,8}})\s+\(\s*{re.escape(acronym)}\s*\)",
+        )
+        for item in evidence:
+            match = expansion_pattern.search(item["text"])
+            if not match:
+                continue
+            expansion = re.sub(r"\s+", " ", match.group(1)).strip()
+            expansion = re.sub(r"^The\s+", "", expansion)
+            return f"**Answer**\n\n**{acronym.upper()}** stands for **{expansion}**. {cls._citation_label(item)}"
+        return None
+
+    @classmethod
+    def _build_document_purpose_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str | None:
+        """Use introductory scope statements for document-purpose questions."""
+        if not cls._is_document_purpose_question(query):
+            return None
+
+        purpose_pattern = re.compile(
+            r"\b(?:this (?:document|report|paper|guide) is|purpose|scope|aim|objective|companion resource|intended for|intended to)\b",
+            re.IGNORECASE,
+        )
+        candidates = []
+        for evidence_index, item in enumerate(evidence):
+            for sentence_index, claim in enumerate(cls._extract_claims(item["text"])):
+                if not cls._is_useful_claim(claim) or not purpose_pattern.search(claim):
+                    continue
+                score = 0
+                if re.search(r"\bthis (?:document|report|paper|guide) is\b", claim, re.IGNORECASE):
+                    score += 8
+                if re.search(r"\b(?:purpose|scope|aim|objective|intended)\b", claim, re.IGNORECASE):
+                    score += 5
+                if re.search(r"\b(?:cross-sectoral|profile|companion resource|framework)\b", claim, re.IGNORECASE):
+                    score += 3
+                candidates.append((score, -evidence_index, -sentence_index, claim, item))
+        if not candidates:
+            return None
+
+        _, _, _, purpose, item = max(candidates, key=lambda candidate: candidate[:3])
+        return "\n".join(["**Purpose**", "", f"{purpose} {cls._citation_label(item)}"])
+
     @classmethod
     def _rank_claims(
         cls,
@@ -1052,8 +1625,10 @@ class RAGService:
                 if intent == "summary":
                     if re.search(r"\b(?:purpose|aim|objective|scope|intended|this (?:document|report|guide)|provides)\b", claim, re.IGNORECASE):
                         relevance += 4
-                    if re.search(r"\b(?:recommend|should|must|guidance|need to|call for|encourage)\b", claim, re.IGNORECASE):
+                    if re.search(r"\b(?:recommend|should|must|guidance|need to|call for|encourage|suggested actions?)\b", claim, re.IGNORECASE):
                         relevance += 3
+                    if re.search(r"\b(?:ai|gai|risk|govern|manage|model|system)\b", claim, re.IGNORECASE):
+                        relevance += 2
                 if intent == "procedure" and re.search(
                     r"\b(?:method|step|first|then|use|assume|choose|guess|initial guess|particular solution|substitut|solv|deriv)\w*\b",
                     claim,
@@ -1086,21 +1661,26 @@ class RAGService:
             )
 
         purpose_pattern = re.compile(r"\b(?:purpose|aim|objective|scope|intended|this (?:document|report|guide)|provides)\b", re.IGNORECASE)
-        recommendation_pattern = re.compile(r"\b(?:recommend|should|must|guidance|need to|call for|encourage)\b", re.IGNORECASE)
+        recommendation_pattern = re.compile(r"\b(?:recommend|should|must|guidance|need to|call for|encourage|suggested actions?)\b", re.IGNORECASE)
         purpose = next((candidate for candidate in candidates if purpose_pattern.search(candidate[3])), candidates[0])
         used_claims = {re.sub(r"\W+", " ", purpose[3].lower()).strip()}
         used_pages = {(purpose[4]["source"], purpose[4]["page"])}
 
         findings = []
         recommendations = []
+        deferred_recommendations = []
         for _, _, _, claim, item in candidates:
             normalized_claim = re.sub(r"\W+", " ", claim.lower()).strip()
             page_key = (item["source"], item["page"])
             if normalized_claim in used_claims or page_key in used_pages:
                 continue
             if recommendation_pattern.search(claim):
+                recommendation = f"- {claim} {cls._citation_label(item)}"
+                if not re.search(r"\b(?:ai|gai|risk|govern|manage|model|system)\b", claim, re.IGNORECASE):
+                    deferred_recommendations.append(recommendation)
+                    continue
                 if len(recommendations) < 2:
-                    recommendations.append(f"- {claim} {cls._citation_label(item)}")
+                    recommendations.append(recommendation)
                     used_claims.add(normalized_claim)
                     used_pages.add(page_key)
                 continue
@@ -1112,7 +1692,7 @@ class RAGService:
         if not findings:
             findings.append("- The selected evidence is concentrated in the document's purpose statement.")
         if not recommendations:
-            recommendations.append("- No explicit recommendation was found in the selected summary evidence.")
+            recommendations.extend(deferred_recommendations[:1] or ["- No explicit recommendation was found in the selected summary evidence."])
 
         return "\n".join(
             [
@@ -1135,6 +1715,15 @@ class RAGService:
     def _build_grounded_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str:
         """Create an intent-specific, evidence-only answer with claim-level citations."""
         intent = cls._question_intent(query)
+        acronym_answer = cls._build_acronym_answer(query, evidence)
+        if acronym_answer:
+            return acronym_answer
+        purpose_answer = cls._build_document_purpose_answer(query, evidence)
+        if purpose_answer:
+            return purpose_answer
+        table_answer = cls._build_table_answer(query, evidence)
+        if table_answer:
+            return table_answer
         candidates = cls._rank_claims(query, evidence, intent)
 
         if not candidates:
@@ -1191,32 +1780,57 @@ class RAGService:
     def query(self, request: QueryRequest) -> Dict[str, Any]:
         start = time.perf_counter()
         intent = self._question_intent(request.query)
+        synthesis_mode = "deterministic"
         with self.storage_lock:
             saved_history = self.session_history.get(request.session_id, [])
             conversation_history = request.history or saved_history
             search_query = self._prepare_query(request.query, conversation_history)
             search_query = self._intent_search_query(request.query, search_query)
             requested_source_names = self._requested_source_names(request)
-            summary_source_names = self._summary_source_names(request) if intent == "summary" else set()
+            indexed_source_names = {
+                document["filename"]
+                for document in getattr(self, "documents", [])
+                if document.get("status") == "indexed"
+            }
+            searchable_source_names = requested_source_names if requested_source_names is not None else indexed_source_names
+            named_source_names = self._query_named_source_names(request.query, searchable_source_names)
+            if named_source_names:
+                # A filename-level match is stronger intent than an "all
+                # documents" browser selection. This prevents an IPCC summary
+                # from mixing unrelated corpus documents.
+                requested_source_names = named_source_names
+            summary_source_names = (
+                requested_source_names
+                if intent == "summary" and requested_source_names is not None
+                else self._summary_source_names(request)
+                if intent == "summary"
+                else set()
+            )
             initial_hits = self._summary_candidate_pool(summary_source_names) if summary_source_names else []
+            purpose_source_names = (
+                requested_source_names
+                if self._is_document_purpose_question(request.query) and requested_source_names is not None
+                else set()
+            )
+            if not initial_hits and purpose_source_names:
+                initial_hits = self._document_purpose_candidate_pool(purpose_source_names)
+            dense_backfill_candidates: List[RetrievalResult] = []
         if not initial_hits:
             query_embedding = self.embedding_store.encode_single(search_query)
+            lexical_query = request.query
+            if self._asks_for_recommendations(request.query):
+                lexical_query = f"{lexical_query} suggested actions risk management guidance controls"
             with self.storage_lock:
                 if requested_source_names == set():
                     initial_hits = []
-                elif intent == "comparison" and requested_source_names and len(requested_source_names) > 1:
-                    initial_hits = self._comparison_candidate_pool(
+                else:
+                    initial_hits, dense_backfill_candidates = self._hybrid_candidate_pool(
                         query_embedding,
+                        lexical_query,
                         requested_source_names,
+                        intent,
                         request.top_k,
                     )
-                else:
-                    initial_hits = self.retriever.retrieve(
-                        query_embedding,
-                        top_k=max(request.top_k, settings.retrieval_candidate_k),
-                        sources=requested_source_names,
-                    )
-        pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in initial_hits]
         rerank_limit = (
             max(request.top_k, settings.summary_rerank_candidate_k)
             if summary_source_names
@@ -1225,6 +1839,17 @@ class RAGService:
         is_multi_document_comparison = (
             intent == "comparison" and requested_source_names is not None and len(requested_source_names) > 1
         )
+        rerank_candidates = (
+            self._hybrid_rerank_candidates(
+                initial_hits,
+                dense_backfill_candidates,
+                rerank_limit,
+                settings.hybrid_dense_backfill_k,
+            )
+            if dense_backfill_candidates
+            else initial_hits
+        )
+        pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in rerank_candidates]
         reranked = self.reranker.rerank(
             search_query,
             pairs,
@@ -1240,6 +1865,16 @@ class RAGService:
                 reranked,
                 requested_source_names,
                 rerank_limit,
+            )
+        identifier_pattern = self._structured_identifier_pattern(request.query)
+        if identifier_pattern:
+            reranked = sorted(
+                reranked,
+                key=lambda result: (
+                    bool(re.search(identifier_pattern, result[0][1].text + "\n" + result[0][1].table, re.IGNORECASE)),
+                    result[1],
+                ),
+                reverse=True,
             )
 
         if not reranked:
@@ -1289,29 +1924,39 @@ class RAGService:
                 )
                 evidence_by_page_and_type[evidence_key] = evidence[-1]
             best_score = float(reranked[0][1])
-            confidence = min(1.0, max(0.0, (best_score + 0.5) / 1.5))
+            # Reranker scores rank candidates but are not calibrated
+            # probabilities. Do not reject a directly supported passage just
+            # because a particular model emits negative logits.
+            rank_confidence = min(1.0, max(0.0, (best_score + 0.5) / 1.5))
             has_document_summary_coverage = bool(summary_source_names) and self._has_summary_coverage(evidence, request.top_k)
-            if has_document_summary_coverage:
-                # Cross-encoder logits are ranking values, not calibrated
-                # probabilities. A scoped summary with substantive evidence
-                # across multiple pages is safe to synthesize even when those
-                # raw values are negative.
-                confidence = max(confidence, 0.5)
-            unsupported = confidence < 0.45
+            has_direct_evidence = self._evidence_supports_query(request.query, evidence, intent)
+            supported = has_document_summary_coverage or has_direct_evidence
+            confidence = max(rank_confidence, 0.5) if supported else 0.0
+            unsupported = not supported
             if unsupported:
                 answer = "Unsupported answer: the retrieved evidence is too weak to support a confident response."
             else:
                 answer_evidence = evidence[:settings.max_answer_sentences]
-                citations = self._format_citations(answer_evidence)
-                evidence_types = {item["type"] for item in answer_evidence}
-                if evidence_types.issubset({"table", "figure"}):
-                    answer = (
-                        "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. "
-                        "Open the cited source regions to review the original content."
-                        f"\n\nSources: {citations}"
-                    )
+                synthesis = getattr(self, "synthesizer", None)
+                synthesized = (
+                    synthesis.synthesize(query=request.query, intent=intent, evidence=answer_evidence)
+                    if synthesis is not None
+                    else None
+                )
+                if synthesized is not None:
+                    answer = synthesized.answer
+                    synthesis_mode = synthesized.provider
                 else:
-                    answer = self._build_grounded_answer(request.query, answer_evidence)
+                    citations = self._format_citations(answer_evidence)
+                    evidence_types = {item["type"] for item in answer_evidence}
+                    if evidence_types.issubset({"table", "figure"}):
+                        answer = (
+                            "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. "
+                            "Open the cited source regions to review the original content."
+                            f"\n\nSources: {citations}"
+                        )
+                    else:
+                        answer = self._build_grounded_answer(request.query, answer_evidence)
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
         with self.storage_lock:
@@ -1330,6 +1975,7 @@ class RAGService:
             "session_id": request.session_id,
             "history": history,
             "answer_intent": intent,
+            "synthesis_mode": synthesis_mode,
         }
 
     @staticmethod

@@ -4,11 +4,11 @@ This benchmark covers the persisted evaluation corpus: NIST AI-risk guidance, th
 
 The ground truth was labelled from `artifacts/metadata.jsonl` on the indexed corpus currently in this workspace. Its chunk IDs are valid only while the document, extraction logic, and chunking settings remain unchanged. Re-indexing the document can change the IDs; revalidate the labels after an intentional re-ingest.
 
-Run both dense-only and dense-plus-reranker retrieval locally:
+Run dense-only, dense+reranker, hybrid BM25+FAISS, and hybrid+reranker retrieval locally:
 
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
 .\.venv\Scripts\python.exe scripts\run_evaluation.py
 ```
 
-This writes `evaluation/predictions/baseline.json`, `evaluation/predictions/reranked.json`, and `evaluation/predictions/metrics.json`. These are retrieval-only metrics. Use `rubric.md` to score the resulting complete answers separately.
+This writes `evaluation/predictions/baseline.json`, `evaluation/predictions/reranked.json`, `evaluation/predictions/hybrid.json`, `evaluation/predictions/hybrid_reranked.json`, and `evaluation/predictions/metrics.json`. These are retrieval-only metrics. Use `rubric.md` to score the resulting complete answers separately.
