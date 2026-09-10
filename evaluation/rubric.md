@@ -14,7 +14,7 @@ Score each supported answer from 0 to 2 on the first five criteria (maximum 10).
 
 ## Pass criteria for the first benchmark
 
-- Retrieval Recall@5: at least 0.80
+- Retrieval Recall@5: at least 0.80, measured at **source-page** granularity. A different extracted chunk from the same labeled source page is relevant because it supports the same cited-page verification workflow. Retain strict chunk-level metrics as diagnostics; do not substitute them for the primary source-page gate.
 - Retrieval MRR: at least 0.70
 - Citation correctness: at least 0.90
 - Faithfulness: at least 0.90

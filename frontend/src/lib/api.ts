@@ -1,5 +1,22 @@
 export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
+export async function apiFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMilliseconds = 30_000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMilliseconds);
+  const abortFromCaller = () => controller.abort();
+  init.signal?.addEventListener("abort", abortFromCaller, { once: true });
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+    init.signal?.removeEventListener("abort", abortFromCaller);
+  }
+}
+
 export type Equation = {
   latex: string;
   status: "needs_verification" | "source_only";
@@ -53,11 +70,11 @@ export type QueryResponse = {
 export type UploadResponse = { uploaded?: string[]; total_chunks?: number; documents?: DocumentInfo[]; jobs?: IngestionJob[]; detail?: string };
 export type DeleteDocumentResponse = { deleted: string; documents: DocumentInfo[] };
 export type MetricsResponse = {
-  recall_at_5: number;
-  mrr: number;
-  citation_accuracy: number;
-  answer_faithfulness: number;
-  latency_ms: number;
+  recall_at_5: number | null;
+  mrr: number | null;
+  citation_accuracy: number | null;
+  answer_faithfulness: number | null;
+  latency_ms: number | null;
 };
 
 export async function readJson<T>(response: Response): Promise<T> {

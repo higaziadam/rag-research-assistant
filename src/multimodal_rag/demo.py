@@ -36,7 +36,7 @@ def build_demo_index():
             metadata={"page": 6},
         ),
     ]
-    encoder = EmbeddingStore(settings.model_name)
+    encoder = EmbeddingStore(settings.model_name, revision=settings.model_revision)
     embeddings = encoder.encode([chunk.to_text_for_search() for chunk in chunks])
     retriever = FAISSRetriever(embedding_dim=embeddings.shape[1])
     retriever.add_chunks(chunks, embeddings)

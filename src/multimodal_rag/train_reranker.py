@@ -5,9 +5,12 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from datasets import Dataset
-from peft import LoraConfig, TaskType, get_peft_model
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, DataCollatorWithPadding, Trainer, TrainingArguments
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+
+RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+RERANKER_REVISION = "233902d25c440f23af6f7d6e94d2946bac0bee0a"
 
 
 def _load_rows(data_path: str) -> List[Dict[str, Any]]:
@@ -36,58 +39,54 @@ def _load_rows(data_path: str) -> List[Dict[str, Any]]:
     return examples
 
 
-def prepare_dataset(data_path: str) -> Dataset:
+def prepare_dataset(data_path: str) -> List[Dict[str, Any]]:
     """Load validated JSON or JSONL query/passage relevance examples."""
-    return Dataset.from_list(_load_rows(data_path))
+    return _load_rows(data_path)
 
 
 def train_reranker(data_path: str, output_dir: str):
     dataset = prepare_dataset(data_path)
-    model_name = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    # Keep the base model's single-logit head: runtime reranking uses a scalar score.
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-
-    lora_config = LoraConfig(
-        r=8,
-        lora_alpha=16,
-        target_modules=["query", "key", "value", "dense"],
-        lora_dropout=0.1,
-        bias="none",
-        task_type=TaskType.SEQ_CLS,
+    torch.manual_seed(42)
+    tokenizer = AutoTokenizer.from_pretrained(RERANKER_MODEL, revision=RERANKER_REVISION)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        RERANKER_MODEL,
+        revision=RERANKER_REVISION,
     )
-    model = get_peft_model(model, lora_config)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.train()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+    batch_size = 8
 
-    def tokenize_function(examples):
-        return tokenizer(examples["query"], examples["passage"], truncation=True, max_length=512)
+    for start in range(0, len(dataset), batch_size):
+        rows = dataset[start : start + batch_size]
+        features = tokenizer(
+            [row["query"] for row in rows],
+            [row["passage"] for row in rows],
+            padding=True,
+            truncation=True,
+            max_length=512,
+            return_tensors="pt",
+        ).to(device)
+        labels = torch.tensor([row["label"] for row in rows], dtype=torch.float32, device=device)
+        optimizer.zero_grad(set_to_none=True)
+        logits = model(**features).logits
+        if logits.shape[-1] == 1:
+            loss = torch.nn.functional.binary_cross_entropy_with_logits(logits[:, 0], labels)
+        else:
+            loss = torch.nn.functional.cross_entropy(logits, labels.long())
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        optimizer.step()
 
-    tokenized = dataset.map(tokenize_function, batched=True, remove_columns=["query", "passage"])
-    tokenized = tokenized.rename_column("label", "labels")
-
-    args = TrainingArguments(
-        output_dir=output_dir,
-        per_device_train_batch_size=8,
-        num_train_epochs=1,
-        learning_rate=2e-5,
-        logging_steps=20,
-        save_strategy="no",
-        report_to="none",
-    )
-
-    trainer = Trainer(
-        model=model,
-        args=args,
-        train_dataset=tokenized,
-        data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
-    )
-    trainer.train()
-    trainer.save_model(output_dir)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
-    print(f"Saved LoRA-tuned reranker to {output_dir}")
+    print(f"Saved fine-tuned reranker to {output_dir}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Fine-tune a cross-encoder reranker with PEFT/LoRA")
+    parser = argparse.ArgumentParser(description="Fine-tune a cross-encoder reranker with a bounded PyTorch loop")
     parser.add_argument("--data-path", type=str, required=True, help="Path to JSON or JSONL training data")
     parser.add_argument("--output-dir", type=str, default="artifacts/reranker", help="Output directory")
     args = parser.parse_args()

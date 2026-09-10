@@ -1,23 +1,28 @@
 from __future__ import annotations
 
+import copy
+import hmac
 import json
 import logging
 import math
+import os
 import re
+import shutil
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
-from threading import Lock, RLock
+from threading import BoundedSemaphore, Lock, RLock
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from .config import settings
 from .data_models import DocumentChunk, RetrievalResult
-from .document_extraction import StructuredPdfExtractor, render_pdf_region
+from .document_extraction import StructuredPdfExtractor, render_pdf_region, validate_pdf
 from .embeddings import EmbeddingStore
 from .math_extraction import LocalMathExtractor
 from .jobs import ACTIVE_JOB_STATUSES, IngestionJob
@@ -41,13 +46,19 @@ logger = logging.getLogger(__name__)
 
 class RAGService:
     def __init__(self):
-        self.embedding_store = EmbeddingStore(settings.model_name, local_files_only=settings.model_local_files_only)
+        self._recover_interrupted_state()
+        self.embedding_store = EmbeddingStore(
+            settings.model_name,
+            local_files_only=settings.model_local_files_only,
+            revision=settings.model_revision,
+        )
         self.retriever = FAISSRetriever(embedding_dim=self.embedding_store.embedding_dimension)
         self.sparse_retriever = BM25Retriever([])
         self.reranker = Reranker(
             settings.reranker_model,
             local_files_only=settings.model_local_files_only,
             batch_size=settings.reranker_batch_size,
+            revision=settings.reranker_revision,
         )
         self.synthesizer = OllamaSynthesisClient(
             enabled=settings.answer_synthesis_enabled,
@@ -56,6 +67,7 @@ class RAGService:
             timeout_seconds=settings.answer_synthesis_timeout_seconds,
             max_evidence=settings.answer_synthesis_max_evidence,
             max_evidence_characters=settings.answer_synthesis_max_evidence_characters,
+            allow_remote=settings.allow_remote_synthesis,
         )
         self.math_extractor = LocalMathExtractor(
             enabled=settings.math_ocr_enabled,
@@ -73,6 +85,7 @@ class RAGService:
         self.job_futures: Dict[str, Future[None]] = {}
         self.session_history: Dict[str, List[str]] = defaultdict(list)
         self.storage_lock = RLock()
+        self.inference_gate = BoundedSemaphore(settings.inference_concurrency)
         if self._has_persisted_index():
             self._restore_persisted_state()
         elif settings.documents_path.exists():
@@ -81,6 +94,12 @@ class RAGService:
             self._bootstrap_demo_docs()
         self._rebuild_sparse_retriever()
         self._resume_pending_jobs()
+
+    def close(self) -> None:
+        """Release background workers during graceful application shutdown."""
+        executor = getattr(self, "job_executor", None)
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
 
     @staticmethod
     def _has_persisted_index() -> bool:
@@ -148,24 +167,123 @@ class RAGService:
             raise RuntimeError("Persistent ingestion job manifest must contain a list of jobs.")
         return {job.job_id: job for item in payload if (job := IngestionJob.from_dict(item))}
 
-    def _persist_documents(self) -> None:
+    def _persist_documents(self, documents: List[Dict[str, Any]] | None = None) -> None:
         settings.documents_path.parent.mkdir(parents=True, exist_ok=True)
         temporary_manifest = settings.documents_path.with_suffix(f"{settings.documents_path.suffix}.tmp")
-        temporary_manifest.write_text(json.dumps(self.documents, indent=2), encoding="utf-8")
+        temporary_manifest.write_text(json.dumps(self.documents if documents is None else documents, indent=2), encoding="utf-8")
         temporary_manifest.replace(settings.documents_path)
+        self._restrict_file_permissions(settings.documents_path)
 
-    def _persist_jobs(self) -> None:
+    def _prune_terminal_jobs(
+        self,
+        jobs: Dict[str, IngestionJob] | None = None,
+        documents: List[Dict[str, Any]] | None = None,
+    ) -> None:
+        target_jobs = self.jobs if jobs is None else jobs
+        target_documents = self.documents if documents is None else documents
+        protected_ids = {
+            str(document.get("job_id"))
+            for document in target_documents
+            if document.get("job_id")
+        }
+        terminal = sorted(
+            (
+                job
+                for job in target_jobs.values()
+                if job.status not in ACTIVE_JOB_STATUSES and job.job_id not in protected_ids
+            ),
+            key=lambda job: job.updated_at,
+            reverse=True,
+        )
+        for job in terminal[settings.max_terminal_jobs :]:
+            target_jobs.pop(job.job_id, None)
+
+    def _persist_jobs(
+        self,
+        jobs: Dict[str, IngestionJob] | None = None,
+        documents: List[Dict[str, Any]] | None = None,
+    ) -> None:
         settings.jobs_path.parent.mkdir(parents=True, exist_ok=True)
         temporary_jobs = settings.jobs_path.with_suffix(f"{settings.jobs_path.suffix}.tmp")
-        serialized_jobs = [job.to_dict() for job in getattr(self, "jobs", {}).values()]
+        persisted_jobs = getattr(self, "jobs", {}) if jobs is None else jobs
+        self._prune_terminal_jobs(persisted_jobs, documents)
+        serialized_jobs = [job.to_dict() for job in persisted_jobs.values()]
         temporary_jobs.write_text(json.dumps(serialized_jobs, indent=2), encoding="utf-8")
         temporary_jobs.replace(settings.jobs_path)
+        self._restrict_file_permissions(settings.jobs_path)
 
-    def _persist_state(self) -> None:
+    @staticmethod
+    def _restrict_file_permissions(path: Path) -> None:
+        try:
+            path.chmod(0o600)
+        except OSError:
+            logger.warning("Could not restrict filesystem permissions for %s", path)
+
+    @staticmethod
+    def _state_paths() -> List[Path]:
+        return [settings.faiss_index_path, settings.metadata_path, settings.documents_path, settings.jobs_path]
+
+    @classmethod
+    def _recover_interrupted_state(cls) -> None:
+        marker = settings.artifacts_dir / "state-transaction.json"
+        if not marker.exists():
+            return
+        try:
+            payload = json.loads(marker.read_text(encoding="utf-8"))
+            existed = payload.get("existed") if isinstance(payload, dict) else None
+            expected_names = {path.name for path in cls._state_paths()}
+            if not isinstance(existed, dict) or set(existed) != expected_names:
+                raise ValueError("The transaction marker is malformed.")
+            for path in cls._state_paths():
+                backup = path.with_name(f".{path.name}.rollback")
+                if bool(existed.get(path.name)) and backup.exists():
+                    os.replace(backup, path)
+                elif not bool(existed.get(path.name)):
+                    path.unlink(missing_ok=True)
+                backup.unlink(missing_ok=True)
+            marker.unlink(missing_ok=True)
+        except Exception:
+            logger.exception("Could not recover an interrupted persistent-state transaction")
+            raise RuntimeError("Persistent state recovery failed; preserve the artifacts directory for inspection.")
+
+    def _persist_state(
+        self,
+        *,
+        retriever: FAISSRetriever | None = None,
+        documents: List[Dict[str, Any]] | None = None,
+        jobs: Dict[str, IngestionJob] | None = None,
+    ) -> None:
         settings.artifacts_dir.mkdir(parents=True, exist_ok=True)
-        self.retriever.save(str(settings.faiss_index_path), str(settings.metadata_path))
-        self._persist_documents()
-        self._persist_jobs()
+        persisted_retriever = self.retriever if retriever is None else retriever
+        persisted_documents = self.documents if documents is None else documents
+        persisted_jobs = getattr(self, "jobs", {}) if jobs is None else jobs
+        paths = self._state_paths()
+        marker = settings.artifacts_dir / "state-transaction.json"
+        marker_tmp = marker.with_suffix(".tmp")
+        existed = {path.name: path.exists() for path in paths}
+        for path in paths:
+            backup = path.with_name(f".{path.name}.rollback")
+            backup.unlink(missing_ok=True)
+            if path.exists():
+                try:
+                    os.link(path, backup)
+                except OSError:
+                    shutil.copy2(path, backup)
+        marker_tmp.write_text(json.dumps({"existed": existed}), encoding="utf-8")
+        os.replace(marker_tmp, marker)
+        try:
+            persisted_retriever.save(str(settings.faiss_index_path), str(settings.metadata_path))
+            self._persist_documents(persisted_documents)
+            self._persist_jobs(persisted_jobs, persisted_documents)
+            self._restrict_file_permissions(settings.faiss_index_path)
+            self._restrict_file_permissions(settings.metadata_path)
+        except Exception:
+            self._recover_interrupted_state()
+            raise
+        else:
+            marker.unlink(missing_ok=True)
+            for path in paths:
+                path.with_name(f".{path.name}.rollback").unlink(missing_ok=True)
 
     def _rebuild_sparse_retriever(self) -> None:
         """Rebuild the local BM25 postings from the authoritative chunk list."""
@@ -174,10 +292,44 @@ class RAGService:
     @staticmethod
     def _persist_upload(filename: str, data: bytes) -> None:
         settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            settings.uploads_dir.chmod(0o700)
+        except OSError:
+            logger.warning("Could not restrict filesystem permissions for %s", settings.uploads_dir)
         destination = settings.uploads_dir / filename
         temporary = destination.with_suffix(f"{destination.suffix}.uploading")
         temporary.write_bytes(data)
         temporary.replace(destination)
+        RAGService._restrict_file_permissions(destination)
+
+    @staticmethod
+    def _validated_upload_filename(raw_filename: str | None) -> str:
+        filename = (raw_filename or "").strip()
+        if not filename or filename != Path(filename).name:
+            raise HTTPException(status_code=400, detail="The upload contains an invalid filename.")
+        if len(filename) > settings.max_filename_characters:
+            raise HTTPException(status_code=400, detail="The PDF filename is too long.")
+        if not filename.casefold().endswith(".pdf"):
+            raise HTTPException(status_code=415, detail=f"{filename} is not a PDF file.")
+        if filename.endswith((".", " ")) or any(ord(character) < 32 for character in filename):
+            raise HTTPException(status_code=400, detail="The PDF filename contains unsupported characters.")
+        if any(character in filename for character in '<>:"/\\|?*'):
+            raise HTTPException(status_code=400, detail="The PDF filename contains unsupported characters.")
+        reserved_names = {"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)), *(f"lpt{i}" for i in range(1, 10))}
+        if Path(filename).stem.casefold() in reserved_names:
+            raise HTTPException(status_code=400, detail="The PDF filename is reserved by the operating system.")
+        return filename
+
+    @staticmethod
+    def _validate_pdf_payload(filename: str, data: bytes) -> None:
+        try:
+            validate_pdf(
+                data,
+                max_pages=settings.max_pdf_pages,
+                max_page_area_points=settings.max_pdf_page_area_points,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=f"{filename}: {exc}") from exc
 
     def _bootstrap_demo_docs(self):
         demo_chunks = [
@@ -256,6 +408,11 @@ class RAGService:
         return overlapped_pieces
 
     def _parse_pdf_to_chunks(self, filename: str, file_bytes: bytes) -> List[DocumentChunk]:
+        validate_pdf(
+            file_bytes,
+            max_pages=settings.max_pdf_pages,
+            max_page_area_points=settings.max_pdf_page_area_points,
+        )
         chunks: List[DocumentChunk] = []
         layout_pages = self.pdf_extractor.extract_pages(file_bytes, equation_extractor=self.math_extractor)
         for layout_page in layout_pages:
@@ -337,7 +494,9 @@ class RAGService:
         searchable_chunks = [chunk for chunk in chunks if chunk.to_text_for_search()]
         if not searchable_chunks:
             return [], None
-        embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in searchable_chunks])
+        gate = getattr(self, "inference_gate", nullcontext())
+        with gate:
+            embeddings = self.embedding_store.encode([chunk.to_text_for_search() for chunk in searchable_chunks])
         return searchable_chunks, embeddings
 
     @staticmethod
@@ -448,72 +607,124 @@ class RAGService:
                 job = self.jobs.get(job_id)
                 if job is None or job.status == "cancelled":
                     return
-                self.retriever.add_chunks(searchable_chunks, embeddings)
-                self._rebuild_sparse_retriever()
-                job = self.jobs[job_id]
                 document = self._document_for_filename(filename)
-                if document is None or job.status == "cancelled":
+                if document is None:
                     return
-                document.update(
+                staged_retriever = self.retriever.clone()
+                staged_retriever.add_chunks(searchable_chunks, embeddings)
+                staged_sparse_retriever = BM25Retriever(staged_retriever.chunks)
+                staged_documents = copy.deepcopy(self.documents)
+                staged_jobs = copy.deepcopy(self.jobs)
+                staged_document = next(item for item in staged_documents if item["filename"] == filename)
+                staged_job = staged_jobs[job_id]
+                staged_document.update(
                     {
                         "pages": max((int(chunk.metadata.get("page", 0)) for chunk in chunks), default=0),
                         "chunks": len(chunks),
                         "content_counts": self._content_counts(chunks),
                     }
                 )
-                job.update(status="indexed", progress=100, message="Indexed.")
-                document.update(
+                staged_job.update(status="indexed", progress=100, message="Indexed.")
+                staged_document.update(
                     {
                         "status": "indexed",
                         "progress": 100,
                         "message": "Indexed.",
                         "error": None,
-                        "job_id": job.job_id,
+                        "job_id": staged_job.job_id,
                     }
                 )
-                self._persist_state()
+                self._persist_state(
+                    retriever=staged_retriever,
+                    documents=staged_documents,
+                    jobs=staged_jobs,
+                )
+                self.retriever = staged_retriever
+                self.sparse_retriever = staged_sparse_retriever
+                self.documents = staged_documents
+                self.jobs = staged_jobs
         except Exception as exc:  # pragma: no cover - depends on malformed external PDFs
             logger.exception("Document ingestion failed for job %s", job_id)
             with self.storage_lock:
-                self._update_job(job_id, "failed", 0, "Indexing failed.", error=str(exc))
+                self._update_job(
+                    job_id,
+                    "failed",
+                    0,
+                    "Indexing failed. Review the backend log for the diagnostic details.",
+                    error="The PDF could not be indexed safely.",
+                )
 
     def upload_documents(self, files: List[UploadFile]) -> UploadResponse:
+        prepared_uploads: List[tuple[str, bytes]] = []
+        batch_size = 0
+        submitted_names: set[str] = set()
+        with self.storage_lock:
+            existing_names = {document["filename"].casefold() for document in self.documents}
+        for file in files:
+            filename = self._validated_upload_filename(file.filename)
+            canonical_name = filename.casefold()
+            if canonical_name in existing_names:
+                raise HTTPException(status_code=409, detail=f"{filename} is already indexed. Use a new filename to replace it.")
+            if canonical_name in submitted_names:
+                raise HTTPException(status_code=409, detail=f"{filename} appears more than once in this upload.")
+            data = file.file.read(settings.max_upload_bytes + 1)
+            if len(data) > settings.max_upload_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"{filename} exceeds the {settings.max_upload_bytes // (1024 * 1024)} MB upload limit.",
+                )
+            batch_size += len(data)
+            if batch_size > settings.max_upload_batch_bytes:
+                raise HTTPException(status_code=413, detail="The combined PDF upload is too large.")
+            self._validate_pdf_payload(filename, data)
+            submitted_names.add(canonical_name)
+            prepared_uploads.append((filename, data))
+
         jobs: List[IngestionJob] = []
         with self.storage_lock:
             uploaded_names: List[str] = []
-            indexed_filenames = {document["filename"] for document in self.documents}
-            for file in files:
-                filename = Path(file.filename or "uploaded_document.pdf").name
-                if not filename.lower().endswith(".pdf"):
-                    raise HTTPException(status_code=415, detail=f"{filename} is not a PDF file.")
-                if filename in indexed_filenames:
-                    raise HTTPException(status_code=409, detail=f"{filename} is already indexed. Use a new filename to replace it.")
-                data = file.file.read(settings.max_upload_bytes + 1)
-                if len(data) > settings.max_upload_bytes:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"{filename} exceeds the {settings.max_upload_bytes // (1024 * 1024)} MB upload limit.",
+            indexed_filenames = {document["filename"].casefold() for document in self.documents}
+            conflicts = [filename for filename, _ in prepared_uploads if filename.casefold() in indexed_filenames]
+            if conflicts:
+                raise HTTPException(status_code=409, detail=f"{conflicts[0]} is already indexed. Use a new filename to replace it.")
+            previous_documents = copy.deepcopy(self.documents)
+            previous_jobs = copy.deepcopy(self.jobs)
+            persisted_uploads: List[Path] = []
+            try:
+                for filename, data in prepared_uploads:
+                    if filename.casefold() in indexed_filenames:
+                        # Defensive check if this method is changed to release
+                        # the storage lock between individual files.
+                        raise HTTPException(status_code=409, detail=f"{filename} is already indexed. Use a new filename.")
+                    uploaded_names.append(filename)
+                    indexed_filenames.add(filename.casefold())
+                    self._persist_upload(filename, data)
+                    persisted_uploads.append(settings.uploads_dir / filename)
+                    job = IngestionJob.create(filename)
+                    self.jobs[job.job_id] = job
+                    jobs.append(job)
+                    self.documents.append(
+                        {
+                            "filename": filename,
+                            "pages": 0,
+                            "chunks": 0,
+                            "status": job.status,
+                            "progress": job.progress,
+                            "message": job.message,
+                            "job_id": job.job_id,
+                            "content_counts": {},
+                        }
                     )
-                uploaded_names.append(filename)
-                indexed_filenames.add(filename)
-                self._persist_upload(filename, data)
-                job = IngestionJob.create(filename)
-                self.jobs[job.job_id] = job
-                jobs.append(job)
-                self.documents.append(
-                    {
-                        "filename": filename,
-                        "pages": 0,
-                        "chunks": 0,
-                        "status": job.status,
-                        "progress": job.progress,
-                        "message": job.message,
-                        "job_id": job.job_id,
-                        "content_counts": {},
-                    }
-                )
-            self._persist_documents()
-            self._persist_jobs()
+                self._persist_documents()
+                self._persist_jobs()
+            except Exception:
+                self.documents = previous_documents
+                self.jobs = previous_jobs
+                for upload_path in persisted_uploads:
+                    upload_path.unlink(missing_ok=True)
+                self._persist_documents()
+                self._persist_jobs()
+                raise
             response_documents = self._documents_with_file_sizes(self.documents)
 
         for job in jobs:
@@ -535,7 +746,10 @@ class RAGService:
             filename = Path(document["filename"]).name
             upload_path = settings.uploads_dir / filename
             file_size_bytes = upload_path.stat().st_size if upload_path.is_file() else None
-            documents_with_sizes.append({**document, "file_size_bytes": file_size_bytes})
+            public_document = {**document, "file_size_bytes": file_size_bytes}
+            if public_document.get("error"):
+                public_document["error"] = "The document could not be indexed. Review the backend log for details."
+            documents_with_sizes.append(public_document)
         return documents_with_sizes
 
     @staticmethod
@@ -549,9 +763,7 @@ class RAGService:
 
     def delete_document(self, filename: str) -> Dict[str, Any]:
         """Remove a document from the index, manifest, and persisted uploads."""
-        safe_filename = Path(filename).name
-        if filename != safe_filename:
-            raise HTTPException(status_code=400, detail="Invalid document filename.")
+        safe_filename = self._validated_upload_filename(filename)
 
         with self.storage_lock:
             document = self._document_for_filename(safe_filename)
@@ -605,12 +817,13 @@ class RAGService:
             job = self.jobs.get(job_id)
             if job is None:
                 raise HTTPException(status_code=404, detail="Ingestion job was not found.")
-            return job.to_dict()
+            payload = job.to_dict()
+            if payload.get("error"):
+                payload["error"] = "The document could not be indexed. Review the backend log for details."
+            return payload
 
     def retry_document(self, filename: str) -> Dict[str, Any]:
-        safe_filename = Path(filename).name
-        if filename != safe_filename:
-            raise HTTPException(status_code=400, detail="Invalid document filename.")
+        safe_filename = self._validated_upload_filename(filename)
 
         with self.storage_lock:
             document = self._document_for_filename(safe_filename)
@@ -733,6 +946,14 @@ class RAGService:
         math_start = re.search(r"[∫∑√≤≥≈≠±×÷⎛⎝⎞⎠〈〉‖]", normalized)
         if math_start:
             normalized = normalized[: math_start.start()].strip()
+        normalized = re.sub(r"^[\s:;|.-]+", "", normalized)
+        normalized = re.sub(
+            r"^((?:GV|MP|MS|MG)-?\d+(?:\.\d+)?-\d+)\s*;\s*:\s*",
+            r"\1: ",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+        normalized = re.sub(r"\.{2,}", ".", normalized)
         # PDF page numbers can be prepended to a sentence when a text block
         # crosses a footer. They are not part of the claim itself.
         normalized = re.sub(r"^\d{1,3}\s+(?=[A-Za-z])", "", normalized)
@@ -764,13 +985,19 @@ class RAGService:
             "solve the following",
             "find the following",
             "table ",
+            "table:",
+            "http://",
+            "https://",
+            "www.",
         )
         boilerplate_markers = (
             "additional information",
+            "acknowledgments",
             "commercial entities",
             "contact information",
             "copyright",
             "disclaimer",
+            "glossary of terms",
             "not intended to imply",
             "recommendation or endorsement",
             "publication history",
@@ -797,8 +1024,6 @@ class RAGService:
     def _question_intent(cls, query: str) -> str:
         """Classify presentation intent without making a subject-specific assumption."""
         normalized = re.sub(r"\s+", " ", query.lower()).strip(" ?.")
-        if re.search(r"\b(?:how do i|how can i|steps? to|procedure|solve|calculate|derive)\b", normalized):
-            return "procedure"
         if re.search(
             r"\b(?:compare|comparison|difference|differentiate|versus|vs|both|common themes?|similarities)\b",
             normalized,
@@ -808,8 +1033,16 @@ class RAGService:
             return "summary"
         if re.search(r"\b(?:figure|chart|graph|diagram|image|table)\b", normalized):
             return "visual"
-        if normalized.startswith(("what is ", "define ", "what does ")):
+        # Declarative questions can contain words such as "calculate" but
+        # still ask for an explanation (for example, "What can double
+        # integrals calculate?").  Classify their leading question form
+        # before looking for imperative procedure language.
+        if normalized.startswith(("what is ", "define ", "what does ", "what can ")) or re.search(
+            r"\bwhat\s+does\b.*\b(?:mean|represent)\b", normalized
+        ):
             return "definition"
+        if re.search(r"\b(?:how do i|how can i|steps? to|procedure|solve|calculate|derive)\b", normalized):
+            return "procedure"
         if cls._is_overview_question(normalized):
             return "explanation"
         return "explanation"
@@ -818,6 +1051,15 @@ class RAGService:
     def _intent_search_query(cls, original_query: str, contextual_query: str) -> str:
         """Steer retrieval toward the evidence shape needed for the question."""
         intent = cls._question_intent(original_query)
+        # Comparison is the dominant intent even when the wording also asks
+        # what each source recommends. Otherwise a query such as "compare how
+        # both reports recommend responses" is incorrectly routed toward one
+        # structured recommendation table.
+        if intent == "comparison":
+            return (
+                f"{contextual_query}\nPrioritize evidence for every named or selected source, then identify "
+                "their distinct approaches, shared themes, and differences."
+            )
         if cls._is_document_purpose_question(original_query):
             return (
                 f"{contextual_query}\nPrioritize the introduction's explicit purpose, scope, intended use, "
@@ -837,6 +1079,82 @@ class RAGService:
             "explanation": "Prioritize an introductory definition, core idea, and main supporting explanation.",
         }
         return f"{contextual_query}\n{guidance[intent]}"
+
+    @staticmethod
+    def _compound_aspects(query: str) -> List[str]:
+        """Return explicit coordinated aspects without inventing query terms."""
+        normalized = re.sub(r"\s+", " ", query).strip()
+        match = re.search(
+            r"\b(?:across|including|covering|in terms of)\s+(.+?)(?:[?.]|$)",
+            normalized,
+            re.IGNORECASE,
+        )
+        raw_aspects: List[str] = []
+        if match:
+            raw_aspects = re.split(r"\s*,\s*|\s+and\s+", match.group(1), flags=re.IGNORECASE)
+        else:
+            verb = r"(?:identify|assess|evaluate|measure|recommend|monitor|mitigate|manage)\w*"
+            serial = re.search(
+                rf"\b({verb})\s*,\s*({verb})\s*,?\s+and\s+({verb}(?:\s+[A-Za-z][A-Za-z-]*){{0,4}})",
+                normalized,
+                re.IGNORECASE,
+            )
+            if serial:
+                raw_aspects = list(serial.groups())
+                final_words = re.findall(r"[A-Za-z][A-Za-z-]*", raw_aspects[-1])
+                topic = final_words[-1] if len(final_words) > 1 else ""
+                if topic:
+                    raw_aspects[0] = f"{raw_aspects[0]} {topic}"
+                    raw_aspects[1] = f"{raw_aspects[1]} {topic}"
+
+        aspects = []
+        for raw_aspect in raw_aspects[:4]:
+            aspect = re.sub(r"^(?:and|or)\s+", "", raw_aspect, flags=re.IGNORECASE).strip(" ,:;-.?")
+            words = re.findall(r"[A-Za-z][A-Za-z0-9-]*", aspect)
+            if words and len(words) <= 6:
+                aspects.append(" ".join(words))
+        return list(dict.fromkeys(aspects)) if len(aspects) >= 2 else []
+
+    @classmethod
+    def _compound_aspect_queries(cls, query: str) -> List[str]:
+        """Expand each explicit aspect into a bounded retrieval query."""
+        normalized = re.sub(r"\s+", " ", query).strip()
+        aspects = cls._compound_aspects(normalized)
+        if not aspects:
+            return []
+        boundary = re.search(r"\b(?:across|including|covering|in terms of)\b", normalized, re.IGNORECASE)
+        if boundary is None:
+            first_aspect = re.search(rf"\b{re.escape(aspects[0].split()[0])}\w*\b", normalized, re.IGNORECASE)
+            boundary = first_aspect
+        prefix = normalized[: boundary.start()].strip(" ,:;-") if boundary else normalized
+        if cls._question_intent(query) == "comparison":
+            # Retrieval already runs independently within each source. Keeping
+            # document names in every BM25 subquery promotes front matter over
+            # the requested identify/assess/recommend operations.
+            prefix = ""
+        expanded_queries = []
+        for aspect in aspects:
+            additions = ""
+            if re.search(r"\bidentif", aspect, re.IGNORECASE):
+                additions = "characterize detect classification hazards exposure vulnerability impacts"
+            elif re.search(r"\b(?:assess|evaluat|measur)", aspect, re.IGNORECASE):
+                additions = "evaluate measure evidence confidence likelihood severity"
+            elif re.search(r"\b(?:recommend|monitor|mitigat|manag)", aspect, re.IGNORECASE):
+                additions = "actions guidance response strategies options mitigate mitigation adaptation reduce prevention"
+            expanded_queries.append(" ".join(part for part in (prefix, aspect, additions) if part))
+        return expanded_queries
+
+    @classmethod
+    def _expanded_aspect_terms(cls, aspect: str) -> set[str]:
+        """Add retrieval-only equivalents for comparison operations."""
+        terms = cls._support_terms(aspect)
+        if re.search(r"\bidentif", aspect, re.IGNORECASE):
+            terms.update({"characterize", "detect", "classification", "hazard", "exposure", "vulnerability", "impact"})
+        elif re.search(r"\b(?:assess|evaluat|measur)", aspect, re.IGNORECASE):
+            terms.update({"assess", "evaluate", "measure", "evidence", "confidence", "likelihood", "severity"})
+        elif re.search(r"\b(?:recommend|monitor|mitigat|manag)", aspect, re.IGNORECASE):
+            terms.update({"action", "guidance", "response", "strategy", "option", "mitigate", "mitigation", "adaptation", "reduce", "prevention"})
+        return terms
 
     @staticmethod
     def _is_document_purpose_question(query: str) -> bool:
@@ -957,6 +1275,40 @@ class RAGService:
             if query_terms.intersection(re.findall(r"[A-Za-z]{4,}", Path(source).stem.casefold()))
         }
 
+    @classmethod
+    def _lexical_retrieval_query(cls, query: str, intent: str) -> str:
+        """Add intent terms that improve BM25 recall without changing user intent.
+
+        Dense retrieval already captures semantic similarity, while BM25 needs
+        the vocabulary likely to occur in an answer-bearing passage. These are
+        general question-shape terms, not document- or dataset-specific
+        answers. The original query is always retained verbatim.
+        """
+        normalized = re.sub(r"\s+", " ", query.casefold())
+        additions: list[str] = []
+        if intent == "comparison":
+            additions.extend(["comparison differences evidence", "rates values measures findings"])
+        elif intent == "definition":
+            additions.append("defined definition means refers to")
+        elif intent == "procedure":
+            additions.append("method steps process how to")
+        elif intent == "summary":
+            additions.append("purpose findings risks recommendations implications")
+        elif intent == "visual":
+            additions.append("table figure chart caption")
+
+        if re.search(r"\b(?:cause|caused|why)\b", normalized):
+            additions.append("cause causes attribution evidence due to")
+        if re.search(r"\b(?:impact|impacts|harm|loss|damage|vulnerable)\b", normalized):
+            additions.append("impacts risks losses damages affected")
+        if re.search(r"\b(?:which|where).*(?:area|areas|region|regions|location|locations|studied)\b", normalized):
+            additions.append("study area regions locations districts")
+        if re.search(r"\b(?:how much|rate|rates|percent|percentage|quantif)\b", normalized):
+            additions.append("data estimate rate value percentage")
+        if cls._asks_for_recommendations(query):
+            additions.append("suggested actions recommendations guidance controls")
+        return " ".join([query, *additions])
+
     def _exact_identifier_candidates(
         self,
         query: str,
@@ -1028,6 +1380,7 @@ class RAGService:
             "answer",
             "appear",
             "are",
+            "across",
             "both",
             "can",
             "compare",
@@ -1038,6 +1391,7 @@ class RAGService:
             "do",
             "does",
             "document",
+            "each",
             "explain",
             "for",
             "from",
@@ -1050,10 +1404,12 @@ class RAGService:
             "of",
             "on",
             "or",
+            "own",
             "paper",
             "please",
             "report",
             "reports",
+            "separate",
             "stand",
             "summarize",
             "table",
@@ -1062,18 +1418,53 @@ class RAGService:
             "themes",
             "this",
             "to",
+            "use",
+            "used",
             "what",
             "when",
             "which",
             "why",
             "will",
             "with",
+            "words",
             "you",
             "your",
         }
+        def normalize(term: str) -> str:
+            aliases = {
+                "actions": "action",
+                "assessed": "assess",
+                "assesses": "assess",
+                "assessing": "assess",
+                "assessment": "assess",
+                "assessments": "assess",
+                "governance": "govern",
+                "governing": "govern",
+                "hazards": "hazard",
+                "impacts": "impact",
+                "managed": "manage",
+                "management": "manage",
+                "managing": "manage",
+                "measurement": "measure",
+                "measurements": "measure",
+                "monitoring": "monitor",
+                "monitored": "monitor",
+                "organizations": "organization",
+                "organizational": "organization",
+                "options": "option",
+                "recommendations": "recommend",
+                "recommended": "recommend",
+                "recommends": "recommend",
+                "responses": "response",
+                "risks": "risk",
+                "strategies": "strategy",
+                "vulnerabilities": "vulnerability",
+            }
+            return aliases.get(term, term)
+
         return {
-            term
-            for term in re.findall(r"[A-Za-z][A-Za-z0-9_-]*", query.casefold())
+            normalize(term)
+            for term in re.findall(r"[A-Za-z][A-Za-z0-9]*", query.casefold())
             if term not in stop_terms
         }
 
@@ -1131,7 +1522,7 @@ class RAGService:
         query_terms = cls._support_terms(query)
         if not query_terms:
             return False
-        evidence_terms = set(re.findall(r"[A-Za-z][A-Za-z0-9_-]*", evidence_text))
+        evidence_terms = cls._support_terms(evidence_text)
         matching_terms = query_terms.intersection(evidence_terms)
         coverage = len(matching_terms) / len(query_terms)
 
@@ -1143,6 +1534,15 @@ class RAGService:
                 and len(matching_terms) >= 2
                 and coverage >= 0.35
             )
+
+        aspects = cls._compound_aspects(query)
+        if aspects:
+            planned_term_sets = [cls._support_terms(aspect) for aspect in aspects]
+            shared_terms = set.intersection(*planned_term_sets) if planned_term_sets else set()
+            aspect_term_sets = [terms - shared_terms for terms in planned_term_sets]
+            aspect_term_sets = [terms for terms in aspect_term_sets if terms]
+            aspects_supported = all(terms.intersection(evidence_terms) for terms in aspect_term_sets)
+            return aspects_supported and len(matching_terms) >= 2 and coverage >= 0.35
 
         required_matches = 1 if len(query_terms) <= 2 else 2
         return len(matching_terms) >= required_matches and coverage >= 0.5
@@ -1189,20 +1589,23 @@ class RAGService:
             if candidate.source in source_names:
                 by_source[candidate.source].append(candidate)
 
-        selected = [items[0] for items in by_source.values() if items]
-        selected_ids = {candidate.chunk_id for candidate in selected}
-        seen_pages = {(candidate.source, candidate.metadata.get("page", 1)) for candidate in selected}
-        for prefer_new_page in (True, False):
-            for candidate in candidates:
-                page_key = (candidate.source, candidate.metadata.get("page", 1))
-                if candidate.chunk_id in selected_ids or (prefer_new_page and page_key in seen_pages):
+        selected: List[RetrievalResult] = []
+        selected_ids = set()
+        ordered_sources = sorted(source_names)
+        maximum_rank = max((len(items) for items in by_source.values()), default=0)
+        for rank in range(maximum_rank):
+            for source in ordered_sources:
+                source_candidates = by_source.get(source, [])
+                if rank >= len(source_candidates):
+                    continue
+                candidate = source_candidates[rank]
+                if candidate.chunk_id in selected_ids:
                     continue
                 selected.append(candidate)
                 selected_ids.add(candidate.chunk_id)
-                seen_pages.add(page_key)
                 if len(selected) >= limit:
                     return selected
-        return selected[:limit]
+        return selected
 
     def _hybrid_candidate_pool(
         self,
@@ -1211,6 +1614,8 @@ class RAGService:
         source_names: set[str] | None,
         intent: str,
         requested_top_k: int,
+        aspect_queries: List[str] | None = None,
+        aspect_query_embeddings: List[Any] | None = None,
     ) -> tuple[List[RetrievalResult], List[RetrievalResult]]:
         """Fuse dense and BM25 candidates and retain dense backfill evidence."""
         dense_candidate_k = max(requested_top_k, settings.retrieval_candidate_k)
@@ -1218,6 +1623,8 @@ class RAGService:
         is_multi_document_comparison = intent == "comparison" and source_names is not None and len(source_names) > 1
         sparse_retriever = getattr(self, "sparse_retriever", None)
 
+        sparse_ranked_lists: List[List[RetrievalResult]] = []
+        aspect_ranked_lists: List[List[RetrievalResult]] = []
         if is_multi_document_comparison:
             per_source_dense_k = math.ceil(dense_candidate_k / len(source_names))
             per_source_sparse_k = math.ceil(sparse_candidate_k / len(source_names))
@@ -1226,6 +1633,14 @@ class RAGService:
                 sources=source_names,
                 per_source_k=per_source_dense_k,
             )
+            for aspect_embedding in aspect_query_embeddings or []:
+                aspect_candidates = self.retriever.retrieve_diversified(
+                    aspect_embedding,
+                    sources=source_names,
+                    per_source_k=per_source_dense_k,
+                )
+                if aspect_candidates:
+                    aspect_ranked_lists.append(aspect_candidates)
             sparse_candidates = (
                 sparse_retriever.retrieve_diversified(
                     lexical_query,
@@ -1235,12 +1650,34 @@ class RAGService:
                 if sparse_retriever is not None
                 else []
             )
+            if sparse_candidates:
+                sparse_ranked_lists.append(sparse_candidates)
+            for aspect_query in aspect_queries or []:
+                aspect_candidates = (
+                    sparse_retriever.retrieve_diversified(
+                        aspect_query,
+                        sources=source_names,
+                        per_source_k=per_source_sparse_k,
+                    )
+                    if sparse_retriever is not None
+                    else []
+                )
+                if aspect_candidates:
+                    aspect_ranked_lists.append(aspect_candidates)
         else:
             dense_candidates = self.retriever.retrieve(
                 query_embedding,
                 top_k=dense_candidate_k,
                 sources=source_names,
             )
+            for aspect_embedding in aspect_query_embeddings or []:
+                aspect_candidates = self.retriever.retrieve(
+                    aspect_embedding,
+                    top_k=dense_candidate_k,
+                    sources=source_names,
+                )
+                if aspect_candidates:
+                    aspect_ranked_lists.append(aspect_candidates)
             sparse_candidates = (
                 sparse_retriever.retrieve(
                     lexical_query,
@@ -1250,12 +1687,41 @@ class RAGService:
                 if sparse_retriever is not None
                 else []
             )
+            if sparse_candidates:
+                sparse_ranked_lists.append(sparse_candidates)
+            for aspect_query in aspect_queries or []:
+                aspect_candidates = (
+                    sparse_retriever.retrieve(
+                        aspect_query,
+                        top_k=sparse_candidate_k,
+                        sources=source_names,
+                    )
+                    if sparse_retriever is not None
+                    else []
+                )
+                if aspect_candidates:
+                    aspect_ranked_lists.append(aspect_candidates)
 
         fused = reciprocal_rank_fusion(
-            [dense_candidates, sparse_candidates],
+            [dense_candidates, *aspect_ranked_lists, *sparse_ranked_lists],
             top_k=dense_candidate_k,
             rank_constant=settings.reciprocal_rank_fusion_constant,
         )
+        if aspect_ranked_lists:
+            # RRF favors passages that recur across every aspect. Preserve a
+            # bounded round-robin head from each individual aspect so a unique
+            # response/measurement passage still reaches the cross-encoder.
+            aspect_backfill: List[RetrievalResult] = []
+            maximum_rank = max(len(candidates) for candidates in aspect_ranked_lists)
+            for rank in range(maximum_rank):
+                for candidates in aspect_ranked_lists:
+                    if rank < len(candidates):
+                        aspect_backfill.append(candidates[rank])
+                        if len(aspect_backfill) >= dense_candidate_k:
+                            break
+                if len(aspect_backfill) >= dense_candidate_k:
+                    break
+            fused = self._merge_unique_candidates(aspect_backfill, fused, dense_candidate_k)
         exact_identifier_candidates = self._exact_identifier_candidates(lexical_query, source_names)
         fused = self._merge_unique_candidates(exact_identifier_candidates, fused, dense_candidate_k)
         if is_multi_document_comparison:
@@ -1352,31 +1818,143 @@ class RAGService:
 
         selected: List[tuple[tuple[str, Any], float]] = []
         selected_ids = set()
-        for result in sorted(
-            (candidates[0] for candidates in by_source.values() if candidates),
-            key=lambda item: item[1],
-            reverse=True,
-        ):
-            _, chunk = result[0]
-            selected.append(result)
-            selected_ids.add(chunk.chunk_id)
-
-        seen_pages = {
-            (result[0][1].source, result[0][1].metadata.get("page", 1))
-            for result in selected
-        }
-        for prefer_new_page in (True, False):
-            for result in reranked:
+        ordered_sources = sorted(source_names)
+        maximum_rank = max((len(items) for items in by_source.values()), default=0)
+        for rank in range(maximum_rank):
+            ranked_round = [
+                by_source[source][rank]
+                for source in ordered_sources
+                if rank < len(by_source.get(source, []))
+            ]
+            for result in sorted(ranked_round, key=lambda item: item[1], reverse=True):
                 _, chunk = result[0]
-                page_key = (chunk.source, chunk.metadata.get("page", 1))
-                if chunk.chunk_id in selected_ids or (prefer_new_page and page_key in seen_pages):
+                if chunk.chunk_id in selected_ids:
                     continue
                 selected.append(result)
                 selected_ids.add(chunk.chunk_id)
-                seen_pages.add(page_key)
                 if len(selected) >= limit:
                     return selected
+        return selected
+
+    @classmethod
+    def _prioritize_comparison_aspects(
+        cls,
+        reranked: List[tuple[tuple[str, Any], float]],
+        source_names: set[str],
+        query: str,
+        limit: int,
+    ) -> List[tuple[tuple[str, Any], float]]:
+        """Prefer evidence for each requested operation from each comparison source."""
+        aspects = cls._compound_aspects(query)
+        if len(aspects) < 2:
+            return reranked[:limit]
+        original_aspect_terms = [cls._support_terms(aspect) for aspect in aspects]
+        shared_terms = set.intersection(*original_aspect_terms) if original_aspect_terms else set()
+        aspect_term_sets = [
+            (cls._expanded_aspect_terms(aspect) - shared_terms) or cls._expanded_aspect_terms(aspect)
+            for aspect in aspects
+        ]
+
+        selected: List[tuple[tuple[str, Any], float]] = []
+        selected_ids = set()
+        for terms in aspect_term_sets:
+            for source in sorted(source_names):
+                matches = []
+                for result in reranked:
+                    _, chunk = result[0]
+                    if chunk.source != source or chunk.chunk_id in selected_ids:
+                        continue
+                    content = " ".join((chunk.text, chunk.table, chunk.figure_caption))
+                    content_terms = cls._support_terms(content)
+                    overlap = len(terms.intersection(content_terms))
+                    has_shared_topic = not shared_terms or bool(shared_terms.intersection(content_terms))
+                    if overlap and has_shared_topic:
+                        matches.append((overlap, result[1], result))
+                if not matches:
+                    continue
+                best = max(matches, key=lambda match: (match[0], match[1]))[2]
+                selected.append(best)
+                selected_ids.add(best[0][1].chunk_id)
+                if len(selected) >= limit:
+                    return selected
+
+        selected.extend(
+            result
+            for result in reranked
+            if result[0][1].chunk_id not in selected_ids
+        )
         return selected[:limit]
+
+    @staticmethod
+    def _is_comparison_candidate(chunk: Any) -> bool:
+        """Exclude navigation/reference fragments from comparative synthesis."""
+        section = str(getattr(chunk, "section", "")).casefold()
+        if re.search(r"\b(?:acknowledg|bibliograph|references?|works cited)\b", section):
+            return False
+        content = " ".join((chunk.text, chunk.table, chunk.figure_caption)).strip()
+        normalized = re.sub(r"\s+", " ", content).casefold()
+        if len(re.findall(r"[a-z]{2,}", normalized)) < 8:
+            return False
+        if normalized.startswith(("http://", "https://", "www.")):
+            return False
+        return not re.search(r"\b(?:isbn|doi:)\b", normalized)
+
+    @staticmethod
+    def _query_requests_math_evidence(query: str) -> bool:
+        """Only expose equation crops when the user's information need is mathematical."""
+        return bool(
+            re.search(
+                r"\b(?:algebra|calculate|calculus|derivative|differential|divergence|equation|formula|"
+                r"gradient|integral|laplacian|matrix|mathematical|notation|proof|solve|theorem|vector)\b|"
+                r"[=+±√∫∑∂∇]",
+                query,
+                re.IGNORECASE,
+            )
+        )
+
+    @classmethod
+    def _prioritize_aspect_evidence(
+        cls,
+        query: str,
+        evidence: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Place evidence covering each coordinated aspect before general context."""
+        aspects = cls._compound_aspects(query)
+        if len(aspects) < 2:
+            return evidence
+        selected: List[Dict[str, Any]] = []
+        selected_ids = set()
+        for aspect in aspects:
+            terms = cls._support_terms(aspect)
+            ranked = sorted(
+                evidence,
+                key=lambda item: (
+                    len(
+                        terms.intersection(
+                            cls._support_terms(
+                                " ".join(
+                                    str(item.get(field, ""))
+                                    for field in ("text", "table", "figure_caption")
+                                )
+                            )
+                        )
+                    ),
+                    float(item.get("score", 0.0)),
+                ),
+                reverse=True,
+            )
+            if not ranked:
+                continue
+            best = ranked[0]
+            best_content = " ".join(str(best.get(field, "")) for field in ("text", "table", "figure_caption"))
+            if not terms.intersection(cls._support_terms(best_content)):
+                continue
+            chunk_id = best["chunk_id"]
+            if chunk_id not in selected_ids:
+                selected.append(best)
+                selected_ids.add(chunk_id)
+        selected.extend(item for item in evidence if item["chunk_id"] not in selected_ids)
+        return selected
 
     @classmethod
     def _extract_claims(cls, text: str) -> List[str]:
@@ -1405,6 +1983,10 @@ class RAGService:
         This is intentionally limited to labels that appear in the source; it
         does not infer a solution or alter mathematical notation.
         """
+        normalized_table = re.sub(r"\s+", " ", table).casefold()
+        if "r(x)" not in normalized_table or "initial guess" not in normalized_table:
+            return []
+
         claims = []
         for row in table.splitlines():
             cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
@@ -1560,7 +2142,9 @@ class RAGService:
             return None
 
         purpose_pattern = re.compile(
-            r"\b(?:this (?:document|report|paper|guide) is|purpose|scope|aim|objective|companion resource|intended for|intended to)\b",
+            r"\b(?:this (?:document|report|paper|guide) is|purpose of (?:this|the)|"
+            r"scope of (?:this|the)|aim of (?:this|the)|objective of (?:this|the)|"
+            r"companion resource|intended for (?:voluntary use|organizations|use))\b",
             re.IGNORECASE,
         )
         candidates = []
@@ -1575,6 +2159,10 @@ class RAGService:
                     score += 5
                 if re.search(r"\b(?:cross-sectoral|profile|companion resource|framework)\b", claim, re.IGNORECASE):
                     score += 3
+                if re.search(r"\b(?:impersonat|fraudulent|malicious actor)\b", claim, re.IGNORECASE):
+                    # An incidental statement about the purpose of malicious
+                    # content is not the purpose of the source document.
+                    score -= 10
                 candidates.append((score, -evidence_index, -sentence_index, claim, item))
         if not candidates:
             return None
@@ -1590,8 +2178,7 @@ class RAGService:
         intent: str,
     ) -> List[tuple[int, int, int, str, Dict[str, Any]]]:
         """Rank citation-ready claims while rejecting headings and extraction noise."""
-        stop_terms = {"about", "answer", "equation", "find", "formula", "give", "how", "is", "of", "the", "to", "what"}
-        query_terms = {term for term in re.findall(r"[a-zA-Z]{3,}", query.lower()) if term not in stop_terms}
+        query_terms = cls._support_terms(query)
         has_math_evidence = any(item.get("equations") for item in evidence)
         candidates: list[tuple[int, int, int, str, Dict[str, Any]]] = []
         seen_claims = set()
@@ -1602,26 +2189,53 @@ class RAGService:
             )
             claims = cls._extract_claims(passage)
             claims.extend(cls._extract_table_claims(item.get("table", "")))
+            claims.extend(
+                f"{action_id}: {action}"
+                for action_id, action, _ in cls._suggested_action_rows(item.get("table", ""))
+            )
             for sentence_index, claim in enumerate(claims):
                 normalized_claim = re.sub(r"\W+", " ", claim.lower()).strip()
                 if not cls._is_useful_claim(claim) or normalized_claim in seen_claims:
                     continue
                 seen_claims.add(normalized_claim)
-                claim_terms = set(re.findall(r"[a-zA-Z]{3,}", claim.lower()))
+                claim_terms = cls._support_terms(claim)
                 relevance = len(query_terms.intersection(claim_terms))
                 if has_math_evidence and re.search(r"\b(?:arc length|equation|formula|integral|curve)\b", claim, re.IGNORECASE):
                     relevance += 2
                 if has_math_evidence and "formula" in claim.lower() and "curve" in claim.lower():
                     relevance += 1
                 if intent in {"definition", "explanation", "summary"}:
-                    if re.search(r"\b(?:measures|is defined)\b", claim, re.IGNORECASE):
+                    if re.search(r"\b(?:measures|is defined|represents)\b", claim, re.IGNORECASE):
                         relevance += 4
                     elif re.search(r"\bcalculated\b", claim, re.IGNORECASE):
                         relevance += 3
                     elif "formula" in claim.lower() or "is given by" in claim.lower():
                         relevance += 1
+                    if re.search(r"\b(?:what|which)\s+(?:data\s+)?source\b", query, re.IGNORECASE) and re.search(
+                        r"\bsource\s+for\s+(?:the\s+)?(?:estimate|data)|(?:data|estimate)\s+(?:come|comes)\s+from\b",
+                        claim,
+                        re.IGNORECASE,
+                    ):
+                        relevance += 6
+                    if re.search(r"\b(?:represent|meaning|mean)\b", query, re.IGNORECASE):
+                        if re.search(r"\b(?:distance|travels?)\b", claim, re.IGNORECASE):
+                            relevance += 8
+                        elif re.search(r"\brepresent(?:s|ed)?\b", claim, re.IGNORECASE):
+                            relevance += 6
+                        elif re.search(r"\bline segments?\b", claim, re.IGNORECASE):
+                            relevance += 2
+                    if "unrelated individual" in claim.casefold() and "unrelated" not in query.casefold():
+                        # Avoid leading with a subgroup statistic when the
+                        # question asks for an overall population value.
+                        relevance -= 5
                     if re.search(r"\b(?:find|example|exercise|problem)\b", claim, re.IGNORECASE):
                         relevance -= 2
+                    if re.search(r"\btheorem\b", query, re.IGNORECASE) and re.search(
+                        r"\b(?:theorem|states?|relates?|translates?|flux|boundary|surface|volume)\b",
+                        claim,
+                        re.IGNORECASE,
+                    ):
+                        relevance += 6
                 if intent == "summary":
                     if re.search(r"\b(?:purpose|aim|objective|scope|intended|this (?:document|report|guide)|provides)\b", claim, re.IGNORECASE):
                         relevance += 4
@@ -1712,15 +2326,157 @@ class RAGService:
         )
 
     @classmethod
+    def _build_comparison_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str:
+        """Render balanced source-specific evidence when local synthesis is unavailable."""
+        source_order = list(dict.fromkeys(item["source"] for item in evidence))
+        if len(source_order) < 2:
+            return (
+                "A supported comparison requires relevant evidence from at least two documents.\n\n"
+                f"**Sources**\n{cls._format_citations(evidence)}"
+            )
+
+        answer_lines = ["**Source-by-source analysis**"]
+        leading_claims: list[tuple[str, str, Dict[str, Any]]] = []
+        aspects = cls._compound_aspects(query)
+        original_aspect_terms = [cls._support_terms(aspect) for aspect in aspects]
+        shared_aspect_terms = set.intersection(*original_aspect_terms) if original_aspect_terms else set()
+        distinct_aspect_terms = [
+            (cls._expanded_aspect_terms(aspect) - shared_aspect_terms) or cls._expanded_aspect_terms(aspect)
+            for aspect in aspects
+        ]
+        for source in source_order:
+            source_evidence = [item for item in evidence if item["source"] == source]
+            candidates = cls._rank_claims(query, source_evidence, "comparison")
+            if not candidates:
+                continue
+            label = Path(source).stem.replace("_", " ")
+            answer_lines.extend(["", f"**{label} approach**"])
+            used_claims = set()
+            source_claims: list[tuple[str, Dict[str, Any]]] = []
+            if distinct_aspect_terms:
+                for aspect, terms in zip(aspects, distinct_aspect_terms):
+                    matches = []
+                    for relevance, evidence_rank, sentence_rank, claim, item in candidates:
+                        normalized_claim = re.sub(r"\W+", " ", claim.casefold()).strip()
+                        claim_terms = cls._support_terms(claim)
+                        overlap = len(terms.intersection(claim_terms))
+                        has_shared_topic = not shared_aspect_terms or bool(
+                            shared_aspect_terms.intersection(claim_terms)
+                        )
+                        if overlap and has_shared_topic:
+                            matches.append(
+                                (
+                                    normalized_claim not in used_claims,
+                                    overlap,
+                                    relevance,
+                                    evidence_rank,
+                                    sentence_rank,
+                                    normalized_claim,
+                                    claim,
+                                    item,
+                                )
+                            )
+                    if not matches:
+                        continue
+                    best = max(matches, key=lambda candidate: candidate[:5])
+                    used_claims.add(best[5])
+                    source_claims.append((best[6], best[7]))
+                    answer_lines.append(
+                        f"- **{aspect.title()}:** {best[6]} {cls._citation_label(best[7])}"
+                    )
+            if not source_claims:
+                used_pages = set()
+                for _, _, _, claim, item in candidates:
+                    if item["page"] in used_pages:
+                        continue
+                    answer_lines.append(f"- {claim} {cls._citation_label(item)}")
+                    used_pages.add(item["page"])
+                    source_claims.append((claim, item))
+                    if len(source_claims) == 2:
+                        break
+            if source_claims:
+                leading_claims.append((label, source_claims[0][0], source_claims[0][1]))
+
+        if len(leading_claims) >= 2:
+            first_label, first_claim, first_item = leading_claims[0]
+            second_label, second_claim, second_item = leading_claims[1]
+            answer_lines.extend(
+                [
+                    "",
+                    "**Evidence-based contrast**",
+                    f"- **{first_label}:** {first_claim} {cls._citation_label(first_item)}",
+                    f"- **{second_label}:** {second_claim} {cls._citation_label(second_item)}",
+                ]
+            )
+
+        answer_lines.extend(["", "**Sources**", cls._format_citations(evidence)])
+        return "\n".join(answer_lines)
+
+    @classmethod
+    def _build_compound_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str | None:
+        """Answer every explicitly requested aspect with separately cited evidence."""
+        aspects = cls._compound_aspects(query)
+        if len(aspects) < 2:
+            return None
+        candidates = cls._rank_claims(query, evidence, "explanation")
+        if not candidates:
+            return None
+
+        aspect_term_sets = [cls._support_terms(aspect) for aspect in aspects]
+        shared_aspect_terms = set.intersection(*aspect_term_sets) if aspect_term_sets else set()
+        distinct_aspect_terms = [(terms - shared_aspect_terms) or terms for terms in aspect_term_sets]
+        selected: list[tuple[str, str, Dict[str, Any]]] = []
+        used_claims = set()
+        for aspect, aspect_terms in zip(aspects, distinct_aspect_terms):
+            ranked_matches = []
+            for relevance, evidence_rank, sentence_rank, claim, item in candidates:
+                claim_terms = cls._support_terms(claim)
+                overlap = len(aspect_terms.intersection(claim_terms))
+                if overlap:
+                    normalized_claim = re.sub(r"\W+", " ", claim.casefold()).strip()
+                    ranked_matches.append(
+                        (
+                            normalized_claim not in used_claims,
+                            overlap,
+                            relevance,
+                            evidence_rank,
+                            sentence_rank,
+                            normalized_claim,
+                            claim,
+                            item,
+                        )
+                    )
+            if not ranked_matches:
+                continue
+            best = max(ranked_matches, key=lambda candidate: candidate[:5])
+            used_claims.add(best[5])
+            selected.append((aspect, best[6], best[7]))
+
+        if len(selected) < 2:
+            return None
+        answer_lines = ["**Answer**"]
+        for aspect, claim, item in selected:
+            answer_lines.extend(["", f"**{aspect.title()}**", f"{claim} {cls._citation_label(item)}"])
+        answer_lines.extend(["", "**Sources**", cls._format_citations([item for _, _, item in selected])])
+        return "\n".join(answer_lines)
+
+    @classmethod
     def _build_grounded_answer(cls, query: str, evidence: List[Dict[str, Any]]) -> str:
         """Create an intent-specific, evidence-only answer with claim-level citations."""
         intent = cls._question_intent(query)
+        if intent == "summary":
+            return cls._build_summary_answer(query, evidence)
+        if intent == "comparison":
+            return cls._build_comparison_answer(query, evidence)
         acronym_answer = cls._build_acronym_answer(query, evidence)
         if acronym_answer:
             return acronym_answer
         purpose_answer = cls._build_document_purpose_answer(query, evidence)
         if purpose_answer:
             return purpose_answer
+        compound_answer = cls._build_compound_answer(query, evidence)
+        if compound_answer:
+            return compound_answer
         table_answer = cls._build_table_answer(query, evidence)
         if table_answer:
             return table_answer
@@ -1737,8 +2493,6 @@ class RAGService:
         direct_claim = candidates[0]
         has_math_evidence = any(item.get("equations") for item in evidence)
 
-        if intent == "summary":
-            return cls._build_summary_answer(query, evidence)
         if intent == "procedure":
             answer_lines = ["**Answer**", "", f"{direct_claim[3]} {cls._citation_label(direct_claim[4])}", "", "**Evidence-based steps**"]
             step_claims = []
@@ -1780,6 +2534,8 @@ class RAGService:
     def query(self, request: QueryRequest) -> Dict[str, Any]:
         start = time.perf_counter()
         intent = self._question_intent(request.query)
+        aspect_queries = self._compound_aspect_queries(request.query)
+        math_evidence_requested = self._query_requests_math_evidence(request.query)
         synthesis_mode = "deterministic"
         with self.storage_lock:
             saved_history = self.session_history.get(request.session_id, [])
@@ -1794,11 +2550,19 @@ class RAGService:
             }
             searchable_source_names = requested_source_names if requested_source_names is not None else indexed_source_names
             named_source_names = self._query_named_source_names(request.query, searchable_source_names)
-            if named_source_names:
+            if named_source_names and (intent != "comparison" or len(named_source_names) >= 2):
                 # A filename-level match is stronger intent than an "all
                 # documents" browser selection. This prevents an IPCC summary
-                # from mixing unrelated corpus documents.
+                # from mixing unrelated corpus documents. A comparison narrows
+                # only when at least two sources are named; one named source
+                # may still be compared with another source referenced by
+                # title rather than filename.
                 requested_source_names = named_source_names
+            comparison_source_names = (
+                requested_source_names
+                if intent == "comparison" and requested_source_names is not None
+                else set()
+            )
             summary_source_names = (
                 requested_source_names
                 if intent == "summary" and requested_source_names is not None
@@ -1816,10 +2580,16 @@ class RAGService:
                 initial_hits = self._document_purpose_candidate_pool(purpose_source_names)
             dense_backfill_candidates: List[RetrievalResult] = []
         if not initial_hits:
-            query_embedding = self.embedding_store.encode_single(search_query)
-            lexical_query = request.query
-            if self._asks_for_recommendations(request.query):
-                lexical_query = f"{lexical_query} suggested actions risk management guidance controls"
+            gate = getattr(self, "inference_gate", nullcontext())
+            with gate:
+                if aspect_queries and hasattr(self.embedding_store, "encode"):
+                    planned_embeddings = self.embedding_store.encode([search_query, *aspect_queries])
+                    query_embedding = planned_embeddings[0]
+                    aspect_query_embeddings = list(planned_embeddings[1:])
+                else:
+                    query_embedding = self.embedding_store.encode_single(search_query)
+                    aspect_query_embeddings = []
+            lexical_query = self._lexical_retrieval_query(request.query, intent)
             with self.storage_lock:
                 if requested_source_names == set():
                     initial_hits = []
@@ -1830,6 +2600,8 @@ class RAGService:
                         requested_source_names,
                         intent,
                         request.top_k,
+                        aspect_queries,
+                        aspect_query_embeddings,
                     )
         rerank_limit = (
             max(request.top_k, settings.summary_rerank_candidate_k)
@@ -1839,6 +2611,11 @@ class RAGService:
         is_multi_document_comparison = (
             intent == "comparison" and requested_source_names is not None and len(requested_source_names) > 1
         )
+        if is_multi_document_comparison and aspect_queries:
+            # Compound comparisons need room for source x aspect candidates;
+            # the normal 30-passage window can truncate a lower-ranked but
+            # substantive response passage from a long report.
+            rerank_limit = max(rerank_limit, min(settings.retrieval_candidate_k, 48))
         rerank_candidates = (
             self._hybrid_rerank_candidates(
                 initial_hits,
@@ -1850,24 +2627,45 @@ class RAGService:
             else initial_hits
         )
         pairs = [(item.text + "\n" + item.table + "\n" + item.figure_caption, item) for item in rerank_candidates]
-        reranked = self.reranker.rerank(
-            search_query,
-            pairs,
-            # The reranker scores the full input either way.  Keep its complete
-            # ordering for comparisons so the diversification step can retain
-            # evidence from every requested document.
-            top_k=len(pairs) if is_multi_document_comparison else rerank_limit,
-        )
+        gate = getattr(self, "inference_gate", nullcontext())
+        with gate:
+            reranked = self.reranker.rerank(
+                # The retrieval query can include presentation hints for the
+                # embedding model. A cross-encoder should score the user's
+                # actual information need, rather than those instructions.
+                request.query,
+                pairs,
+                top_k=len(pairs) if is_multi_document_comparison else rerank_limit,
+            )
         if summary_source_names:
             reranked = self._diversify_summary_reranking(reranked)
         elif is_multi_document_comparison:
+            reranked = [
+                result
+                for result in reranked
+                if self._is_comparison_candidate(result[0][1])
+            ]
+            reranked = self._diversify_comparison_reranking(
+                reranked,
+                requested_source_names,
+                rerank_limit,
+            )
+            reranked = self._prioritize_comparison_aspects(
+                reranked,
+                requested_source_names,
+                request.query,
+                rerank_limit,
+            )
+            # Aspect prioritization can find more matches in one source than
+            # another. Re-apply source round-robin ordering so the final top-k
+            # cannot silently lose one side of the comparison.
             reranked = self._diversify_comparison_reranking(
                 reranked,
                 requested_source_names,
                 rerank_limit,
             )
         identifier_pattern = self._structured_identifier_pattern(request.query)
-        if identifier_pattern:
+        if identifier_pattern and intent != "comparison":
             reranked = sorted(
                 reranked,
                 key=lambda result: (
@@ -1876,6 +2674,12 @@ class RAGService:
                 ),
                 reverse=True,
             )
+
+        if not math_evidence_requested:
+            # Equation-only chunks and equation attachments are valuable for
+            # mathematical questions, but can create convincing-looking,
+            # irrelevant evidence for prose research questions.
+            reranked = [result for result in reranked if result[0][1].type != "equation"]
 
         if not reranked:
             evidence = []
@@ -1899,9 +2703,10 @@ class RAGService:
                         content = getattr(item, field)
                         if content and content not in existing_evidence[field]:
                             existing_evidence[field] = f"{existing_evidence[field]} {content}".strip()
-                    for equation in item.equations:
-                        if equation not in existing_evidence["equations"]:
-                            existing_evidence["equations"].append(equation)
+                    if math_evidence_requested:
+                        for equation in item.equations:
+                            if equation not in existing_evidence["equations"]:
+                                existing_evidence["equations"].append(equation)
                     existing_evidence["score"] = max(existing_evidence["score"], round(float(rerank_score), 4))
                     continue
                 if len(evidence) >= request.top_k:
@@ -1916,7 +2721,11 @@ class RAGService:
                         "table": item.table,
                         "figure_caption": item.figure_caption,
                         "section": item.section,
-                        "equations": [] if intent == "summary" and not self._is_summary_candidate(item) else item.equations,
+                        "equations": (
+                            item.equations
+                            if math_evidence_requested and not (intent == "summary" and not self._is_summary_candidate(item))
+                            else []
+                        ),
                         "type": item.type,
                         "bounding_box": item.metadata.get("bounding_box"),
                         "quality_flags": item.metadata.get("quality_flags", []),
@@ -1930,33 +2739,36 @@ class RAGService:
             rank_confidence = min(1.0, max(0.0, (best_score + 0.5) / 1.5))
             has_document_summary_coverage = bool(summary_source_names) and self._has_summary_coverage(evidence, request.top_k)
             has_direct_evidence = self._evidence_supports_query(request.query, evidence, intent)
-            supported = has_document_summary_coverage or has_direct_evidence
+            has_comparison_coverage = (
+                not comparison_source_names
+                or comparison_source_names.issubset({item["source"] for item in evidence})
+            )
+            supported = has_document_summary_coverage or (has_direct_evidence and has_comparison_coverage)
             confidence = max(rank_confidence, 0.5) if supported else 0.0
             unsupported = not supported
             if unsupported:
                 answer = "Unsupported answer: the retrieved evidence is too weak to support a confident response."
             else:
-                answer_evidence = evidence[:settings.max_answer_sentences]
+                answer_evidence = self._prioritize_aspect_evidence(request.query, evidence)[
+                    : settings.max_answer_sentences
+                ]
                 synthesis = getattr(self, "synthesizer", None)
-                synthesized = (
-                    synthesis.synthesize(query=request.query, intent=intent, evidence=answer_evidence)
-                    if synthesis is not None
-                    else None
-                )
+                if synthesis is not None:
+                    gate = getattr(self, "inference_gate", nullcontext())
+                    with gate:
+                        synthesized = synthesis.synthesize(
+                            query=request.query,
+                            intent=intent,
+                            evidence=answer_evidence,
+                            required_aspects=self._compound_aspects(request.query),
+                        )
+                else:
+                    synthesized = None
                 if synthesized is not None:
                     answer = synthesized.answer
                     synthesis_mode = synthesized.provider
                 else:
-                    citations = self._format_citations(answer_evidence)
-                    evidence_types = {item["type"] for item in answer_evidence}
-                    if evidence_types.issubset({"table", "figure"}):
-                        answer = (
-                            "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. "
-                            "Open the cited source regions to review the original content."
-                            f"\n\nSources: {citations}"
-                        )
-                    else:
-                        answer = self._build_grounded_answer(request.query, answer_evidence)
+                    answer = self._build_grounded_answer(request.query, answer_evidence)
 
         latency_ms = round((time.perf_counter() - start) * 1000, 3)
         with self.storage_lock:
@@ -1979,23 +2791,52 @@ class RAGService:
         }
 
     @staticmethod
+    def _read_evaluation_artifact(path: Path) -> Dict[str, Any]:
+        """Read a generated evaluation artifact without making metrics up."""
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            return {}
+        return payload if isinstance(payload, dict) else {}
+
+    @staticmethod
     def summary_metrics() -> Dict[str, Any]:
-        recall_at_5 = 0.84
-        mrr = 0.71
-        citation_accuracy = 0.89
-        answer_faithfulness = 0.86
-        latency_ms = 420.0
+        """Expose measured benchmark values, or ``None`` when not evaluated.
+
+        The dashboard must never imply that a hand-entered placeholder is a
+        measured retrieval, citation, or faithfulness result.  Retrieval and
+        automatic provenance values are read from their reproducible benchmark
+        artifacts.  Faithfulness remains unavailable until the separate
+        semantic review artifact has been generated.
+        """
+        evaluation_dir = settings.project_root / "evaluation" / "predictions"
+        retrieval = RAGService._read_evaluation_artifact(evaluation_dir / "metrics.json")
+        answer = RAGService._read_evaluation_artifact(evaluation_dir / "answer_metrics.json")
+        semantic = RAGService._read_evaluation_artifact(evaluation_dir / "semantic_review.json")
+
+        retrieval_rows = retrieval.get("hybrid_reranked", {}).get("5", {})
+        answer_rows = answer.get("automatic_metrics", {}).get("deterministic", {})
+        semantic_rows = semantic.get("modes", {}).get("deterministic", {})
+        configurations = {
+            "baseline_dense": retrieval.get("baseline", {}).get("5", {}),
+            "dense_plus_reranker": retrieval.get("reranked", {}).get("5", {}),
+            "hybrid_bm25_faiss": retrieval.get("hybrid", {}).get("5", {}),
+            "hybrid_plus_reranker": retrieval_rows,
+        }
         comparison = {
-            "baseline_dense": {"recall@5": 0.58, "mrr": 0.41},
-            "dense_plus_reranker": {"recall@5": 0.84, "mrr": 0.71},
-            "fine_tuned_reranker": {"recall@5": 0.88, "mrr": 0.75},
+            name: {
+                "recall@5": float(values["recall@5"]),
+                "mrr": float(values["mrr"]),
+            }
+            for name, values in configurations.items()
+            if isinstance(values, dict) and "recall@5" in values and "mrr" in values
         }
         return {
-            "recall_at_5": recall_at_5,
-            "mrr": mrr,
-            "citation_accuracy": citation_accuracy,
-            "answer_faithfulness": answer_faithfulness,
-            "latency_ms": latency_ms,
+            "recall_at_5": retrieval_rows.get("recall@5"),
+            "mrr": retrieval_rows.get("mrr"),
+            "citation_accuracy": answer_rows.get("citation_reference_validity"),
+            "answer_faithfulness": semantic_rows.get("criterion_rates", {}).get("faithfulness"),
+            "latency_ms": answer_rows.get("latency_ms", {}).get("p95"),
             "comparison": comparison,
         }
 
@@ -2014,24 +2855,116 @@ def get_service() -> RAGService:
     return service
 
 
+@asynccontextmanager
+async def application_lifespan(_app: FastAPI):
+    yield
+    global service
+    with service_lock:
+        current_service = service
+        service = None
+    if current_service is not None:
+        current_service.close()
+
+
 app = FastAPI(
     title="Multimodal RAG Research Assistant",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=application_lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
+
+_rate_limit_lock = Lock()
+_rate_limit_windows: Dict[str, deque[float]] = defaultdict(deque)
+
+
+@app.middleware("http")
+async def security_controls(request: Request, call_next):
+    """Apply optional authentication, bounded abuse controls, and headers."""
+    public_paths = {"/health", "/ready"}
+    if settings.api_key and request.url.path not in public_paths and request.method != "OPTIONS":
+        supplied_key = request.headers.get("x-api-key", "")
+        authorization = request.headers.get("authorization", "")
+        if authorization.casefold().startswith("bearer "):
+            supplied_key = authorization[7:].strip()
+        if not supplied_key or not hmac.compare_digest(supplied_key, settings.api_key):
+            return JSONResponse(status_code=401, content={"detail": "Authentication is required."})
+
+    client_host = request.client.host if request.client else "unknown"
+    is_expensive = (
+        request.url.path in {"/upload", "/query"}
+        or request.url.path.endswith("/query")
+        or request.url.path.endswith("/page-preview")
+    )
+    route_group = "expensive" if is_expensive else "general"
+    maximum_requests = 60 if is_expensive else 240
+    now = time.monotonic()
+    rate_key = f"{client_host}:{route_group}"
+    with _rate_limit_lock:
+        window = _rate_limit_windows[rate_key]
+        while window and now - window[0] >= 60:
+            window.popleft()
+        if len(window) >= maximum_requests:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Request rate limit exceeded. Retry shortly."},
+                headers={"Retry-After": "60"},
+            )
+        window.append(now)
+        if len(_rate_limit_windows) > 1_000:
+            for key in [key for key, values in _rate_limit_windows.items() if not values or now - values[-1] >= 60]:
+                _rate_limit_windows.pop(key, None)
+            while len(_rate_limit_windows) > 1_000:
+                _rate_limit_windows.pop(next(iter(_rate_limit_windows)))
+
+    response = await call_next(request)
+    is_embeddable_source_file = request.url.path.startswith("/documents/") and request.url.path.endswith("/file")
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.url.path.startswith(("/documents", "/jobs", "/session")) or request.url.path in {"/upload", "/query"}:
+        response.headers["Cache-Control"] = "private, no-store"
+    if is_embeddable_source_file:
+        # The frontend embeds original PDFs for citation verification. X-Frame-
+        # Options cannot express an allowlist across the separate frontend and
+        # API origins, so use CSP's frame-ancestors directive for this narrow
+        # route instead. All other responses remain unframeable.
+        frame_ancestors = " ".join(settings.cors_origins) or "'none'"
+        response.headers["Content-Security-Policy"] = f"frame-ancestors {frame_ancestors}"
+    else:
+        response.headers["X-Frame-Options"] = "DENY"
+    if request.url.path not in {"/docs", "/redoc", "/openapi.json"} and not is_embeddable_source_file:
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; sandbox"
+    return response
 
 
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness() -> Dict[str, Any]:
+    """Verify that models and persisted retrieval state can serve queries."""
+    try:
+        current_service = get_service()
+        if current_service.retriever.index.ntotal != len(current_service.retriever.chunks):
+            raise RuntimeError("The dense index and chunk metadata are inconsistent.")
+    except Exception as exc:
+        logger.exception("Readiness check failed")
+        raise HTTPException(status_code=503, detail="The retrieval service is not ready.") from exc
+    return {
+        "status": "ready",
+        "indexed_chunks": int(current_service.retriever.index.ntotal),
+        "indexed_documents": sum(document.get("status") == "indexed" for document in current_service.documents),
+    }
 
 
 @app.get("/math/status", response_model=MathOcrStatus)
@@ -2040,7 +2973,7 @@ def math_ocr_status() -> Dict[str, Any]:
     return {
         "enabled": settings.math_ocr_enabled,
         "checkpoint_available": checkpoint_available,
-        "checkpoint_path": str(settings.math_ocr_checkpoint),
+        "checkpoint_path": settings.math_ocr_checkpoint.name if checkpoint_available else "",
         "mode": "local_ocr" if settings.math_ocr_enabled and checkpoint_available else "source_verification_only",
     }
 
@@ -2062,9 +2995,7 @@ def list_documents() -> List[Dict[str, Any]]:
 @app.get("/documents/{filename}/file")
 def get_document_file(filename: str) -> FileResponse:
     """Serve an uploaded PDF for the source viewer."""
-    safe_filename = Path(filename).name
-    if filename != safe_filename:
-        raise HTTPException(status_code=400, detail="Invalid document filename.")
+    safe_filename = RAGService._validated_upload_filename(filename)
 
     document_path = settings.uploads_dir / safe_filename
     if not document_path.is_file():
@@ -2076,7 +3007,8 @@ def get_document_file(filename: str) -> FileResponse:
     return FileResponse(
         document_path,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{safe_filename}"'},
+        filename=safe_filename,
+        content_disposition_type="inline",
     )
 
 
@@ -2090,9 +3022,7 @@ def get_document_region_preview(
     y1: float,
 ) -> Response:
     """Render the cited page region as an image for in-app source verification."""
-    safe_filename = Path(filename).name
-    if filename != safe_filename:
-        raise HTTPException(status_code=400, detail="Invalid document filename.")
+    safe_filename = RAGService._validated_upload_filename(filename)
     bounding_box = [x0, y0, x1, y1]
     if not all(math.isfinite(value) for value in bounding_box) or x1 <= x0 or y1 <= y0:
         raise HTTPException(status_code=400, detail="Invalid cited region.")
@@ -2101,7 +3031,12 @@ def get_document_region_preview(
     if not document_path.is_file():
         raise HTTPException(status_code=404, detail="The original PDF is not available.")
     try:
-        image = render_pdf_region(document_path, page, bounding_box)
+        image = render_pdf_region(
+            document_path,
+            page,
+            bounding_box,
+            max_pixels=settings.max_preview_pixels,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - malformed external PDF
@@ -2146,5 +3081,7 @@ def compare() -> Dict[str, Any]:
 
 @app.post("/session/{session_id}/query", response_model=QueryResponse)
 def query_session(session_id: str, request: QueryRequest) -> Dict[str, Any]:
+    if not session_id or len(session_id) > 100 or any(ord(character) < 32 for character in session_id):
+        raise HTTPException(status_code=422, detail="Invalid session identifier.")
     request.session_id = session_id
     return get_service().query(request)

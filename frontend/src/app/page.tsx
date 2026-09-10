@@ -6,6 +6,7 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 
 import {
+  apiFetch,
   apiBaseUrl,
   readJson,
   type DeleteDocumentResponse,
@@ -18,6 +19,10 @@ import {
 } from "@/lib/api";
 
 const sourcePreviewCharacterLimit = 500;
+
+function formatMetric(value: number | null | undefined) {
+  return typeof value === "number" ? value.toFixed(2) : "â€”";
+}
 
 function sourceFileUrl(source: Source) {
   return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/file#page=${source.page}`;
@@ -244,11 +249,12 @@ export default function Home() {
 
   useEffect(() => {
     getOrCreateSessionId();
+    const controller = new AbortController();
 
     async function loadDashboardData() {
       const [metricsResult, documentsResult] = await Promise.allSettled([
-        fetch(`${apiBaseUrl}/metrics`).then(readJson<MetricsResponse>),
-        fetch(`${apiBaseUrl}/documents`).then(readJson<DocumentInfo[]>),
+        apiFetch(`${apiBaseUrl}/metrics`, { signal: controller.signal }, 10_000).then(readJson<MetricsResponse>),
+        apiFetch(`${apiBaseUrl}/documents`, { signal: controller.signal }, 10_000).then(readJson<DocumentInfo[]>),
       ]);
 
       if (metricsResult.status === "fulfilled") {
@@ -260,6 +266,7 @@ export default function Home() {
     }
 
     void loadDashboardData();
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -267,14 +274,27 @@ export default function Home() {
       return undefined;
     }
 
-    const refreshDocuments = () => {
-      void fetch(`${apiBaseUrl}/documents`)
-        .then(readJson<DocumentInfo[]>)
-        .then(setDocuments)
-        .catch(() => undefined);
+    const controller = new AbortController();
+    let documentPoller: number | undefined;
+    const refreshDocuments = async () => {
+      try {
+        const response = await apiFetch(`${apiBaseUrl}/documents`, { signal: controller.signal }, 10_000);
+        setDocuments(await readJson<DocumentInfo[]>(response));
+      } catch {
+        // A later polling cycle retries transient backend failures.
+      } finally {
+        if (!controller.signal.aborted) {
+          documentPoller = window.setTimeout(refreshDocuments, 2_000);
+        }
+      }
     };
-    const documentPoller = window.setInterval(refreshDocuments, 2_000);
-    return () => window.clearInterval(documentPoller);
+    documentPoller = window.setTimeout(refreshDocuments, 2_000);
+    return () => {
+      controller.abort();
+      if (documentPoller !== undefined) {
+        window.clearTimeout(documentPoller);
+      }
+    };
   }, [hasActiveIngestion]);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -311,7 +331,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append("files", file));
-      const response = await fetch(`${apiBaseUrl}/upload`, { method: "POST", body: formData });
+      const response = await apiFetch(`${apiBaseUrl}/upload`, { method: "POST", body: formData }, 120_000);
       const data = await readJson<UploadResponse>(response);
       setDocuments(data.documents ?? []);
       rememberBrowserDocuments(data.uploaded ?? []);
@@ -340,7 +360,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${apiBaseUrl}/query`, {
+      const response = await apiFetch(`${apiBaseUrl}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
@@ -350,7 +370,7 @@ export default function Home() {
           session_id: getOrCreateSessionId(),
           document_names: indexedBrowserDocumentNames,
         }),
-      });
+      }, 60_000);
       const data = await readJson<QueryResponse>(response);
       if (!data.answer) {
         throw new Error("The backend response did not include an answer.");
@@ -379,7 +399,7 @@ export default function Home() {
 
     setDeletingFilename(filename);
     try {
-      const response = await fetch(`${apiBaseUrl}/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
+      const response = await apiFetch(`${apiBaseUrl}/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
       const data = await readJson<DeleteDocumentResponse>(response);
       setDocuments(data.documents);
       setBrowserDocumentNames((currentNames) => {
@@ -403,7 +423,7 @@ export default function Home() {
   async function handleRetry(filename: string) {
     setRetryingFilename(filename);
     try {
-      const response = await fetch(`${apiBaseUrl}/documents/${encodeURIComponent(filename)}/retry`, { method: "POST" });
+      const response = await apiFetch(`${apiBaseUrl}/documents/${encodeURIComponent(filename)}/retry`, { method: "POST" });
       await readJson(response);
       setDocuments((currentDocuments) => currentDocuments.map((document) => (
         document.filename === filename
@@ -430,7 +450,7 @@ export default function Home() {
           <button
             type="button"
             className="rounded-full border border-cyan-500 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-300"
-            onClick={() => window.open(`${apiBaseUrl}/docs`, "_blank")}
+            onClick={() => window.open(`${apiBaseUrl}/docs`, "_blank", "noopener,noreferrer")}
           >
             Open API Docs
           </button>
@@ -562,10 +582,10 @@ export default function Home() {
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <p className="mb-4 text-xs uppercase tracking-[0.25em] text-slate-400">Evaluation</p>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span>Recall@5</span><strong>{metrics ? metrics.recall_at_5.toFixed(2) : "-"}</strong></div>
-                <div className="flex justify-between"><span>MRR</span><strong>{metrics ? metrics.mrr.toFixed(2) : "-"}</strong></div>
-                <div className="flex justify-between"><span>Citation accuracy</span><strong>{metrics ? metrics.citation_accuracy.toFixed(2) : "-"}</strong></div>
-                <div className="flex justify-between"><span>Faithfulness</span><strong>{metrics ? metrics.answer_faithfulness.toFixed(2) : "-"}</strong></div>
+                <div className="flex justify-between"><span>Recall@5</span><strong>{formatMetric(metrics?.recall_at_5)}</strong></div>
+                <div className="flex justify-between"><span>MRR</span><strong>{formatMetric(metrics?.mrr)}</strong></div>
+                <div className="flex justify-between"><span>Citation provenance</span><strong>{formatMetric(metrics?.citation_accuracy)}</strong></div>
+                <div className="flex justify-between"><span>Faithfulness (review)</span><strong>{formatMetric(metrics?.answer_faithfulness)}</strong></div>
                 <div className="flex justify-between"><span>Query latency</span><strong>{queryLatency !== null ? `${Math.round(queryLatency)} ms` : "-"}</strong></div>
               </div>
             </div>

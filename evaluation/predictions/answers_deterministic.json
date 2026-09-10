@@ -1,0 +1,6281 @@
+[
+  {
+    "query_id": "nist-001",
+    "query": "What does NIST stand for?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "NIST stands for National Institute of Standards and Technology."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n**NIST** stands for **National Institute of Standards and Technology**. [NIST.AI.600-1.pdf, p. 3]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 679.667,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        3
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 1,
+      "cited_blocks": 1
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        3
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        1
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        2
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        60
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        2
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        3
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-1-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 1,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-2-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 2,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-13-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-002",
+    "query": "What is the purpose of this NIST document?",
+    "category": "explanation",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The document is a cross-sectoral companion resource for the AI RMF focused on generative AI risks and suggested actions."
+    ],
+    "mode": "deterministic",
+    "answer": "**Purpose**\n\nAdditionally, generative AI models can assist malicious actors in creating fraudulent content intended to impersonate others. [NIST.AI.600-1.pdf, p. 14]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 219.853,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        14
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 1,
+      "cited_blocks": 1
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        14
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        56
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-14-text-3-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 14,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-56-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 56,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-003",
+    "query": "How is the AI RMF intended to be used?",
+    "category": "explanation",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The AI RMF is voluntary and helps organizations incorporate trustworthiness considerations and manage AI risks."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThis document is a cross-sectoral pro\ufb01le of and companion resource for the AI Risk Management Framework (AI RMF 1.0) for Generative AI,1 pursuant to President Biden\u2019s Executive Order (EO) 14110 on Safe, Secure, and Trustworthy Arti\ufb01cial Intelligence.2 The AI RMF was released in January 2023, and is intended for voluntary use and to improve the ability of organizations to incorporate trustworthiness considerations into the design, development, use, and evaluation of AI products, services, and systems. [NIST.AI.600-1.pdf, p. 5]\n\n**Supporting context**\n- The suggested actions are organized by relevant AI RMF subcategories to streamline these activities alongside implementation of the AI RMF. [NIST.AI.600-1.pdf, p. 16]\n- The tables below begin with the AI RMF subcategory, shaded in blue, followed by suggested actions. [NIST.AI.600-1.pdf, p. 17]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 434.693,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        17
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        17
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        60
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-9-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-15-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-004",
+    "query": "How does the document define generative AI?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Generative AI models emulate input-data structure and characteristics to produce derived synthetic content."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThis can include images, videos, audio, text, and other digital content.\u201d While not all GAI is derived from foundation models, for purposes of this document, GAI generally refers to generative foundation models. [NIST.AI.600-1.pdf, p. 5]\n\n**Supporting context**\n- Art and the science of generative AI. [NIST.AI.600-1.pdf, p. 59]\n- Canadian Centre for Cyber Security (2023) Generative arti\ufb01cial intelligence (AI) - ITSAP.00.041. [NIST.AI.600-1.pdf, p. 58]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 521.4,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        59
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        58
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        59
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        58
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        63
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        62
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-59-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 59,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-58-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 58,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-63-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 63,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-62-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 62,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-005",
+    "query": "What four primary GAI considerations guide the suggested actions?",
+    "category": "list",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Governance, Content Provenance, Pre-Deployment Testing, and Incident Disclosure are the four primary considerations."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe focus of the GAI PWG was limited to four primary considerations relevant to GAI: Governance, Content Provenance, Pre-deployment Testing, and Incident Disclosure (further described in Appendix A). [NIST.AI.600-1.pdf, p. 6]\n\n**Supporting context**\n- The following primary considerations were derived as overarching themes from the GAI PWG consultation process. [NIST.AI.600-1.pdf, p. 51]\n- In addition to the suggested actions below, AI risk management activities and actions set forth in the AI RMF 1.0 and Playbook are already applicable for managing GAI risks. [NIST.AI.600-1.pdf, p. 16]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1664.511,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        4
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        17
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-006",
+    "query": "How does the AI RMF describe risk?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Risk is the composite of an event's likelihood and the magnitude of its consequences."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nIn the context of the AI RMF, risk refers to the composite measure of an event\u2019s probability (or likelihood) of occurring and the magnitude or degree of the consequences of the corresponding event. [NIST.AI.600-1.pdf, p. 6]\n\n**Supporting context**\n- Https://airc.nist.gov/AI_RMF_Knowledge_Base/AI_RMF/Core_And_Pro\ufb01les/6-sec-pro\ufb01le National Institute of Standards and Technology (2023) AI Risk Management Framework, Appendix A: Descriptions of AI Actor Tasks. [NIST.AI.600-1.pdf, p. 60]\n- To help streamline risk management e\ufb00orts, each risk is mapped in Section 3 (as well as in tables in Appendix B) to relevant Trustworthy AI Characteristics identi\ufb01ed in the AI RMF. [NIST.AI.600-1.pdf, p. 7]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 395.703,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        60
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        60
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-15-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-007",
+    "query": "What is confabulation in a generative AI system?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Confabulation is confidently stated erroneous or false content, also described as hallucination or fabrication."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n\u201cConfabulation\u201d refers to a phenomenon in which GAI systems generate and con\ufb01dently present erroneous or false content in response to prompts. [NIST.AI.600-1.pdf, p. 10]\n\n**Supporting context**\n- Confabulation: The production of con\ufb01dently stated but erroneous or false content (known colloquially as \u201challucinations\u201d or \u201cfabrications\u201d) by which users may be misled or deceived.6 7. [NIST.AI.600-1.pdf, p. 8]\n- Art and the science of generative AI. [NIST.AI.600-1.pdf, p. 59]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 671.99,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        10
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        59
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        10
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        59
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        63
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        10
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-10-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 10,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-59-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 59,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-63-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 63,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-008",
+    "query": "What data privacy risk does the document identify for GAI?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Data privacy risk includes leakage, unauthorized use, disclosure, or de-anonymization of sensitive or personally identifiable data."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe use of personal data for GAI training raises risks to widely accepted privacy principles, including to transparency, individual participation (including consent), and purpose speci\ufb01cation. [NIST.AI.600-1.pdf, p. 11]\n\n**Supporting context**\n- : GV-6.2-001; : Document GAI risks associated with system value chain to identify over-reliance on third-party data and to identify fallbacks.; : Value Chain and Component Integration. [NIST.AI.600-1.pdf, p. 25]\n- Another cybersecurity risk to GAI is data poisoning, in which an adversary compromises a training dataset used by a model to manipulate its outputs or operation. [NIST.AI.600-1.pdf, p. 15]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1063.387,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        11
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        25
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        15
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        11
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        14
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        25
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        15
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-14-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 14,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-25-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 25,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-15-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 15,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-009",
+    "query": "What does harmful bias or homogenization mean in the document?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The risk covers amplified biases, subgroup performance disparities, discrimination, and undesirable output homogeneity."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nHarmful Bias or Homogenization: Ampli\ufb01cation and exacerbation of historical, societal, and systemic biases; performance disparities8 between sub-groups or languages, possibly due to non-representative training data, that result in discrimination, ampli\ufb01cation of biases, or incorrect presumptions about performance; undesired homogeneity that skews system or model outputs, which may be erroneous, lead to ill-founded decision-making, or amplify harmful biases. [NIST.AI.600-1.pdf, p. 8]\n\n**Supporting context**\n- The spread of denigrating or stereotypical content can also further exacerbate representational harms (see Harmful Bias and Homogenization below). [NIST.AI.600-1.pdf, p. 11]\n- Table: : MEASURE 2.11: Fairness and bias. [NIST.AI.600-1.pdf, p. 40]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1035.198,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        11
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        40
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        40
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        13
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        12
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        11
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-40-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 40,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-13-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 13,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-12-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-010",
+    "query": "What environmental impacts can result from GAI?",
+    "category": "explanation",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Training and operating GAI can use substantial resources and have energy, carbon, and environmental footprints."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nCurrently there is no agreed upon method to estimate environmental impacts from GAI. [NIST.AI.600-1.pdf, p. 12]\n\n**Supporting context**\n- Environmental Impacts: Impacts due to high compute resource utilization in training or operating GAI models, and related outcomes that may adversely impact ecosystems. [NIST.AI.600-1.pdf, p. 8]\n- The impact of GAI on chemical or biological agent misuse will depend on what the key barriers for malicious actors are (e.g., whether information access is one such barrier), and how well GAI can help actors address those barriers. [NIST.AI.600-1.pdf, p. 9]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 810.335,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        12
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        12
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        53
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        41
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        12
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-12-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-53-text-2-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 53,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-9-text-5-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 9,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-41-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 41,
+        "type": "table"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-011",
+    "query": "What is human-AI configuration risk?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Human-AI configuration can lead to anthropomorphization, automation bias, over-reliance, aversion, or emotional entanglement."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n: MS-3.2-001; : Establish processes for identifying emergent GAI system risks including consulting with external AI Actors.; : Human-AI Configuration; Confabulation. [NIST.AI.600-1.pdf, p. 42]\n\n**Supporting context**\n- One possible way to further categorize these risks, derived in part from the UK\u2019s International Scienti\ufb01c Report on the Safety of Advanced AI, could be: 1) Technical / Model risks (or risk from malfunction): Confabulation; Dangerous or Violent Recommendations; Data Privacy; Value Chain and Component Integration; Harmful Bias, and Homogenization; 2) Misuse by humans (or malicious use): CBRN Information or Capabilities; Data Privacy; Human-AI Con\ufb01guration; Obscene, Degrading, and/or Abusive Content; Information Integrity; Information Security; 3) Ecosystem / societal risks (or systemic risks): Data Privacy; Environmental; Intellectual Property. [NIST.AI.600-1.pdf, p. 7]\n- Human-AI Con\ufb01guration: Arrangements of or interactions between a human and an AI system which can result in the human inappropriately anthropomorphizing GAI systems or experiencing algorithmic aversion, automation bias, over-reliance, or emotional entanglement with GAI systems. [NIST.AI.600-1.pdf, p. 8]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 645.892,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        42
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        24
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        42
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        52
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        13
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-24-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 24,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-42-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 42,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-52-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 52,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-012",
+    "query": "What characteristics make information high integrity?",
+    "category": "explanation",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "High-integrity information distinguishes fact, fiction, opinion, and inference; acknowledges uncertainty; and is transparent, verifiable, and linked to evidence."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n: GV-1.2-002; : Establish policies to evaluate risk-relevant capabilities of GAI and robustness of safety measures, both prior to deployment and on an ongoing basis, through internal and external evaluations.; : CBRN Information or Capabilities; Information Security Table: : GOVERN 1.3: Processes, procedures, and practices are in place to determine the needed level of risk management activities based. [NIST.AI.600-1.pdf, p. 18]\n\n**Supporting context**\n- Information integrity describes the \u201cspectrum of information and associated patterns of its creation, exchange, and consumption in society.\u201d High-integrity information can be trusted; \u201cdistinguishes fact from \ufb01ction, opinion, and inference; acknowledges uncertainties; and is transparent about its level of vetting. [NIST.AI.600-1.pdf, p. 13]\n- Information Integrity: Lowered barrier to entry to generate and support the exchange and consumption of content which may not distinguish fact from opinion or \ufb01ction or acknowledge uncertainties, or could be leveraged for large-scale dis- and mis-information campaigns. [NIST.AI.600-1.pdf, p. 8]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 0.9793,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1084.055,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        13
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        13
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        62
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        13
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-13-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 13,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-62-text-14-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 62,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-9-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 9,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-013",
+    "query": "What are CBRN information or capabilities risks?",
+    "category": "explanation",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The risk is eased access to or synthesis of dangerous CBRN information or design capabilities."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n: GV-1.2-002; : Establish policies to evaluate risk-relevant capabilities of GAI and robustness of safety measures, both prior to deployment and on an ongoing basis, through internal and external evaluations.; : CBRN Information or Capabilities; Information Security Table: : GOVERN 1.3: Processes, procedures, and practices are in place to determine the needed level of risk management activities based. [NIST.AI.600-1.pdf, p. 18]\n\n**Supporting context**\n- GV-1.3-004: GV-1.3-006; Obtain input from stakeholder communities to identify unacceptable use, in accordance with activities in the AI RMF Map function.: Reevaluate organizational risk tolerances to account for unacceptable negative risk (such as where significant negative impacts are imminent, severe harms are actually occurring, or large-scale risks could occur); and broad GAI negative risks, including: Immature safety or risk cultures related to AI and GAI design, development and deployment, public information integrity risks, including impacts on democratic processes, unknown long-term performance characteristics of GAI.; CBRN Information or Capabilities; Obscene, Degrading, and/or Abusive Content; Harmful Bias and Homogenization; Dangerous, Violent, or Hateful Content: Information Integrity; Dangerous, Violent, or Hateful Content; CBRN Information or Capabilities. [NIST.AI.600-1.pdf, p. 19]\n- One possible way to further categorize these risks, derived in part from the UK\u2019s International Scienti\ufb01c Report on the Safety of Advanced AI, could be: 1) Technical / Model risks (or risk from malfunction): Confabulation; Dangerous or Violent Recommendations; Data Privacy; Value Chain and Component Integration; Harmful Bias, and Homogenization; 2) Misuse by humans (or malicious use): CBRN Information or Capabilities; Data Privacy; Human-AI Con\ufb01guration; Obscene, Degrading, and/or Abusive Content; Information Integrity; Information Security; 3) Ecosystem / societal risks (or systemic risks): Data Privacy; Environmental; Intellectual Property. [NIST.AI.600-1.pdf, p. 7]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1020.319,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        8
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-19-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 19,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-9-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 9,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-014",
+    "query": "Why are GAI value chains and third-party components a risk?",
+    "category": "explanation",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Third-party datasets, models, and libraries can be improperly obtained or insufficiently vetted, reducing transparency and accountability."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nGAI value chains involve many third-party components such as procured datasets, pre-trained models, and software libraries. [NIST.AI.600-1.pdf, p. 16]\n\n**Supporting context**\n- : GV-6.2-001; : Document GAI risks associated with system value chain to identify over-reliance on third-party data and to identify fallbacks.; : Value Chain and Component Integration Table: GV-6.1-005: GV-6.1-006; Implement a use-cased based supplier risk assessment framework to evaluate and monitor third-party entities\u2019 performance and adherence to content provenance standards and technologies to detect anomalies and unauthorized changes; services acquisition and value chain risk management; and legal compliance.: Include clauses in contracts which allow an organization to evaluate third-party GAI processes and standards.; Data Privacy; Information Integrity; Information Security; Intellectual Property; Value Chain and Component Integration: Information Integrity. [NIST.AI.600-1.pdf, p. 25]\n- Value Chain and Component Integration: Non-transparent or untraceable integration of upstream third-party components, including data that has been improperly obtained or not processed and cleaned due to increased automation from GAI; improper supplier vetting across the AI lifecycle; or other issues that diminish transparency or accountability for downstream users. [NIST.AI.600-1.pdf, p. 9]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1001.996,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        25
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        25
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        52
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-25-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 25,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-9-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 9,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-52-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 52,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-015",
+    "query": "What intellectual property risk can arise from generative AI?",
+    "category": "definition",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "GAI can ease unauthorized replication of copyrighted, trademarked, or licensed content and can create copyright concerns through memorization."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nOne possible way to further categorize these risks, derived in part from the UK\u2019s International Scienti\ufb01c Report on the Safety of Advanced AI, could be: 1) Technical / Model risks (or risk from malfunction): Confabulation; Dangerous or Violent Recommendations; Data Privacy; Value Chain and Component Integration; Harmful Bias, and Homogenization; 2) Misuse by humans (or malicious use): CBRN Information or Capabilities; Data Privacy; Human-AI Con\ufb01guration; Obscene, Degrading, and/or Abusive Content; Information Integrity; Information Security; 3) Ecosystem / societal risks (or systemic risks): Data Privacy; Environmental; Intellectual Property. [NIST.AI.600-1.pdf, p. 7]\n\n**Supporting context**\n- Like any other technology system, governance principles and techniques can be used to manage risks related to generative AI models, capabilities, and applications. [NIST.AI.600-1.pdf, p. 51]\n- Stage of the AI lifecycle: Risks can arise during design, development, deployment, operation, and/or decommissioning. [NIST.AI.600-1.pdf, p. 6]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 398.67,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        63
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        9
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        15
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-63-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 63,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-016",
+    "query": "How can organizational governance be adapted for GAI risks?",
+    "category": "procedure",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations can revise risk tiers, governance regimes, oversight, human review, tracking, documentation, and management oversight for GAI."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThis section describes how organizational governance regimes may be re- evaluated and adjusted for GAI contexts. [NIST.AI.600-1.pdf, p. 51]\n\n**Supporting context**\n- Establishing acceptable use policies and guidance for the use of GAI in formal human-AI teaming settings as well as di\ufb00erent levels of human-AI con\ufb01gurations can help to decrease risks arising from misuse, abuse, inappropriate repurpose, and misalignment between systems and users. [NIST.AI.600-1.pdf, p. 52]\n- : GV-1.6-001; : Enumerate organizational GAI systems for incorporation into AI system inventory and adjust AI system inventory requirements to account for GAI risks.; : Information Security. [NIST.AI.600-1.pdf, p. 20]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1042.544,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        52
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        52
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        22
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-52-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 52,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-20-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 20,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-22-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 22,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-017",
+    "query": "What does the GOVERN 1.2 table recommend for transparency of training and generated data?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations should establish transparency policies documenting the origin and history of training and generated data."
+    ],
+    "mode": "deterministic",
+    "answer": "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. Open the cited source regions to review the original content.\n\nSources: NIST.AI.600-1.pdf (pp. 18, 19, 24, 39, 48)",
+    "answer_intent": "visual",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1091.555,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 1,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        24
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        48
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        39
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-19-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 19,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-24-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 24,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-48-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 48,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-39-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 39,
+        "type": "table"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-018",
+    "query": "What does the GOVERN 1.2 table recommend for evaluating GAI capabilities and safety measures?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations should evaluate risk-relevant capabilities and safety-measure robustness before deployment and on an ongoing basis."
+    ],
+    "mode": "deterministic",
+    "answer": "Relevant table or figure evidence was found, but it could not be summarized as reliable prose. Open the cited source regions to review the original content.\n\nSources: NIST.AI.600-1.pdf (pp. 18, 19, 20, 22, 24)",
+    "answer_intent": "visual",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1185.368,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 1,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        22
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        24
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-19-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 19,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-22-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 22,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-20-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 20,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-24-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 24,
+        "type": "table"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-019",
+    "query": "Which factors should an organization consider when defining GAI risk tiers?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Risk tiers should consider information integrity, dependencies, public safety, harmful output, psychological impacts, misuse, security vulnerabilities, group impacts, and reliability."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n: GV-1.3-001; : Consider the following factors when updating or defining risk tiers for GAI: Abuses and impacts to information integrity; Dependencies between GAI and other IT or data systems; Harm to fundamental rights or public safety; Presentation of obscene, objectionable, offensive, discriminatory, invalid or untruthful output; Psychological impacts to humans (e.g., anthropomorphization, algorithmic aversion, emotional entanglement); Possibility for malicious use; Whether the system introduces significant new security vulnerabilities; Anticipated system impact on some groups compared to others; Unreliable decision making capabilities, validity, adaptability, and variability of GAI system performance over time.; : Information Integrity; Obscene, Degrading, and/or Abusive Content; Value Chain and Component Integration; Harmful Bias and Homogenization; Dangerous, Violent, or Hateful Content; CBRN Information or Capabilities. [NIST.AI.600-1.pdf, p. 18]\n\n**Supporting context**\n- Source of risk: Risks may emerge from factors related to the design, training, or operation of the GAI model itself, stemming in some cases from GAI model or system inputs, and in other cases, from GAI system outputs. [NIST.AI.600-1.pdf, p. 6]\n- These considerations (Governance, Pre-Deployment Testing, Content Provenance, and Incident Disclosure) are relevant for voluntary use by any organization designing, developing, and using GAI and also inform the Actions to Manage GAI risks. [NIST.AI.600-1.pdf, p. 51]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1348.804,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-020",
+    "query": "What should an organization plan for when a GAI system poses unacceptable negative risk?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations should devise a plan to halt development or deployment when a system poses unacceptable negative risk."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nFor r(x) = GV-1.3-007, the initial guess for y_p(x) is Devise a plan to halt development or deployment of a GAI system that poses unacceptable negative risk.. [NIST.AI.600-1.pdf, p. 19]\n\n**Supporting context**\n- Table: MP-1.1-002: MP-1.1-003; Determine and document the expected and acceptable GAI system context of use in collaboration with socio-cultural and other domain experts, by assessing: Assumptions and limitations; Direct value to the organization; Intended operational environment and observed usage patterns; Potential positive and negative impacts to individuals, public safety, groups, communities, organizations, democratic institutions, and the physical environment; Social norms and expectations.: Document risk measurement plans to address identified risks. [NIST.AI.600-1.pdf, p. 27]\n- They may additionally wish to allocate risk management resources relative to the severity and likelihood of negative impacts, including where and how these risks manifest, and their direct and material impacts harms in the context of GAI use. [NIST.AI.600-1.pdf, p. 7]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1408.535,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        27
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        27
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        17
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-27-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 27,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-19-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 19,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-021",
+    "query": "What should periodic review cover for GAI risk management?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Periodic review should cover content provenance, incident monitoring, after-action review, incident disclosure, and retention of TEVV history."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nTable: : GOVERN 1.5: Ongoing monitoring and periodic review of the risk management process and its outcomes are planned, and. [NIST.AI.600-1.pdf, p. 20]\n\n**Supporting context**\n- In addition to the suggested actions below, AI risk management activities and actions set forth in the AI RMF 1.0 and Playbook are already applicable for managing GAI risks. [NIST.AI.600-1.pdf, p. 16]\n- A glossary of terms pertinent to GAI risk management will be developed and hosted on NIST\u2019s Trustworthy & Responsible AI Resource Center (AIRC), and added to The Language of Trustworthy AI: An In-Depth Glossary of Terms. [NIST.AI.600-1.pdf, p. 6]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1321.776,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        19
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-20-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 20,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-19-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 19,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-022",
+    "query": "What should a GAI system inventory include?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Inventory entries should include provenance, known issues, human oversight, rights and data considerations, and underlying models and versions."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n: GV-1.6-001; : Enumerate organizational GAI systems for incorporation into AI system inventory and adjust AI system inventory requirements to account for GAI risks.; : Information Security. [NIST.AI.600-1.pdf, p. 20]\n\n**Supporting context**\n- : GV-1.3-001; : Consider the following factors when updating or defining risk tiers for GAI: Abuses and impacts to information integrity; Dependencies between GAI and other IT or data systems; Harm to fundamental rights or public safety; Presentation of obscene, objectionable, offensive, discriminatory, invalid or untruthful output; Psychological impacts to humans (e.g., anthropomorphization, algorithmic aversion, emotional entanglement); Possibility for malicious use; Whether the system introduces significant new security vulnerabilities; Anticipated system impact on some groups compared to others; Unreliable decision making capabilities, validity, adaptability, and variability of GAI system performance over time.; : Information Integrity; Obscene, Degrading, and/or Abusive Content; Value Chain and Component Integration; Harmful Bias and Homogenization; Dangerous, Violent, or Hateful Content; CBRN Information or Capabilities. [NIST.AI.600-1.pdf, p. 18]\n- In addition to the suggested actions below, AI risk management activities and actions set forth in the AI RMF 1.0 and Playbook are already applicable for managing GAI risks. [NIST.AI.600-1.pdf, p. 16]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1405.988,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        4
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-20-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 20,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-023",
+    "query": "What should organizations consider when decommissioning a GAI system?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Decommissioning should consider deactivation, data retention and security, leakage, dependencies, open-source components, and user emotional entanglement."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n: GV-1.3-001; : Consider the following factors when updating or defining risk tiers for GAI: Abuses and impacts to information integrity; Dependencies between GAI and other IT or data systems; Harm to fundamental rights or public safety; Presentation of obscene, objectionable, offensive, discriminatory, invalid or untruthful output; Psychological impacts to humans (e.g., anthropomorphization, algorithmic aversion, emotional entanglement); Possibility for malicious use; Whether the system introduces significant new security vulnerabilities; Anticipated system impact on some groups compared to others; Unreliable decision making capabilities, validity, adaptability, and variability of GAI system performance over time.; : Information Integrity; Obscene, Degrading, and/or Abusive Content; Value Chain and Component Integration; Harmful Bias and Homogenization; Dangerous, Violent, or Hateful Content; CBRN Information or Capabilities. [NIST.AI.600-1.pdf, p. 18]\n\n**Supporting context**\n- Organizations may consider varying risk controls for foundation models, \ufb01ne-tuned models, and embedded tools, enhanced processes for interacting with external GAI technologies or service providers. [NIST.AI.600-1.pdf, p. 52]\n- : GV-1.7-001; : Protocols are put in place to ensure GAI systems are able to be deactivated when necessary.; : Information Security; Value Chain and Component Integration. [NIST.AI.600-1.pdf, p. 21]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1422.713,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        52
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        21
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        52
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        21
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        21
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-52-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 52,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-21-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 21,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-024",
+    "query": "How should organizations communicate GAI incidents and performance to stakeholders?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations should define roles, policies, and procedures to communicate incidents and performance to AI actors and affected downstream stakeholders."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nTo better understand previous incidents and implement measures to prevent similar ones in the future, organizations could consider developing guidelines for publicly available incident reporting which include information about AI actor responsibilities. [NIST.AI.600-1.pdf, p. 57]\n\n**Supporting context**\n- : GV-2.1-001; : Establish organizational roles, policies, and procedures for communicating GAI incidents and performance to AI Actors and downstream stakeholders (including those potentially impacted), via community or official resources (e.g., AI incident database, AVID, CVE, NVD, or OECD AI incident monitor).; : Human-AI Configuration; Value Chain and Component Integration. [NIST.AI.600-1.pdf, p. 21]\n- Furthermore, organizations can track and document the provenance of datasets to identify instances in which AI-generated data is a potential root cause of performance issues with the GAI system. [NIST.AI.600-1.pdf, p. 56]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1438.696,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        57
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        21
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        56
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        21
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        57
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        56
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        27
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        21
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-21-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 21,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-57-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 57,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-56-text-5-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 56,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-27-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 27,
+        "type": "table"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-025",
+    "query": "What does the document recommend for checking the accuracy of generated information?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations should deploy and document fact-checking techniques, especially for information from multiple or unknown sources."
+    ],
+    "mode": "deterministic",
+    "answer": "**GOVERN 1.5 recommendations**\n\nOngoing monitoring and periodic review of the risk management process and its outcomes are planned, and. : organizational roles and responsibilities are clearly defined, including determining the frequency of periodic review. [NIST.AI.600-1.pdf, p. 20]\n\n**Recommended actions**\n1. **GV-1.5-001** \u2014 Define organizational responsibilities for periodic review of content provenance and incident monitoring for GAI systems. [NIST.AI.600-1.pdf, p. 20]\n   - Related risks: Information Integrity\n2. **GV-1.5-002** \u2014 Establish organizational policies and procedures for afet r action reviews of GAI system incident response and incident disclosures, to identify gaps; Update incident response and incident disclosure processes as required. [NIST.AI.600-1.pdf, p. 20]\n   - Related risks: Human-AI Configuration; Information Security\n3. **GV-1.5-003** \u2014 Maintain a document retention policy to keep history for test, evaluation, validation, and verification (TEVV), and digital content transparency methods for GAI. [NIST.AI.600-1.pdf, p. 20]\n   - Related risks: Information Integrity; Intellectual Property\n\n**Source**\nNIST.AI.600-1.pdf (p. 20)",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1504.968,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 7,
+      "cited_blocks": 4
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        29
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        44
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        17
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        32
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        29
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-29-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 29,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-20-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 20,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-44-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 44,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-32-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 32,
+        "type": "table"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-026",
+    "query": "What testing does the document recommend for synthetic content that could appear human-generated?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations should develop and implement tests to identify synthetic GAI content that may be indistinguishable from human-generated content."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nMP-2.3-002: MP-2.3-004; Review and document accuracy, representativeness, relevance, suitability of data used at different stages of AI life cycle.: Develop and implement testing techniques to identify GAI produced content (e.g., synthetic media) that might be indistinguishable from human-generated content.; Harmful Bias and Homogenization; Intellectual Property: Information Integrity. [NIST.AI.600-1.pdf, p. 29]\n\n**Supporting context**\n- Some aspects of GAI outputs, such as the production of deepfake content, can challenge our ability to distinguish human-generated content from AI-generated synthetic content. [NIST.AI.600-1.pdf, p. 55]\n- MG-2.2-006: MG-2.2-009; Use feedback from internal and external AI Actors, users, individuals, and communities, to assess impact of AI-generated content.: Consider opportunities to responsibly use synthetic data and other privacy enhancing techniques in GAI development, where appropriate and applicable, match the statistical properties of real-world data without disclosing personally identifiable information or contributing to homogenization.; Human-AI Configuration: Data Privacy; Intellectual Property; Information Integrity; Confabulation; Harmful Bias and Homogenization. [NIST.AI.600-1.pdf, p. 45]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1573.861,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        29
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        55
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        45
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        29
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        55
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        45
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        53
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        29
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-29-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 29,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-55-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 55,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-45-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 45,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-53-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 53,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-027",
+    "query": "How should organizations address intellectual property and privacy risks in training data?",
+    "category": "table",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Organizations should perform diligence on training-data use and establish policies for curation, use, storage, and protection of third-party IP and sensitive data."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n: GV-1.2-001; : Establish transparency policies and processes for documenting the origin and history of training data and generated data for GAI applications to advance digital content transparency, while balancing the proprietary nature of training approaches.; : Data Privacy; Information Integrity; Intellectual Property. [NIST.AI.600-1.pdf, p. 18]\n\n**Supporting context**\n- One possible way to further categorize these risks, derived in part from the UK\u2019s International Scienti\ufb01c Report on the Safety of Advanced AI, could be: 1) Technical / Model risks (or risk from malfunction): Confabulation; Dangerous or Violent Recommendations; Data Privacy; Value Chain and Component Integration; Harmful Bias, and Homogenization; 2) Misuse by humans (or malicious use): CBRN Information or Capabilities; Data Privacy; Human-AI Con\ufb01guration; Obscene, Degrading, and/or Abusive Content; Information Integrity; Information Security; 3) Ecosystem / societal risks (or systemic risks): Data Privacy; Environmental; Intellectual Property. [NIST.AI.600-1.pdf, p. 7]\n- Table: : MAP 4.1: Approaches for mapping AI technology and legal risks of its components. [NIST.AI.600-1.pdf, p. 30]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1202.177,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        30
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        15
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        18
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        30
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        39
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        30
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        31
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-15-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 15,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-30-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 30,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-39-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 39,
+        "type": "table"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-028",
+    "query": "Summarize this document's purpose, risks, and suggested actions.",
+    "category": "summary",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The summary should identify the AI RMF companion purpose, GAI risks, and actions organized around governance, content provenance, pre-deployment testing, and incident disclosure."
+    ],
+    "mode": "deterministic",
+    "answer": "**Purpose**\n\nThe foundation model subcategory of \u201cdual-use foundation models\u201d is de\ufb01ned by EO 14110 as \u201can AI model that is trained on broad data; generally uses self-supervision; contains at least tens of billions of parameters; is applicable across a wide range of contexts.\u201d 2 This pro\ufb01le was developed per Section 4.1(a)(i)(A) of EO 14110, which directs the Secretary of Commerce, acting through the Director of the National Institute of Standards and Technology (NIST), to develop a companion resource to the AI RMF, NIST AI 100. [NIST.AI.600-1.pdf, p. 5]",
+    "answer_intent": "summary",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1921.388,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 1,
+      "cited_blocks": 1
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        17
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-4-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-029",
+    "query": "What are the document's primary considerations for managing GAI risks?",
+    "category": "summary",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The primary considerations are governance, content provenance, pre-deployment testing, and incident disclosure, and they inform risk-management actions."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThese considerations (Governance, Pre-Deployment Testing, Content Provenance, and Incident Disclosure) are relevant for voluntary use by any organization designing, developing, and using GAI and also inform the Actions to Manage GAI risks. [NIST.AI.600-1.pdf, p. 51]\n\n**Supporting context**\n- This document de\ufb01nes risks that are novel to or exacerbated by the use of GAI. [NIST.AI.600-1.pdf, p. 5]\n- To guide organizations in identifying and managing GAI risks, a set of risks unique to or exacerbated by the development and use of GAI are de\ufb01ned below.5 Each risk is labeled according to the outcome, object, or source of the risk (i.e., some are risks \u201cto\u201d a subject or domain and others are risks \u201cof\u201d or \u201cfrom\u201d an issue or theme). [NIST.AI.600-1.pdf, p. 7]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1290.15,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        4
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        51
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "nist-030",
+    "query": "What is the author's favorite programming language?",
+    "category": "unsupported",
+    "document_scope": [
+      "NIST.AI.600-1.pdf"
+    ],
+    "expected_supported": false,
+    "expected_claims": [
+      "The answer must state that the indexed document does not support this information."
+    ],
+    "mode": "deterministic",
+    "answer": "Unsupported answer: the retrieved evidence is too weak to support a confident response.",
+    "answer_intent": "definition",
+    "unsupported": true,
+    "confidence": 0.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 381.855,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 0,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        58
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        62
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        61
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        63
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        40
+      ]
+    ],
+    "ground_truth_source_pages": [],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-58-text-13-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 58,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-62-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 62,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-61-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 61,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-63-text-11-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 63,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-40-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 40,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "transformer-001",
+    "query": "What architecture does the Transformer paper propose?",
+    "category": "definition",
+    "document_scope": [
+      "1706.03762v7.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The Transformer is an attention-only sequence-transduction architecture that dispenses with recurrence and convolutions."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nIn this work we propose the Transformer, a model architecture eschewing recurrence and instead relying entirely on an attention mechanism to draw global dependencies between input and output. [1706.03762v7.pdf, p. 2]\n\n**Supporting context**\n- Figure 1: The Transformer - model architecture. [1706.03762v7.pdf, p. 3]\n- In this work, we presented the Transformer, the first sequence transduction model based entirely on attention, replacing the recurrent layers most commonly used in encoder-decoder architectures with multi-headed self-attention. [1706.03762v7.pdf, p. 10]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1179.227,
+    "citations": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        3
+      ],
+      [
+        "1706.03762v7.pdf",
+        10
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        3
+      ],
+      [
+        "1706.03762v7.pdf",
+        10
+      ],
+      [
+        "1706.03762v7.pdf",
+        1
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        1
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-3-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-figure-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3,
+        "type": "figure"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-10-text-4-0",
+        "source": "1706.03762v7.pdf",
+        "page": 10,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-1-text-5-0",
+        "source": "1706.03762v7.pdf",
+        "page": 1,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "transformer-002",
+    "query": "Why do recurrent models limit parallelization during training?",
+    "category": "explanation",
+    "document_scope": [
+      "1706.03762v7.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Sequential dependence on previous hidden states prevents parallelization within training examples."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThis inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths, as memory constraints limit batching across examples. [1706.03762v7.pdf, p. 2]\n\n**Supporting context**\n- We employ three types of regularization during training: This section describes the training regime for our models. [1706.03762v7.pdf, p. 7]\n- The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. [1706.03762v7.pdf, p. 1]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 410.217,
+    "citations": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        7
+      ],
+      [
+        "1706.03762v7.pdf",
+        1
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        1
+      ],
+      [
+        "1706.03762v7.pdf",
+        7
+      ],
+      [
+        "1706.03762v7.pdf",
+        12
+      ],
+      [
+        "1706.03762v7.pdf",
+        11
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-1-text-4-0",
+        "source": "1706.03762v7.pdf",
+        "page": 1,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-7-text-10-0",
+        "source": "1706.03762v7.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-12-text-29-0",
+        "source": "1706.03762v7.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-11-text-14-0",
+        "source": "1706.03762v7.pdf",
+        "page": 11,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "transformer-003",
+    "query": "What is self-attention?",
+    "category": "definition",
+    "document_scope": [
+      "1706.03762v7.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Self-attention relates positions in a single sequence to compute its representation."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nSelf-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. [1706.03762v7.pdf, p. 2]\n\n**Supporting context**\n- As side benefit, self-attention could yield more interpretable models. [1706.03762v7.pdf, p. 7]\n- As noted in Table 1, a self-attention layer connects all positions with a constant number of sequentially executed operations, whereas a recurrent layer requires O(n) sequential operations. [1706.03762v7.pdf, p. 6]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 474.651,
+    "citations": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        7
+      ],
+      [
+        "1706.03762v7.pdf",
+        6
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        7
+      ],
+      [
+        "1706.03762v7.pdf",
+        6
+      ],
+      [
+        "1706.03762v7.pdf",
+        5
+      ],
+      [
+        "1706.03762v7.pdf",
+        13
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        2
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-5-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-7-text-2-0",
+        "source": "1706.03762v7.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-6-text-11-0",
+        "source": "1706.03762v7.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-14-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-13-figure-2-0",
+        "source": "1706.03762v7.pdf",
+        "page": 13,
+        "type": "figure"
+      }
+    ]
+  },
+  {
+    "query_id": "transformer-004",
+    "query": "How does scaled dot-product attention compute its weights?",
+    "category": "procedure",
+    "document_scope": [
+      "1706.03762v7.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Scaled dot-product attention takes query-key dot products, divides by the square root of the key dimension, and applies softmax to produce value weights."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nScaled Dot-Product Attention Multi-Head Attention In practice, we compute the attention function on a set of queries simultaneously, packed together into a matrix Q. [1706.03762v7.pdf, p. 4]\n\n**Supporting context**\n- We implement this inside of scaled dot-product attention by masking out (setting to \u2212\u221e) all values in the input of the softmax which correspond to illegal connections. [1706.03762v7.pdf, p. 5]\n- Noam proposed scaled dot-product attention, multi-head attention and the parameter-free position representation and became the other person involved in nearly every detail. [1706.03762v7.pdf, p. 1]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 327.402,
+    "citations": [
+      [
+        "1706.03762v7.pdf",
+        4
+      ],
+      [
+        "1706.03762v7.pdf",
+        5
+      ],
+      [
+        "1706.03762v7.pdf",
+        1
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        4
+      ],
+      [
+        "1706.03762v7.pdf",
+        5
+      ],
+      [
+        "1706.03762v7.pdf",
+        1
+      ],
+      [
+        "1706.03762v7.pdf",
+        3
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        4
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "1706.03762v7.pdf-4-text-3-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-15-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-figure-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4,
+        "type": "figure"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-1-text-5-0",
+        "source": "1706.03762v7.pdf",
+        "page": 1,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-text-4-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "transformer-005",
+    "query": "What is the purpose of multi-head attention in the Transformer?",
+    "category": "explanation",
+    "document_scope": [
+      "1706.03762v7.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Multi-head attention uses multiple learned projections of queries, keys, and values and applies attention in parallel."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe Transformer uses multi-head attention in three different ways: Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. [1706.03762v7.pdf, p. 5]\n\n**Supporting context**\n- In the Transformer this is reduced to a constant number of operations, albeit at the cost of reduced effective resolution due to averaging attention-weighted positions, an effect we counteract with Multi-Head Attention as described in section 3.2. [1706.03762v7.pdf, p. 2]\n- In this work, we presented the Transformer, the first sequence transduction model based entirely on attention, replacing the recurrent layers most commonly used in encoder-decoder architectures with multi-headed self-attention. [1706.03762v7.pdf, p. 10]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 321.951,
+    "citations": [
+      [
+        "1706.03762v7.pdf",
+        5
+      ],
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        10
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        5
+      ],
+      [
+        "1706.03762v7.pdf",
+        10
+      ],
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        1
+      ],
+      [
+        "1706.03762v7.pdf",
+        4
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        4
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-12-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-10-text-4-0",
+        "source": "1706.03762v7.pdf",
+        "page": 10,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-4-1",
+        "source": "1706.03762v7.pdf",
+        "page": 2,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-1-text-5-0",
+        "source": "1706.03762v7.pdf",
+        "page": 1,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-text-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "transformer-006",
+    "query": "Why does the Transformer use positional encodings?",
+    "category": "explanation",
+    "document_scope": [
+      "1706.03762v7.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Positional encodings inject relative or absolute token-position information because the model has no recurrence or convolution."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nTo this end, we add \"positional encodings\" to the input embeddings at the bottoms of the encoder and decoder stacks. [1706.03762v7.pdf, p. 6]\n\n**Supporting context**\n- To the best of our knowledge, however, the Transformer is the first transduction model relying entirely on self-attention to compute representations of its input and output without using sequence- aligned RNNs or convolution. [1706.03762v7.pdf, p. 2]\n- The Transformer uses multi-head attention in three different ways: In addition to attention sub-layers, each of the layers in our encoder and decoder contains a fully connected feed-forward network, which is applied to each position separately and identically. [1706.03762v7.pdf, p. 5]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 1359.848,
+    "citations": [
+      [
+        "1706.03762v7.pdf",
+        6
+      ],
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        5
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        6
+      ],
+      [
+        "1706.03762v7.pdf",
+        2
+      ],
+      [
+        "1706.03762v7.pdf",
+        5
+      ],
+      [
+        "1706.03762v7.pdf",
+        3
+      ],
+      [
+        "1706.03762v7.pdf",
+        10
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        6
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "1706.03762v7.pdf-6-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-7-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-12-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-10-text-4-0",
+        "source": "1706.03762v7.pdf",
+        "page": 10,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "transformer-007",
+    "query": "What restaurant do the Transformer authors recommend?",
+    "category": "unsupported",
+    "document_scope": [
+      "1706.03762v7.pdf"
+    ],
+    "expected_supported": false,
+    "expected_claims": [
+      "The paper does not support an answer."
+    ],
+    "mode": "deterministic",
+    "answer": "Unsupported answer: the retrieved evidence is too weak to support a confident response.",
+    "answer_intent": "explanation",
+    "unsupported": true,
+    "confidence": 0.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 350.007,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 0,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "1706.03762v7.pdf",
+        5
+      ],
+      [
+        "1706.03762v7.pdf",
+        8
+      ],
+      [
+        "1706.03762v7.pdf",
+        3
+      ],
+      [
+        "1706.03762v7.pdf",
+        10
+      ]
+    ],
+    "ground_truth_source_pages": [],
+    "sources": [
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-12-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-8-text-9-0",
+        "source": "1706.03762v7.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-figure-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3,
+        "type": "figure"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-10-text-3-0",
+        "source": "1706.03762v7.pdf",
+        "page": 10,
+        "type": "text"
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "ipcc-001",
+    "query": "What does the IPCC report say caused global warming?",
+    "category": "explanation",
+    "document_scope": [
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Human activities, principally greenhouse-gas emissions, unequivocally caused global warming."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nAn IPCC special report on the impacts of global warming of 1.5 \u00b0C above pre-industrial levels and related global greenhouse gas emission pathways, in the context of strengthening the global response to the threat of climate change, sustainable development, and efforts to eradicate poverty. [IPCC_AR6_SYR_FullVolume.pdf, p. 177]\n\n**Supporting context**\n- The three Special Reports are: Global Warming of 1.5\u00b0C (2018): an IPCC Special Report on the impacts of global warming of 1.5\u00b0C above pre-industrial levels and related global greenhouse gas emission pathways, in the context of strengthening the global response to the threat of climate change, sustainable development, and efforts to eradicate poverty (SR1.5); Climate Change and Land (2019): an IPCC Special Report on climate change, desertification, land degradation, sustainable land management, food security, and greenhouse gas fluxes in terrestrial ecosystems (SRCCL); and The Ocean and Cryosphere in a Changing Climate (2019) (SROCC). [IPCC_AR6_SYR_FullVolume.pdf, p. 19]\n- Other IPCC reports cited in this Synthesis Report: SR1.5: Global Warming of 1.5\u00b0C SRCCL: Climate Change and Land SROCC: The Ocean and Cryosphere in a Changing Climate. [IPCC_AR6_SYR_FullVolume.pdf, p. 16]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.6223,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 491.893,
+    "citations": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        177
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        19
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        16
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        186
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        177
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        19
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        54
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        16
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        20
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-186-text-1-1",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 186,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-12-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-19-text-4-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 19,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-54-text-8-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 54,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-16-text-5-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 16,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "ipcc-002",
+    "query": "How much warmer was global surface temperature in 2011\u20132020 than 1850\u20131900?",
+    "category": "data",
+    "document_scope": [
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Global surface temperature was about 1.1\u00b0C higher in 2011\u20132020 than 1850\u20131900."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\n2011-2020 was around 1.1\u00b0C warmer than 1850-1900 Global surface temperature change relative to 1850. [IPCC_AR6_SYR_FullVolume.pdf, p. 91]\n\n**Supporting context**\n- Global surface temperature was around 1.1\u00b0C above 1850. [IPCC_AR6_SYR_FullVolume.pdf, p. 58]\n- A.1.1 Global surface temperature was 1.09 [0.95 to 1.20]\u00b0C5 higher in 2011. [IPCC_AR6_SYR_FullVolume.pdf, p. 20]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 492.304,
+    "citations": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        91
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        58
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        20
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        58
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        20
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        30
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        86
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        91
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        20
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-58-text-4-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 58,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-20-text-3-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 20,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 30,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 86,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 91,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "ipcc-003",
+    "query": "What impacts of climate change does the IPCC identify for vulnerable communities?",
+    "category": "explanation",
+    "document_scope": [
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Climate change has already caused widespread adverse impacts and losses and damages, disproportionately affecting vulnerable communities."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe IPCC\u2019s periodic assessments of the causes, impacts and possible response strategies to climate change are the most comprehensive and up-to-date reports available on the subject, and form the standard reference for all concerned with climate change in academia, government and industry worldwide. [IPCC_AR6_SYR_FullVolume.pdf, p. 186]\n\n**Supporting context**\n- The SYR is the synthesis of the most comprehensive assessment of climate change undertaken thus far by the IPCC: Climate Change 2021: The Physical Science Basis; Climate Change 2022: Impacts, Adaptation and Vulnerability; and Climate Change 2022: Mitigation of Climate Change. [IPCC_AR6_SYR_FullVolume.pdf, p. 7]\n- This Synthesis Report (SYR) of the IPCC Sixth Assessment Report (AR6) summarises the state of knowledge of climate change, its widespread impacts and risks, and climate change mitigation and adaptation, based on the peer-reviewed scientific, technical and socio-economic literature since the publication of the IPCC\u2019s Fifth Assessment Report (AR5) in 2014. [IPCC_AR6_SYR_FullVolume.pdf, p. 54]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 410.754,
+    "citations": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        186
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        54
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        54
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        186
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        9
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        177
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        21
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-7-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-54-text-0-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 54,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-186-text-1-1",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 186,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-9-text-0-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 9,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "ipcc-004",
+    "query": "What near-term climate actions does the IPCC say would reduce losses and damages?",
+    "category": "recommendation",
+    "document_scope": [
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Deep, rapid, sustained mitigation and accelerated adaptation in this decade would reduce projected losses and damages."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nNear-term actions that limit global warming to close to 1.5\u00b0C would substantially reduce projected losses and damages related to climate change in human systems and ecosystems, compared to higher warming levels, but cannot eliminate them all (very high confidence). [IPCC_AR6_SYR_FullVolume.pdf, p. 111]\n\n**Supporting context**\n- Raise risks of stranded assets and cost-escalation, reduce feasibility, and increase losses and damages. [IPCC_AR6_SYR_FullVolume.pdf, p. 7]\n- The summary for Policymakers (SPM) is structured in three parts: SPM.A Current Status and Trends, SPM.B Future Climate Change, Risks, and Long-Term Responses, and SPM.C Responses in the Near Term3. [IPCC_AR6_SYR_FullVolume.pdf, p. 19]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 448.8,
+    "citations": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        111
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        19
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        111
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        40
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        19
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        177
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-111-text-5-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 111,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-7-text-7-1",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-40-text-1-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 40,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-19-text-0-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 19,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-15-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "ipcc-005",
+    "query": "What does the report say is required to limit human-caused global warming?",
+    "category": "recommendation",
+    "document_scope": [
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Limiting human-caused global warming requires net-zero CO2 emissions."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe report points out that limiting human-caused global warming requires net zero CO2 emissions. [IPCC_AR6_SYR_FullVolume.pdf, p. 7]\n\n**Supporting context**\n- From a physical science perspective, limiting human-caused global warming to a specific level requires limiting cumulative CO2 emissions, reaching net zero or net negative CO2 emissions, along with strong reductions of other GHG emissions (see Cross-Section Box.1). [IPCC_AR6_SYR_FullVolume.pdf, p. 101]\n- Limiting human-caused global warming to a specific level requires limiting cumulative CO2 emissions, reaching net zero or net negative CO2 emissions, along with strong reductions in other GHG emissions (see 3.3.2). [IPCC_AR6_SYR_FullVolume.pdf, p. 76]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 566.791,
+    "citations": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        101
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        76
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        101
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        76
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        35
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        129
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-7-text-7-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-101-text-3-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 101,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-76-text-1-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 76,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-35-text-5-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 35,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-129-text-3-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 129,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "ipcc-006",
+    "query": "What is climate resilient development according to the IPCC?",
+    "category": "definition",
+    "document_scope": [
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Climate resilient development integrates adaptation and mitigation to advance sustainable development."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nClimate resilient development is enabled by increased international cooperation including mobilising and enhancing access to finance, particularly for developing countries, vulnerable regions, sectors and groups and aligning finance flows for climate action to be consistent with ambition levels and funding needs (high confidence). [IPCC_AR6_SYR_FullVolume.pdf, p. 50]\n\n**Supporting context**\n- Climate resilient development strategies that treat climate, ecosystems and biodiversity, and human society as parts of an integrated system are the most effective (high confidence). [IPCC_AR6_SYR_FullVolume.pdf, p. 130]\n- Climate resilient development integrates adaptation and mitigation to advance sustainable development for all, and is enabled by increased international cooperation including improved access to adequate financial resources, particularly for vulnerable regions, sectors and groups, and inclusive governance and coordinated policies (high confidence). [IPCC_AR6_SYR_FullVolume.pdf, p. 40]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.966,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 366.802,
+    "citations": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        50
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        130
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        40
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        50
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        130
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        40
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        181
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        105
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        40
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-50-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 50,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-130-text-7-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 130,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-40-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 40,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-181-text-26-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 181,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-105-text-5-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 105,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "ipcc-007",
+    "query": "Which city will have the highest temperature tomorrow?",
+    "category": "unsupported",
+    "document_scope": [
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": false,
+    "expected_claims": [
+      "The report does not provide a city-level weather forecast."
+    ],
+    "mode": "deterministic",
+    "answer": "Unsupported answer: the retrieved evidence is too weak to support a confident response.",
+    "answer_intent": "explanation",
+    "unsupported": true,
+    "confidence": 0.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 381.319,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 0,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        181
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        185
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        86
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        30
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        182
+      ]
+    ],
+    "ground_truth_source_pages": [],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-181-text-67-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 181,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-185-text-23-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 185,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-86-text-13-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 86,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-30-text-13-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 30,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-182-text-44-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 182,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "poverty-001",
+    "query": "What was the official U.S. poverty rate in 2024?",
+    "category": "data",
+    "document_scope": [
+      "p60-287.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The official poverty rate was 10.6 percent in 2024."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe official poverty rate for unrelated individuals was 18.7 percent, not statistically different from 2023. [p60-287.pdf, p. 11]\n\n**Supporting context**\n- In 2024, the official poverty rate fell 0.4 percentage points to 10.6 percent. [p60-287.pdf, p. 7]\n- In 2024, the official poverty rate fell 0.4 percentage points to 10.6 percent, the second consecutive annual decline (Figure 1 and Table A-1). [p60-287.pdf, p. 9]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 363.039,
+    "citations": [
+      [
+        "p60-287.pdf",
+        11
+      ],
+      [
+        "p60-287.pdf",
+        7
+      ],
+      [
+        "p60-287.pdf",
+        9
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "p60-287.pdf",
+        7
+      ],
+      [
+        "p60-287.pdf",
+        9
+      ],
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        11
+      ],
+      [
+        "p60-287.pdf",
+        1
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "p60-287.pdf",
+        7
+      ],
+      [
+        "p60-287.pdf",
+        9
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "p60-287.pdf-7-text-6-0",
+        "source": "p60-287.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-9-text-2-0",
+        "source": "p60-287.pdf",
+        "page": 9,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-20-text-13-0",
+        "source": "p60-287.pdf",
+        "page": 20,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-11-text-16-0",
+        "source": "p60-287.pdf",
+        "page": 11,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-1-text-0-0",
+        "source": "p60-287.pdf",
+        "page": 1,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "poverty-002",
+    "query": "How does the official poverty measure define poverty?",
+    "category": "definition",
+    "document_scope": [
+      "p60-287.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The official measure compares pretax money income with a national threshold adjusted for family composition."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThis report provides estimates of two measures of poverty: the official poverty measure and the Supplemental Poverty Measure (SPM). [p60-287.pdf, p. 7]\n\n**Supporting context**\n- The results illustrate how using different measures affects who counts as being in poverty. [p60-287.pdf, p. 20]\n- The official poverty measure provides a consistent definition of poverty over long periods by considering pretax money income alone and using thresholds that are only inflation-adjusted. [p60-287.pdf, p. 12]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 428.568,
+    "citations": [
+      [
+        "p60-287.pdf",
+        7
+      ],
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        12
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "p60-287.pdf",
+        12
+      ],
+      [
+        "p60-287.pdf",
+        7
+      ],
+      [
+        "p60-287.pdf",
+        8
+      ],
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        23
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "p60-287.pdf",
+        7
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "p60-287.pdf-12-text-6-0",
+        "source": "p60-287.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-7-text-7-0",
+        "source": "p60-287.pdf",
+        "page": 7,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-8-text-3-0",
+        "source": "p60-287.pdf",
+        "page": 8,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-20-text-6-0",
+        "source": "p60-287.pdf",
+        "page": 20,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-23-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 23,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "poverty-003",
+    "query": "How does the Supplemental Poverty Measure differ from the official poverty measure?",
+    "category": "table",
+    "document_scope": [
+      "p60-287.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The SPM includes noncash benefits, deducts key expenses, and uses different resource units and thresholds."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe results illustrate how using different measures affects who counts as being in poverty. [p60-287.pdf, p. 20]\n\n**Supporting context**\n- The official poverty measure provides a consistent definition of poverty over long periods by considering pretax money income alone and using thresholds that are only inflation-adjusted. [p60-287.pdf, p. 12]\n- For a history of the official poverty measure, refer to \u201cPoverty: The History of the Official Poverty. [p60-287.pdf, p. 23]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 292.243,
+    "citations": [
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        12
+      ],
+      [
+        "p60-287.pdf",
+        23
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "p60-287.pdf",
+        12
+      ],
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        23
+      ],
+      [
+        "p60-287.pdf",
+        5
+      ],
+      [
+        "p60-287.pdf",
+        13
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "p60-287.pdf",
+        8
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "p60-287.pdf-12-text-6-0",
+        "source": "p60-287.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-20-text-6-0",
+        "source": "p60-287.pdf",
+        "page": 20,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-23-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 23,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-5-text-2-0",
+        "source": "p60-287.pdf",
+        "page": 5,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-13-figure-0-0",
+        "source": "p60-287.pdf",
+        "page": 13,
+        "type": "figure"
+      }
+    ]
+  },
+  {
+    "query_id": "poverty-004",
+    "query": "What data source is used for the poverty estimates in this report?",
+    "category": "methodology",
+    "document_scope": [
+      "p60-287.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The report uses Current Population Survey Annual Social and Economic Supplement data."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe CPS Annual Social and Economic Supplement (CPS ASEC), the source for the estimates in this report, collects data in February, March, and April each year, asking detailed questions categorizing income into over 50 sources. [p60-287.pdf, p. 58]\n\n**Supporting context**\n- This report provides estimates of poverty in the United States using both the official poverty measure and the SPM. [p60-287.pdf, p. 20]\n- Estimates of income and poverty for all geographic units, including census tracts and block groups, are available by pooling 5 years of ACS data. [p60-287.pdf, p. 60]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 581.307,
+    "citations": [
+      [
+        "p60-287.pdf",
+        58
+      ],
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        60
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "p60-287.pdf",
+        58
+      ],
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        60
+      ],
+      [
+        "p60-287.pdf",
+        23
+      ],
+      [
+        "p60-287.pdf",
+        59
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "p60-287.pdf",
+        7
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "p60-287.pdf-58-text-7-0",
+        "source": "p60-287.pdf",
+        "page": 58,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-20-text-9-0",
+        "source": "p60-287.pdf",
+        "page": 20,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-60-text-9-0",
+        "source": "p60-287.pdf",
+        "page": 60,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-23-text-1-0",
+        "source": "p60-287.pdf",
+        "page": 23,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-59-text-16-0",
+        "source": "p60-287.pdf",
+        "page": 59,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "poverty-005",
+    "query": "What does an income-to-poverty ratio indicate?",
+    "category": "definition",
+    "document_scope": [
+      "p60-287.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "An income-to-poverty ratio indicates how close resources are to the poverty line by dividing resources by the applicable threshold."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThese ratios indicate how close people\u2019s income or resources are to the poverty line by dividing their resources by their poverty threshold. [p60-287.pdf, p. 18]\n\n**Supporting context**\n- Differences in the SPM and official+ methodologies also affect income- to-poverty ratio distributions by age. [p60-287.pdf, p. 19]\n- Distribution of People by Income-to-Poverty Ratios and Age: 2024 . [p60-287.pdf, p. 6]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.6192,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 358.148,
+    "citations": [
+      [
+        "p60-287.pdf",
+        18
+      ],
+      [
+        "p60-287.pdf",
+        19
+      ],
+      [
+        "p60-287.pdf",
+        6
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "p60-287.pdf",
+        18
+      ],
+      [
+        "p60-287.pdf",
+        19
+      ],
+      [
+        "p60-287.pdf",
+        6
+      ],
+      [
+        "p60-287.pdf",
+        12
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "p60-287.pdf",
+        18
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "p60-287.pdf-18-text-12-0",
+        "source": "p60-287.pdf",
+        "page": 18,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-19-text-3-0",
+        "source": "p60-287.pdf",
+        "page": 19,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-6-figure-11-0",
+        "source": "p60-287.pdf",
+        "page": 6,
+        "type": "figure"
+      },
+      {
+        "chunk_id": "p60-287.pdf-18-figure-14-0",
+        "source": "p60-287.pdf",
+        "page": 18,
+        "type": "figure"
+      },
+      {
+        "chunk_id": "p60-287.pdf-12-text-6-0",
+        "source": "p60-287.pdf",
+        "page": 12,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "poverty-006",
+    "query": "How did Supplemental Poverty Measure rates compare with official poverty rates for most groups in 2024?",
+    "category": "comparison",
+    "document_scope": [
+      "p60-287.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Most groups had higher SPM rates than official poverty rates estimated with the same universe."
+    ],
+    "mode": "deterministic",
+    "answer": "Unsupported answer: the retrieved evidence is too weak to support a confident response.",
+    "answer_intent": "comparison",
+    "unsupported": true,
+    "confidence": 0.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 480.101,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 0,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "p60-287.pdf",
+        17
+      ],
+      [
+        "p60-287.pdf",
+        15
+      ],
+      [
+        "p60-287.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        12
+      ],
+      [
+        "p60-287.pdf",
+        13
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "p60-287.pdf",
+        7
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "p60-287.pdf-17-figure-3-0",
+        "source": "p60-287.pdf",
+        "page": 17,
+        "type": "figure"
+      },
+      {
+        "chunk_id": "p60-287.pdf-15-figure-6-0",
+        "source": "p60-287.pdf",
+        "page": 15,
+        "type": "figure"
+      },
+      {
+        "chunk_id": "p60-287.pdf-20-text-1-0",
+        "source": "p60-287.pdf",
+        "page": 20,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-12-text-2-0",
+        "source": "p60-287.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "p60-287.pdf-13-figure-0-0",
+        "source": "p60-287.pdf",
+        "page": 13,
+        "type": "figure"
+      }
+    ]
+  },
+  {
+    "query_id": "usgs-001",
+    "query": "What was imaging spectroscopy used for in the Utah mine-land study?",
+    "category": "explanation",
+    "document_scope": [
+      "SIR5241_WEB.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Imaging spectroscopy was applied to environmental assessments and watershed evaluations in Utah mining districts."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nImaging spectroscopy has been used since the mid 1990s to map surface minerals in abandoned mine lands for the purposes of environmental site characterization (Farrand and Harsanyi, 1997; Smith and others, 1998; Swayze and others, 2000; King and others, 2000; Dalton and others, 2000). [SIR5241_WEB.pdf, p. 13]\n\n**Supporting context**\n- Geological Survey, 2002) selected the Dragon mine as a site for testing and comparing methods of mineral mapping with imaging spectroscopy data. [SIR5241_WEB.pdf, p. 29]\n- Then, when coupled with a geological understanding of a study area, the interpretation of mineral maps derived from imaging spectroscopy data can be an effective means of (1) evaluating potential environmental impacts associated with hydrothermally altered rocks and mine waste on a watershed or regional scale and (2) focusing field-sampling and remediation programs. [SIR5241_WEB.pdf, p. 12]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 418.431,
+    "citations": [
+      [
+        "SIR5241_WEB.pdf",
+        13
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        29
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        13
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        29
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        90
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-3-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-13-text-10-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 13,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-29-text-18-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 29,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-90-text-8-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 90,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "usgs-002",
+    "query": "Which Utah mining areas were studied in the remote-sensing report?",
+    "category": "list",
+    "document_scope": [
+      "SIR5241_WEB.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The study covered the East Tintic Mountains, Oquirrh Mountains, and the Tushar Mountains and Antelope Range near Marysvale."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThis report is a summary of the results obtained from analysis and interpretation of spectroscopic imagery collected by the Airborne Visible/Infrared Imaging Spectrometer (AVIRIS) over several mining districts in Utah. [SIR5241_WEB.pdf, p. 12]\n\n**Supporting context**\n- Suggested citation: Rockwell, B.W., McDougal, R.R., and Gent, C.A., 2005, Remote sensing for environmental site screening and watershed evaluation in Utah mine lands. [SIR5241_WEB.pdf, p. 4]\n- In the Oquirrh Mountains and Bingham mining district, Utah: U.S. [SIR5241_WEB.pdf, p. 89]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 529.921,
+    "citations": [
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        4
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        89
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        3
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        4
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        89
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-3-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 3,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-4-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-4-text-6-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 4,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-89-text-18-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 89,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "usgs-003",
+    "query": "Why can altered rocks in the study areas affect watershed pH?",
+    "category": "explanation",
+    "document_scope": [
+      "SIR5241_WEB.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Sulfide or sulfate minerals in altered rocks can produce sulfuric acid when oxidized, lowering watershed baseline pH."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nLarge exposures of unmined hydrothermally altered rocks occur throughout the three study areas. [SIR5241_WEB.pdf, p. 11]\n\n**Supporting context**\n- When performing watershed-based environmental evaluations, researchers should consider that ground and surface runoff from unmined, but hydrothermally altered rocks might have a lower pH than runoff from unaltered rocks and that such low-pH runoff could effectively lower the premining pH baseline of a watershed. [SIR5241_WEB.pdf, p. 15]\n- Altered rocks in these areas are characterized by alunite, jarosite, clay minerals, and micas formed by intense acid-sulfate hydrothermal alteration in the Miocene Epoch at. [SIR5241_WEB.pdf, p. 70]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 478.678,
+    "citations": [
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        15
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        70
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        15
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        84
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        47
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        70
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-15-text-4-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 15,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-84-text-4-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 84,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-47-text-1-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 47,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-70-text-10-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 70,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "usgs-004",
+    "query": "How can Landsat and imaging-spectroscopy data support environmental screening?",
+    "category": "procedure",
+    "document_scope": [
+      "SIR5241_WEB.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Landsat can screen for mineralized or mining-affected areas, guide surveys, evaluate watershed impacts, and focus field sampling or remediation."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nAnalysis of Landsat 7 ETM+ data can provide a very cost-effective screening tool for identifying mineralized and (or) mining-affected areas and guiding the planning of low- altitude imaging spectrometer surveys or field investigations. [SIR5241_WEB.pdf, p. 12]\n\n**Supporting context**\n- Imaging spectroscopy has been used since the mid 1990s to map surface minerals in abandoned mine lands for the purposes of environmental site characterization (Farrand and Harsanyi, 1997; Smith and others, 1998; Swayze and others, 2000; King and others, 2000; Dalton and others, 2000). [SIR5241_WEB.pdf, p. 13]\n- Cr.usgs.gov/earth.studies/Utah-1/utah-1.html (last accessed 8 September 2004). [SIR5241_WEB.pdf, p. 90]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 480.397,
+    "citations": [
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        13
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        90
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        13
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        90
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        3
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-2-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-3-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-13-text-10-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 13,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-90-text-8-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 90,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-3-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 3,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "usgs-005",
+    "query": "What does the Landsat frontispiece depict?",
+    "category": "figure",
+    "document_scope": [
+      "SIR5241_WEB.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The frontispiece is a Landsat 7 true-color composite centered on Utah's Tintic mining district."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nLandsat 7 ETM+ true-color composite, Tintic mining district, Utah \u2026\u2026\u2026\u2026 frontispiece 1. [SIR5241_WEB.pdf, p. 6]\n\n**Supporting context**\n- Landsat 7 ETM+ true-color composite (321/RGB) centered on the Tintic mining district, Utah. [SIR5241_WEB.pdf, p. 2]\n- The Landsat 7 ETM+ data were used for initial site screening and the planning of AVIRIS surveys. [SIR5241_WEB.pdf, p. 11]",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 546.361,
+    "citations": [
+      [
+        "SIR5241_WEB.pdf",
+        6
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        2
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        2
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        6
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        19
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        2
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-2-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 2,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-6-text-3-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-7-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-19-text-2-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 19,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-2-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "usgs-006",
+    "query": "What were the goals of the Utah Abandoned Mine Lands Imaging Spectroscopy Project?",
+    "category": "list",
+    "document_scope": [
+      "SIR5241_WEB.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The project aimed to identify and map acid-generation sources and seek evidence for downstream or downwind transport of associated minerals."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nImaging spectroscopy has been used since the mid 1990s to map surface minerals in abandoned mine lands for the purposes of environmental site characterization (Farrand and Harsanyi, 1997; Smith and others, 1998; Swayze and others, 2000; King and others, 2000; Dalton and others, 2000). [SIR5241_WEB.pdf, p. 13]\n\n**Supporting context**\n- The project had three primary goals: Analysis of Landsat 7 ETM+ data can provide a very cost-effective screening tool for identifying mineralized and (or) mining-affected areas and guiding the planning of low- altitude imaging spectrometer surveys or field investigations. [SIR5241_WEB.pdf, p. 12]\n- Geological Survey, 2002) selected the Dragon mine as a site for testing and comparing methods of mineral mapping with imaging spectroscopy data. [SIR5241_WEB.pdf, p. 29]",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 402.129,
+    "citations": [
+      [
+        "SIR5241_WEB.pdf",
+        13
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        29
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        29
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        90
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        13
+      ],
+      [
+        "SIR5241_WEB.pdf",
+        11
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "SIR5241_WEB.pdf",
+        12
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-29-text-18-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 29,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-90-text-8-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 90,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-13-text-10-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 13,
+        "type": "text"
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-3-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "calculus-001",
+    "query": "What does arc length represent for a parametric curve?",
+    "category": "math_concept",
+    "document_scope": [
+      "CalculusVolume3-OP.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Arc length is the distance traveled along a curve, approximated using line segments."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe arc length of a parametric curve can be calculated by using the formula. [CalculusVolume3-OP.pdf, p. 106]\n\n**Supporting context**\n- To develop a formula for arc length, we start with an approximation by line segments as shown in the following graph. [CalculusVolume3-OP.pdf, p. 43]\n- Arc length of a parametric curve \u2022 Arc length of a polar curve. [CalculusVolume3-OP.pdf, p. 105]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 301.418,
+    "citations": [
+      [
+        "CalculusVolume3-OP.pdf",
+        106
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        43
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        105
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        43
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        106
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        45
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        105
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        293
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        43
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-43-text-37-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 43,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-106-text-10-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 106,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-45-text-32-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 45,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-105-text-29-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 105,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-293-text-65-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 293,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "calculus-002",
+    "query": "What can double integrals be used to calculate?",
+    "category": "math_concept",
+    "document_scope": [
+      "CalculusVolume3-OP.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Double integrals can calculate area, volume under a surface, and average value over a plane region."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe basic idea is that the evaluation becomes easier if we can break a double integral into single integrals by integrating first with respect to one variable and then with respect to the other. [CalculusVolume3-OP.pdf, p. 491]\n\n**Evidence-based steps**\n1. The basic idea is that the evaluation becomes easier if we can break a double integral into single integrals by integrating first with respect to one variable and then with respect to the other. [CalculusVolume3-OP.pdf, p. 491]\n2. Double integrals are used to calculate the area of a region, the volume under a surface, and the average value of a function of two variables over a rectangular region. [CalculusVolume3-OP.pdf, p. 643]\n3. We have already seen how double integrals can be used to find the volume of a solid bounded above by a function f(x, y) [CalculusVolume3-OP.pdf, p. 499]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "procedure",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 372.844,
+    "citations": [
+      [
+        "CalculusVolume3-OP.pdf",
+        491
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        643
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        499
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 4,
+      "cited_blocks": 4
+    },
+    "returned_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        644
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        643
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        491
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        509
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        499
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        486
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-644-text-0-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 644,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-643-text-105-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 643,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-491-text-5-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 491,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-509-text-2-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 509,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-499-text-8-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 499,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "calculus-003",
+    "query": "What is the idea behind the method of Lagrange multipliers?",
+    "category": "math_concept",
+    "document_scope": [
+      "CalculusVolume3-OP.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Lagrange multipliers solve constrained optimization by using the fact that relevant gradients are parallel or antiparallel at an extremum."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nThe method of Lagrange multipliers can be applied to problems with more than one constraint. [CalculusVolume3-OP.pdf, p. 473]\n\n**Supporting context**\n- The method of Lagrange multipliers is introduced in Lagrange Multipliers. [CalculusVolume3-OP.pdf, p. 455]\n- 4.8.1 Use the method of Lagrange multipliers to solve optimization problems with one constraint. [CalculusVolume3-OP.pdf, p. 466]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 327.914,
+    "citations": [
+      [
+        "CalculusVolume3-OP.pdf",
+        473
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        455
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        466
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        473
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        455
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        466
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        468
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        480
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        466
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        467
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-473-text-20-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 473,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-455-text-24-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 455,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-466-text-0-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 466,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-468-text-5-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 468,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-480-text-8-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 480,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "calculus-004",
+    "query": "What relationship does Green's theorem establish?",
+    "category": "math_concept",
+    "document_scope": [
+      "CalculusVolume3-OP.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Green's theorem relates a line integral around a simply closed curve to a double integral over its enclosed region."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nPut simply, Green\u2019s theorem relates a line integral around a simply closed plane curve C and a double integral over the region enclosed by C. [CalculusVolume3-OP.pdf, p. 719]\n\n**Supporting context**\n- Green\u2019s theorem relates the integral over a connected region to an integral over the boundary of the region. [CalculusVolume3-OP.pdf, p. 835]\n- If we think of divergence as a derivative of sorts, then Green\u2019s theorem says the \u201cderivative\u201d of F on a region can be translated into a line integral of F along the boundary of the region. [CalculusVolume3-OP.pdf, p. 749]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 0.5097,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 460.704,
+    "citations": [
+      [
+        "CalculusVolume3-OP.pdf",
+        719
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        835
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        749
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        719
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        835
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        749
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        735
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        724
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        719
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-719-text-3-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 719,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-835-text-4-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 835,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-749-text-31-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 749,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-735-text-66-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 735,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-724-text-7-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 724,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "calculus-005",
+    "query": "What does Stokes' theorem relate?",
+    "category": "math_concept",
+    "document_scope": [
+      "CalculusVolume3-OP.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "Stokes' theorem relates a vector surface integral to a line integral around the boundary of the surface."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nStokes\u2019 theorem relates a flux integral over a surface to a line integral around the boundary of the surface. [CalculusVolume3-OP.pdf, p. 835]\n\n**Supporting context**\n- Stokes\u2019 theorem relates a vector surface integral over surface S in space to a line integral around the boundary of S. [CalculusVolume3-OP.pdf, p. 797]\n- Stokes\u2019 theorem translates between the flux integral of surface S to a line integral around the boundary of S. [CalculusVolume3-OP.pdf, p. 802]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "definition",
+    "unsupported": false,
+    "confidence": 0.7003,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 470.521,
+    "citations": [
+      [
+        "CalculusVolume3-OP.pdf",
+        835
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        797
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        802
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        835
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        797
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        802
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        815
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        834
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        797
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-835-text-18-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 835,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-797-text-2-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 797,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-802-text-14-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 802,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-815-text-36-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 815,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-834-text-9-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 834,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "calculus-006",
+    "query": "What applications of the divergence theorem does the text mention?",
+    "category": "math_concept",
+    "document_scope": [
+      "CalculusVolume3-OP.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The divergence theorem is used to calculate flux and has applications in heat-flow, conservation-of-mass, and electrostatic-field modeling."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nAreas of study such as fluid dynamics, electromagnetism, and quantum mechanics have equations that describe the conservation of mass, momentum, or energy, and the divergence theorem allows us to give these equations in both integral and differential forms. [CalculusVolume3-OP.pdf, p. 823]\n\n**Supporting context**\n- The divergence theorem can be used to transform a difficult flux integral into an easier triple integral and vice versa. [CalculusVolume3-OP.pdf, p. 836]\n- If we think of divergence as a derivative of sorts, then the divergence theorem relates a triple integral of derivative divF over a solid to a flux integral of F over the boundary of the solid. [CalculusVolume3-OP.pdf, p. 816]\n\n**Mathematical notation**\nThe original notation is rendered below from the cited PDF for verification.",
+    "answer_intent": "explanation",
+    "unsupported": false,
+    "confidence": 1.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 404.608,
+    "citations": [
+      [
+        "CalculusVolume3-OP.pdf",
+        823
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        836
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        816
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        823
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        747
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        748
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        836
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        816
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        815
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-823-text-14-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 823,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-747-text-15-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 747,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-748-text-12-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 748,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-836-text-2-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 836,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-816-text-10-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 816,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "calculus-007",
+    "query": "What will the Dow Jones Industrial Average close at tomorrow?",
+    "category": "unsupported",
+    "document_scope": [
+      "CalculusVolume3-OP.pdf"
+    ],
+    "expected_supported": false,
+    "expected_claims": [
+      "The textbook does not provide stock-market forecasts."
+    ],
+    "mode": "deterministic",
+    "answer": "Unsupported answer: the retrieved evidence is too weak to support a confident response.",
+    "answer_intent": "explanation",
+    "unsupported": true,
+    "confidence": 0.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 192.888,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 0,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "CalculusVolume3-OP.pdf",
+        776
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        782
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        787
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        563
+      ],
+      [
+        "CalculusVolume3-OP.pdf",
+        698
+      ]
+    ],
+    "ground_truth_source_pages": [],
+    "sources": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-776-text-27-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 776,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-782-text-25-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 782,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-787-text-49-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 787,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-563-text-23-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 563,
+        "type": "text"
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-698-text-7-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 698,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "comparison-001",
+    "query": "Compare how the NIST AI report and the IPCC report describe the sources of risk or harm.",
+    "category": "comparison",
+    "document_scope": [
+      "NIST.AI.600-1.pdf",
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The NIST document focuses on GAI risks that are novel or exacerbated by GAI, while the IPCC attributes global warming principally to human greenhouse-gas emissions."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nAbout AI at NIST: The National Institute of Standards and Technology (NIST) develops measurements, technology, tools, and standards to advance reliable, safe, transparent, explainable, privacy-enhanced, and fair arti\ufb01cial intelligence (AI) so that its full commercial and societal bene\ufb01ts can be realized without harm to people or the planet. [NIST.AI.600-1.pdf, p. 3]\n\n**Supporting context**\n- A glossary of terms pertinent to GAI risk management will be developed and hosted on NIST\u2019s Trustworthy & Responsible AI Resource Center (AIRC), and added to The Language of Trustworthy AI: An In-Depth Glossary of Terms. [NIST.AI.600-1.pdf, p. 6]\n- One possible way to further categorize these risks, derived in part from the UK\u2019s International Scienti\ufb01c Report on the Safety of Advanced AI, could be: 1) Technical / Model risks (or risk from malfunction): Confabulation; Dangerous or Violent Recommendations; Data Privacy; Value Chain and Component Integration; Harmful Bias, and Homogenization; 2) Misuse by humans (or malicious use): CBRN Information or Capabilities; Data Privacy; Human-AI Con\ufb01guration; Obscene, Degrading, and/or Abusive Content; Information Integrity; Information Security; 3) Ecosystem / societal risks (or systemic risks): Data Privacy; Environmental; Intellectual Property. [NIST.AI.600-1.pdf, p. 7]",
+    "answer_intent": "comparison",
+    "unsupported": false,
+    "confidence": 0.5,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 593.585,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        3
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        3
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        176
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        31
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        7
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        20
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-31-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 31,
+        "type": "table"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "comparison-002",
+    "query": "Compare the actions recommended by the NIST AI report and the IPCC report to reduce harms.",
+    "category": "comparison",
+    "document_scope": [
+      "NIST.AI.600-1.pdf",
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "NIST offers actions organized around AI-risk considerations, while the IPCC calls for rapid mitigation and accelerated adaptation."
+    ],
+    "mode": "deterministic",
+    "answer": "**Answer**\n\nFuture revisions of this pro\ufb01le will include additional AI RMF subcategories, risks, and suggested actions based on additional considerations of GAI as the space evolves and empirical evidence indicates additional risks. [NIST.AI.600-1.pdf, p. 6]\n\n**Supporting context**\n- Supplementary report of the IPCC Impacts Assessment Working Group II. [IPCC_AR6_SYR_FullVolume.pdf, p. 176]\n- About AI at NIST: The National Institute of Standards and Technology (NIST) develops measurements, technology, tools, and standards to advance reliable, safe, transparent, explainable, privacy-enhanced, and fair arti\ufb01cial intelligence (AI) so that its full commercial and societal bene\ufb01ts can be realized without harm to people or the planet. [NIST.AI.600-1.pdf, p. 3]",
+    "answer_intent": "comparison",
+    "unsupported": false,
+    "confidence": 0.5223,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 523.658,
+    "citations": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        176
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        3
+      ]
+    ],
+    "citation_coverage": {
+      "factual_blocks": 3,
+      "cited_blocks": 3
+    },
+    "returned_source_pages": [
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        176
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        3
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        16
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        1
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        7
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        5
+      ],
+      [
+        "NIST.AI.600-1.pdf",
+        6
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16,
+        "type": "text"
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-1-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 1,
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "query_id": "comparison-003",
+    "query": "Compare how the Census poverty report and the IPCC report quantify the issues they examine.",
+    "category": "comparison",
+    "document_scope": [
+      "p60-287.pdf",
+      "IPCC_AR6_SYR_FullVolume.pdf"
+    ],
+    "expected_supported": true,
+    "expected_claims": [
+      "The Census report quantifies poverty with rates and population counts, while the IPCC quantifies warming against a historical temperature baseline."
+    ],
+    "mode": "deterministic",
+    "answer": "Unsupported answer: the retrieved evidence is too weak to support a confident response.",
+    "answer_intent": "comparison",
+    "unsupported": true,
+    "confidence": 0.0,
+    "synthesis_mode": "deterministic",
+    "latency_ms": 353.065,
+    "citations": [],
+    "citation_coverage": {
+      "factual_blocks": 0,
+      "cited_blocks": 0
+    },
+    "returned_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        25
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        176
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        177
+      ],
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        184
+      ]
+    ],
+    "ground_truth_source_pages": [
+      [
+        "IPCC_AR6_SYR_FullVolume.pdf",
+        20
+      ],
+      [
+        "p60-287.pdf",
+        7
+      ]
+    ],
+    "sources": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-25-text-3-1",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 25,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-29-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-1-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177,
+        "type": "text"
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-184-text-47-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 184,
+        "type": "text"
+      }
+    ]
+  }
+]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
@@ -58,19 +59,79 @@ def compute_mrr(relevance: Iterable[Iterable[int]]) -> float:
     return float(np.mean(scores)) if scores else 0.0
 
 
-def evaluate_ranking_predictions(predictions_path: str, ground_truth_path: str, k: int = 5) -> Dict[str, float]:
+def _source_page_from_chunk_id(chunk_id: str) -> tuple[str, int] | None:
+    """Recover source/page from this project's stable extracted-chunk IDs.
+
+    Older prediction artifacts only contain chunk IDs. New artifacts also
+    store explicit source/page metadata, but this parser keeps those earlier
+    benchmark runs comparable.
+    """
+    match = re.match(r"^(.*)-(\d+)-(?:text|table|figure|equation)-", chunk_id)
+    if not match:
+        return None
+    return match.group(1), int(match.group(2))
+
+
+def _prediction_source_pages(prediction: Dict[str, Any]) -> list[tuple[str, int]]:
+    explicit = prediction.get("ranked_results", [])
+    if isinstance(explicit, list):
+        source_pages = [
+            (str(item["source"]), int(item["page"]))
+            for item in explicit
+            if isinstance(item, dict) and item.get("source") and item.get("page") is not None
+        ]
+        if source_pages:
+            return source_pages
+    return [
+        source_page
+        for chunk_id in prediction.get("ranked_chunk_ids", [])
+        if isinstance(chunk_id, str) and (source_page := _source_page_from_chunk_id(chunk_id)) is not None
+    ]
+
+
+def _ground_truth_source_pages(entry: Dict[str, Any]) -> set[tuple[str, int]]:
+    return {
+        source_page
+        for chunk_id in entry.get("relevance", [])
+        if isinstance(chunk_id, str) and (source_page := _source_page_from_chunk_id(chunk_id)) is not None
+    }
+
+
+def evaluate_ranking_predictions(
+    predictions_path: str,
+    ground_truth_path: str,
+    k: int = 5,
+    relevance_level: str = "chunk",
+) -> Dict[str, float]:
+    """Evaluate ranked results at strict-chunk or source-page granularity.
+
+    Source-page relevance is the primary RAG retrieval measure: several
+    chunks can represent the same answer-bearing PDF page, and any one of
+    them enables the same cited-page verification experience. Strict chunk
+    relevance remains available as a diagnostic for chunking sensitivity.
+    """
+    if relevance_level not in {"chunk", "source_page"}:
+        raise ValueError("relevance_level must be 'chunk' or 'source_page'.")
     with open(predictions_path, "r", encoding="utf-8") as f:
         predictions = json.load(f)
     with open(ground_truth_path, "r", encoding="utf-8") as f:
         ground_truth = json.load(f)
 
-    relevance_by_query = {entry["query_id"]: set(entry.get("relevance", [])) for entry in ground_truth}
+    relevance_by_query = {
+        entry["query_id"]: (
+            set(entry.get("relevance", []))
+            if relevance_level == "chunk"
+            else _ground_truth_source_pages(entry)
+        )
+        for entry in ground_truth
+    }
     relevance_list = []
     for item in predictions:
         qid = item["query_id"]
         gt = relevance_by_query.get(qid, set())
-        ranking = [1 if chunk_id in gt else 0 for chunk_id in item["ranked_chunk_ids"]]
-        missing_relevant = len(gt.difference(item["ranked_chunk_ids"]))
+        ranked_items = item.get("ranked_chunk_ids", []) if relevance_level == "chunk" else _prediction_source_pages(item)
+        ranking = [1 if ranked_item in gt else 0 for ranked_item in ranked_items]
+        missing_relevant = len(gt.difference(ranked_items))
         ranking.extend([1] * missing_relevant)
         relevance_list.append(ranking)
 

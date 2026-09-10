@@ -30,13 +30,22 @@ class Reranker:
         device: str | None = None,
         local_files_only: bool = True,
         batch_size: int = 16,
+        revision: str = "233902d25c440f23af6f7d6e94d2946bac0bee0a",
     ):
         if batch_size < 1:
             raise ValueError("batch_size must be at least 1")
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.batch_size = batch_size
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local_files_only)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, local_files_only=local_files_only)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            local_files_only=local_files_only,
+            revision=revision,
+        )
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            model_name,
+            local_files_only=local_files_only,
+            revision=revision,
+        )
         self.model.to(self.device)
         self.model.eval()
 
@@ -53,7 +62,7 @@ class Reranker:
                 return_tensors="pt",
                 max_length=512,
             ).to(self.device)
-            with torch.no_grad():
+            with torch.inference_mode():
                 logits = self.model(**features).logits
                 scores.extend(logits_to_scores(logits))
         return scores

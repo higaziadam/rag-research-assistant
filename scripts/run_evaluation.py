@@ -11,6 +11,7 @@ from typing import Any
 from multimodal_rag.config import settings
 from multimodal_rag.embeddings import EmbeddingStore
 from multimodal_rag.evaluation import evaluate_ranking_predictions
+from multimodal_rag.api import RAGService
 from multimodal_rag.reranker import Reranker
 from multimodal_rag.retrieval import FAISSRetriever
 from multimodal_rag.sparse_retrieval import BM25Retriever, reciprocal_rank_fusion
@@ -109,8 +110,19 @@ def hybrid_rerank_candidates(
     return selected
 
 
-def prediction_record(query_id: str, ranked_chunk_ids: list[str]) -> dict[str, Any]:
-    return {"query_id": query_id, "ranked_chunk_ids": ranked_chunk_ids}
+def prediction_record(query_id: str, ranked_candidates: list[Any]) -> dict[str, Any]:
+    return {
+        "query_id": query_id,
+        "ranked_chunk_ids": [candidate.chunk_id for candidate in ranked_candidates],
+        "ranked_results": [
+            {
+                "chunk_id": candidate.chunk_id,
+                "source": candidate.source,
+                "page": int(candidate.metadata.get("page", 1)),
+            }
+            for candidate in ranked_candidates
+        ],
+    }
 
 
 def reranker_text(candidate: Any) -> str:
@@ -175,7 +187,8 @@ def main() -> None:
 
         query = str(question["query"])
         source_scope = set(question.get("document_scope", []))
-        is_comparison = question.get("category") == "comparison"
+        intent = RAGService._question_intent(query)
+        is_comparison = intent == "comparison" and len(source_scope) > 1
         dense_selector = comparison_candidates if is_comparison else scoped_candidates
         sparse_selector = sparse_comparison_candidates if is_comparison else sparse_scoped_candidates
         query_embedding = embeddings.encode_single(query)
@@ -187,7 +200,7 @@ def main() -> None:
         )
         sparse_candidates = sparse_selector(
             sparse_retriever,
-            query,
+            RAGService._lexical_retrieval_query(query, intent),
             source_scope,
             args.sparse_candidate_k,
         )
@@ -197,28 +210,38 @@ def main() -> None:
             rank_constant=settings.reciprocal_rank_fusion_constant,
         )
         baseline_predictions.append(
-            prediction_record(question["query_id"], [candidate.chunk_id for candidate in dense_candidates[: args.top_k]])
+            prediction_record(question["query_id"], dense_candidates[: args.top_k])
         )
         hybrid_predictions.append(
-            prediction_record(question["query_id"], [candidate.chunk_id for candidate in hybrid_candidates[: args.top_k]])
+            prediction_record(question["query_id"], hybrid_candidates[: args.top_k])
         )
         reranked_predictions.append(
             prediction_record(
                 question["query_id"],
-                reranked_ids(
+                [
+                    next(candidate for candidate in dense_candidates if candidate.chunk_id == chunk_id)
+                    for chunk_id in reranked_ids(
                     reranker,
                     query,
                     dense_candidates[: args.rerank_candidate_k],
                     args.top_k,
                     is_comparison,
                     source_scope,
-                ),
+                    )
+                ],
             )
         )
         hybrid_reranked_predictions.append(
             prediction_record(
                 question["query_id"],
-                reranked_ids(
+                [
+                    next(candidate for candidate in hybrid_rerank_candidates(
+                        hybrid_candidates,
+                        dense_candidates,
+                        args.rerank_candidate_k,
+                        settings.hybrid_dense_backfill_k,
+                    ) if candidate.chunk_id == chunk_id)
+                    for chunk_id in reranked_ids(
                     reranker,
                     query,
                     hybrid_rerank_candidates(
@@ -230,7 +253,8 @@ def main() -> None:
                     args.top_k,
                     is_comparison,
                     source_scope,
-                ),
+                    )
+                ],
             )
         )
 
@@ -253,12 +277,31 @@ def main() -> None:
         "candidate_k": args.candidate_k,
         "sparse_candidate_k": args.sparse_candidate_k,
         "rerank_candidate_k": args.rerank_candidate_k,
-        "baseline": {str(k): evaluate_ranking_predictions(str(baseline_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
-        "reranked": {str(k): evaluate_ranking_predictions(str(reranked_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
-        "hybrid": {str(k): evaluate_ranking_predictions(str(hybrid_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
-        "hybrid_reranked": {
-            str(k): evaluate_ranking_predictions(str(hybrid_reranked_path), str(ground_truth_path), k=k)
+        "primary_relevance_level": "source_page",
+        "baseline": {
+            str(k): evaluate_ranking_predictions(str(baseline_path), str(ground_truth_path), k=k, relevance_level="source_page")
             for k in (1, 3, args.top_k)
+        },
+        "reranked": {
+            str(k): evaluate_ranking_predictions(str(reranked_path), str(ground_truth_path), k=k, relevance_level="source_page")
+            for k in (1, 3, args.top_k)
+        },
+        "hybrid": {
+            str(k): evaluate_ranking_predictions(str(hybrid_path), str(ground_truth_path), k=k, relevance_level="source_page")
+            for k in (1, 3, args.top_k)
+        },
+        "hybrid_reranked": {
+            str(k): evaluate_ranking_predictions(str(hybrid_reranked_path), str(ground_truth_path), k=k, relevance_level="source_page")
+            for k in (1, 3, args.top_k)
+        },
+        "strict_chunk_diagnostics": {
+            "baseline": {str(k): evaluate_ranking_predictions(str(baseline_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
+            "reranked": {str(k): evaluate_ranking_predictions(str(reranked_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
+            "hybrid": {str(k): evaluate_ranking_predictions(str(hybrid_path), str(ground_truth_path), k=k) for k in (1, 3, args.top_k)},
+            "hybrid_reranked": {
+                str(k): evaluate_ranking_predictions(str(hybrid_reranked_path), str(ground_truth_path), k=k)
+                for k in (1, 3, args.top_k)
+            },
         },
     }
     metrics_path = predictions_dir / "metrics.json"

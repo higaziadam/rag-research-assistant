@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from io import BytesIO
 import pymupdf
 import pytest
 from threading import RLock
@@ -157,6 +158,8 @@ def test_document_file_endpoint_serves_uploaded_pdf(monkeypatch, tmp_path):
     assert response.content == document_contents
     assert response.headers["content-type"].startswith("application/pdf")
     assert response.headers["content-disposition"].startswith("inline")
+    assert "x-frame-options" not in response.headers
+    assert response.headers["content-security-policy"] == "frame-ancestors http://localhost:3000"
 
 
 def test_document_file_endpoint_rejects_missing_pdf(monkeypatch, tmp_path):
@@ -209,3 +212,35 @@ def test_delete_document_endpoint_forwards_to_the_service(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == {"deleted": "notes.pdf", "documents": []}
+
+
+def test_api_key_protects_non_health_endpoints(monkeypatch):
+    monkeypatch.setattr(api.settings, "api_key", "test-secret")
+    client = TestClient(api.app)
+
+    assert client.get("/metrics").status_code == 401
+    assert client.get("/metrics", headers={"X-API-Key": "test-secret"}).status_code == 200
+    assert client.get("/health").status_code == 200
+
+
+def test_upload_rejects_invalid_pdf_content():
+    service = api.RAGService.__new__(api.RAGService)
+    service.documents = []
+    service.storage_lock = RLock()
+
+    class File:
+        filename = "notes.pdf"
+        file = BytesIO(b"not really a PDF")
+
+    with pytest.raises(api.HTTPException) as error:
+        service.upload_documents([File()])
+
+    assert error.value.status_code == 422
+
+
+def test_session_path_identifier_is_bounded(monkeypatch):
+    monkeypatch.setattr(api, "get_service", lambda: FakeService())
+
+    response = TestClient(api.app).post(f"/session/{'x' * 101}/query", json={"query": "Summarize this."})
+
+    assert response.status_code == 422

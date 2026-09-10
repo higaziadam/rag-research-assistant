@@ -95,6 +95,7 @@ class BM25Retriever:
         self.average_document_length = 0.0
         self.postings: Dict[str, List[Tuple[int, int]]] = defaultdict(list)
         self.source_indices: Dict[str, List[int]] = defaultdict(list)
+        self._source_filter_cache: Dict[frozenset[str], frozenset[int]] = {}
         self._build()
 
     @staticmethod
@@ -134,9 +135,22 @@ class BM25Retriever:
 
         allowed_indices = None
         if sources is not None:
-            allowed_indices = {index for source in sources for index in self.source_indices.get(source, [])}
-            if not allowed_indices:
-                return []
+            if sources.issuperset(self.source_indices):
+                sources = None
+            else:
+                source_key = frozenset(sources)
+                allowed_indices = self._source_filter_cache.get(source_key)
+                if allowed_indices is None:
+                    allowed_indices = frozenset(
+                        index
+                        for source in source_key
+                        for index in self.source_indices.get(source, ())
+                    )
+                    if len(self._source_filter_cache) >= 128:
+                        self._source_filter_cache.clear()
+                    self._source_filter_cache[source_key] = allowed_indices
+                if not allowed_indices:
+                    return []
 
         scores: Dict[int, float] = defaultdict(float)
         document_count = len(self.chunks)

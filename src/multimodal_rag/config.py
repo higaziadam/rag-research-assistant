@@ -11,7 +11,9 @@ class Settings:
     artifacts_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts")
     results_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "results")
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    model_revision: str = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_revision: str = "233902d25c440f23af6f7d6e94d2946bac0bee0a"
     model_local_files_only: bool = field(default_factory=lambda: os.getenv("MODEL_LOCAL_FILES_ONLY", "true").lower() == "true")
     faiss_index_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "faiss_index.index")
     metadata_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "metadata.jsonl")
@@ -19,15 +21,24 @@ class Settings:
     jobs_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "jobs.json")
     uploads_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "uploads")
     max_upload_bytes: int = 100 * 1024 * 1024
+    max_upload_batch_bytes: int = 250 * 1024 * 1024
     max_upload_files: int = 10
+    max_filename_characters: int = 180
+    max_pdf_pages: int = 2_500
+    max_pdf_page_area_points: float = 25_000_000.0
+    max_preview_pixels: int = 12_000_000
     ingestion_worker_count: int = 1
+    inference_concurrency: int = field(default_factory=lambda: max(1, int(os.getenv("INFERENCE_CONCURRENCY", "1"))))
+    max_terminal_jobs: int = field(default_factory=lambda: max(10, int(os.getenv("MAX_TERMINAL_JOBS", "250"))))
     max_session_history: int = 10
     max_session_count: int = 100
-    retrieval_candidate_k: int = 30
-    sparse_candidate_k: int = 30
+    # Keep enough dense and lexical candidates for the cross-encoder to
+    # recover direct evidence from long documents before truncating to top-k.
+    retrieval_candidate_k: int = 60
+    sparse_candidate_k: int = 60
     reciprocal_rank_fusion_constant: int = 60
-    rerank_candidate_k: int = 12
-    hybrid_dense_backfill_k: int = 12
+    rerank_candidate_k: int = 30
+    hybrid_dense_backfill_k: int = 30
     reranker_batch_size: int = 16
     summary_candidate_k: int = 80
     summary_rerank_candidate_k: int = 32
@@ -45,10 +56,13 @@ class Settings:
         default_factory=lambda: float(os.getenv("ANSWER_SYNTHESIS_TIMEOUT_SECONDS", "20"))
     )
     answer_synthesis_max_evidence: int = field(
-        default_factory=lambda: int(os.getenv("ANSWER_SYNTHESIS_MAX_EVIDENCE", "5"))
+        default_factory=lambda: int(os.getenv("ANSWER_SYNTHESIS_MAX_EVIDENCE", "7"))
     )
     answer_synthesis_max_evidence_characters: int = field(
         default_factory=lambda: int(os.getenv("ANSWER_SYNTHESIS_MAX_EVIDENCE_CHARACTERS", "1400"))
+    )
+    allow_remote_synthesis: bool = field(
+        default_factory=lambda: os.getenv("ALLOW_REMOTE_SYNTHESIS", "false").lower() == "true"
     )
     math_ocr_enabled: bool = field(default_factory=lambda: os.getenv("MATH_OCR_ENABLED", "true").lower() == "true")
     math_ocr_checkpoint: Path = field(
@@ -67,6 +81,7 @@ class Settings:
     cors_origins: List[str] = field(
         default_factory=lambda: [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if origin.strip()]
     )
+    api_key: str = field(default_factory=lambda: os.getenv("RAG_API_KEY", "").strip())
 
 
 settings = Settings()

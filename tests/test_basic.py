@@ -178,6 +178,55 @@ def test_grounded_answer_synthesis_prefers_a_definition_over_a_related_topic():
     assert "curvature" not in direct_answer
 
 
+def test_grounded_answer_prefers_the_meaning_of_a_math_concept_over_its_formula():
+    evidence = [
+        {
+            "source": "calculus.pdf",
+            "page": 43,
+            "text": "If a particle travels from point A to point B along a curve, then the distance that particle travels is the arc length. To develop a formula for arc length, we start with an approximation by line segments.",
+            "equations": [],
+        },
+        {
+            "source": "calculus.pdf",
+            "page": 106,
+            "text": "The arc length of a parametric curve can be calculated by using the formula.",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer("What does arc length represent for a parametric curve?", evidence)
+
+    assert "distance that particle travels" in answer.split("**Supporting context**", 1)[0]
+
+
+def test_grounded_answer_routes_summary_requests_to_the_summary_layout_before_purpose_shortcuts():
+    evidence = [
+        {
+            "source": "report.pdf",
+            "page": 2,
+            "text": "This document is a companion resource for managing risks in AI systems.",
+            "equations": [],
+        },
+        {
+            "source": "report.pdf",
+            "page": 8,
+            "text": "The report identifies data, security, and governance risks for deployed systems.",
+            "equations": [],
+        },
+        {
+            "source": "report.pdf",
+            "page": 16,
+            "text": "Organizations should document limitations and monitor systems after deployment.",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer("Summarize this document's purpose, risks, and actions.", evidence)
+
+    assert "**Key findings**" in answer
+    assert "**Recommendations / implications**" in answer
+
+
 def test_intent_search_query_requests_foundational_evidence():
     search_query = RAGService._intent_search_query("Tell me about arc length", "Tell me about arc length")
 
@@ -226,9 +275,17 @@ def test_table_claims_preserve_labeled_source_values_for_procedures():
     assert claims == ["For r(x) = aeλx, the initial guess for y_p(x) is Aeλx."]
 
 
+def test_non_math_table_is_not_rewritten_as_a_differential_equation_claim():
+    table = "| Action ID | Suggested action |\n| MG-1.3-001 | Monitor deployed systems |"
+
+    assert RAGService._extract_table_claims(table) == []
+
+
 def test_question_intent_covers_general_research_question_types():
     assert RAGService._question_intent("What is organic chemistry?") == "definition"
     assert RAGService._question_intent("How do I calculate arc length?") == "procedure"
+    assert RAGService._question_intent("What can double integrals calculate?") == "definition"
+    assert RAGService._question_intent("What does arc length represent?") == "definition"
     assert RAGService._question_intent("Compare the two experimental methods") == "comparison"
     assert RAGService._question_intent("Summarize the report") == "summary"
     assert RAGService._question_intent("What does Figure 2 show?") == "visual"
@@ -483,7 +540,9 @@ def test_health_and_metrics_are_available_without_loading_models():
     client = TestClient(api.app)
 
     assert client.get("/health").json() == {"status": "ok"}
-    assert client.get("/metrics").json()["recall_at_5"] == 0.84
+    metrics = client.get("/metrics").json()
+    assert metrics["recall_at_5"] == pytest.approx(0.8306451613)
+    assert metrics["citation_accuracy"] == 1.0
     assert api.service is None
 
 
@@ -687,6 +746,29 @@ def test_document_purpose_answer_prefers_an_introductory_scope_statement_over_a_
     assert "Disclaimer" not in answer
 
 
+def test_document_purpose_answer_rejects_an_incidental_content_purpose():
+    evidence = [
+        {
+            "source": "report.pdf",
+            "page": 2,
+            "text": "This report is a companion resource for organizations managing AI risks.",
+            "equations": [],
+        },
+        {
+            "source": "report.pdf",
+            "page": 9,
+            "text": "Generative systems can create content intended to impersonate other people.",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_document_purpose_answer("What is the purpose of this report?", evidence)
+
+    assert answer is not None
+    assert "companion resource" in answer
+    assert "impersonate" not in answer
+
+
 def test_document_purpose_pool_prioritizes_scope_over_front_matter():
     service = RAGService.__new__(RAGService)
     service.retriever = type(
@@ -727,6 +809,154 @@ def test_current_information_query_is_not_supported_by_a_historical_document_exa
 
 def test_common_themes_across_documents_is_classified_as_a_comparison():
     assert RAGService._question_intent("What common themes appear in both IPCC and NIST reports?") == "comparison"
+
+
+def test_comparison_search_guidance_takes_priority_over_recommendation_guidance():
+    planned = RAGService._intent_search_query(
+        "Compare how the NIST and IPCC reports recommend responses to risk.",
+        "contextual query",
+    )
+
+    assert "evidence for every named or selected source" in planned
+    assert "Prefer structured recommendation tables" not in planned
+
+
+def test_compound_question_plans_one_retrieval_query_per_explicit_aspect():
+    planned = RAGService._compound_aspect_queries(
+        "Explain risk management across governance, measurement, and ongoing monitoring."
+    )
+
+    assert planned == [
+        "Explain risk management governance",
+        "Explain risk management measurement evaluate measure evidence confidence likelihood severity",
+        "Explain risk management ongoing monitoring actions guidance response strategies options mitigate mitigation adaptation reduce prevention",
+    ]
+
+
+def test_comparison_question_plans_coordinated_action_queries():
+    planned = RAGService._compound_aspect_queries(
+        "Compare how two reports identify, assess, and recommend responses to risk."
+    )
+
+    assert planned == [
+        "identify risk characterize detect classification hazards exposure vulnerability impacts",
+        "assess risk evaluate measure evidence confidence likelihood severity",
+        "recommend responses to risk actions guidance response strategies options mitigate mitigation adaptation reduce prevention",
+    ]
+
+
+def test_compound_question_requires_evidence_for_every_explicit_aspect():
+    query = "Explain risk management across governance, measurement, and ongoing monitoring."
+    complete_evidence = [
+        {
+            "source": "nist.pdf",
+            "text": "The framework covers organizational governance, risk measurement, and continuous monitoring.",
+            "table": "",
+            "figure_caption": "",
+        }
+    ]
+    incomplete_evidence = [
+        {
+            "source": "nist.pdf",
+            "text": "The framework covers organizational governance and risk measurement.",
+            "table": "",
+            "figure_caption": "",
+        }
+    ]
+
+    assert RAGService._evidence_supports_query(query, complete_evidence, "explanation")
+    assert not RAGService._evidence_supports_query(query, incomplete_evidence, "explanation")
+
+
+def test_compound_answer_cites_each_requested_aspect_separately():
+    evidence = [
+        {
+            "source": "nist.pdf",
+            "page": 10,
+            "text": "Governance establishes ownership and accountability for generative AI risks.",
+            "table": "",
+            "figure_caption": "",
+            "equations": [],
+        },
+        {
+            "source": "nist.pdf",
+            "page": 20,
+            "text": "Risk measurement evaluates system performance using documented metrics.",
+            "table": "",
+            "figure_caption": "",
+            "equations": [],
+        },
+        {
+            "source": "nist.pdf",
+            "page": 30,
+            "text": "Ongoing monitoring identifies changes in system risks after deployment.",
+            "table": "",
+            "figure_caption": "",
+            "equations": [],
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer(
+        "Explain risk management across governance, measurement, and ongoing monitoring.",
+        evidence,
+    )
+
+    assert "**Governance**" in answer
+    assert "**Measurement**" in answer
+    assert "**Ongoing Monitoring**" in answer
+    assert "[nist.pdf, p. 10]" in answer
+    assert "[nist.pdf, p. 20]" in answer
+    assert "[nist.pdf, p. 30]" in answer
+
+
+def test_comparison_answer_is_balanced_and_does_not_use_table_recommendation_renderer():
+    evidence = [
+        {
+            "source": "NIST.AI.600-1.pdf",
+            "page": 42,
+            "text": "NIST establishes processes to identify and monitor emerging generative AI risks.",
+            "table": "| Action ID | Suggested action |\n| GV-1.2-001 | Establish transparency policies |",
+            "figure_caption": "",
+            "equations": [],
+            "type": "table",
+        },
+        {
+            "source": "IPCC_AR6_SYR_FullVolume.pdf",
+            "page": 126,
+            "text": "Effective climate governance enables mitigation and adaptation across policy domains and levels.",
+            "table": "",
+            "figure_caption": "",
+            "equations": [],
+            "type": "text",
+        },
+    ]
+
+    answer = RAGService._build_grounded_answer(
+        "Compare how NIST and IPCC recommend responses to risk.",
+        evidence,
+    )
+
+    assert "**NIST.AI.600-1 approach**" in answer
+    assert "**IPCC AR6 SYR FullVolume approach**" in answer
+    assert "**Evidence-based contrast**" in answer
+    assert "GOVERN 1.2 recommendations" not in answer
+
+
+def test_math_evidence_is_requested_only_for_mathematical_information_needs():
+    assert RAGService._query_requests_math_evidence("State and explain the Divergence Theorem.")
+    assert RAGService._query_requests_math_evidence("What equation defines kinetic energy?")
+    assert not RAGService._query_requests_math_evidence(
+        "What governance principles appear in both NIST and IPCC reports?"
+    )
+
+
+def test_lexical_query_planning_adds_general_intent_terms_without_removing_the_question():
+    query = "What impacts of climate change affect vulnerable communities?"
+
+    planned = RAGService._lexical_retrieval_query(query, "explanation")
+
+    assert planned.startswith(query)
+    assert "losses damages affected" in planned
 
 
 def test_common_themes_comparison_requires_and_accepts_evidence_from_both_documents():
@@ -800,6 +1030,65 @@ def test_comparison_diversification_keeps_the_best_result_from_each_source():
 
     assert [entry[0][1].source for entry in diversified[:2]] == ["first.pdf", "second.pdf"]
     assert len(diversified) == 3
+
+
+def test_comparison_aspect_prioritization_covers_each_operation_and_source():
+    def result(chunk_id, source, text, score):
+        item = RetrievalResult(
+            chunk_id=chunk_id,
+            score=score,
+            text=text,
+            source=source,
+            metadata={"page": 1},
+        )
+        return ((item.text, item), score)
+
+    reranked = [
+        result("generic-a", "a.pdf", "General risk management context.", 0.99),
+        result("identify-a", "a.pdf", "Identify emerging risks.", 0.70),
+        result("assess-a", "a.pdf", "Assess risk severity.", 0.69),
+        result("respond-a", "a.pdf", "Recommend response actions for risk.", 0.68),
+        result("generic-b", "b.pdf", "General risk management context.", 0.98),
+        result("identify-b", "b.pdf", "Identify climate risks and hazards.", 0.67),
+        result("assess-b", "b.pdf", "Assess climate risk.", 0.66),
+        result("respond-b", "b.pdf", "Recommend response policies for climate risk.", 0.65),
+    ]
+
+    prioritized = RAGService._prioritize_comparison_aspects(
+        reranked,
+        {"a.pdf", "b.pdf"},
+        "Compare how the reports identify, assess, and recommend responses to risk.",
+        limit=6,
+    )
+
+    assert [entry[0][1].chunk_id for entry in prioritized] == [
+        "identify-a",
+        "identify-b",
+        "assess-a",
+        "assess-b",
+        "respond-a",
+        "respond-b",
+    ]
+
+
+def test_comparison_candidate_rejects_reference_fragments():
+    reference = RetrievalResult(
+        chunk_id="reference",
+        score=0.5,
+        text="Climate Change: The IPCC Response Strategies Report of Working Group III, 1990",
+        source="ipcc.pdf",
+        section="References",
+    )
+    finding = RetrievalResult(
+        chunk_id="finding",
+        score=0.5,
+        text="The assessment evaluates interacting climate hazards, exposure, vulnerability, and response options.",
+        source="ipcc.pdf",
+        section="Risk assessment",
+    )
+
+    assert not RAGService._is_comparison_candidate(reference)
+    assert RAGService._is_comparison_candidate(finding)
 
 
 def test_hybrid_rerank_candidates_keep_dense_results_missing_from_fusion_head():

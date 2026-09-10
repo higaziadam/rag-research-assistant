@@ -1,21 +1,7 @@
-torch>=2.2.0
-transformers>=4.41.0
-sentence-transformers>=3.0.0
-faiss-cpu>=1.7.4
-pillow>=10.0.0
-PyMuPDF>=1.24.0
-pix2tex>=0.1.4
-fastapi>=0.110.0
-uvicorn>=0.29.0
-pydantic>=2.6.0
-numpy>=1.26.0
-peft>=0.11.0
-accelerate>=0.30.0
-datasets>=2.19.0
-scikit-learn>=1.4.0
-pandas>=2.2.0
-matplotlib>=3.8.0
-python-dotenv>=1.0.0
-requests>=2.32.0
-python-multipart>=0.0.9
-pytest>=8.2.0
+-r requirements-runtime.txt
+
+# Evaluation, reranker training, and development dependencies.
+scikit-learn>=1.4.0,<2
+pandas>=2.2.0,<4
+matplotlib>=3.8.0,<4
+pytest>=8.2.0,<10

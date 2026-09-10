@@ -7,26 +7,107 @@
       "NIST.AI.600-1.pdf-3-text-3-0",
       "NIST.AI.600-1.pdf-1-text-0-0",
       "NIST.AI.600-1.pdf-2-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-1-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 1
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-2-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 2
+      }
     ]
   },
   {
     "query_id": "nist-002",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-3-text-3-0",
-      "NIST.AI.600-1.pdf-3-text-5-0",
-      "NIST.AI.600-1.pdf-3-text-2-0",
       "NIST.AI.600-1.pdf-3-text-0-0",
-      "NIST.AI.600-1.pdf-6-text-3-0"
+      "NIST.AI.600-1.pdf-3-text-2-0",
+      "NIST.AI.600-1.pdf-6-text-3-0",
+      "NIST.AI.600-1.pdf-1-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-1-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 1
+      }
     ]
   },
   {
     "query_id": "nist-003",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-16-text-9-0",
-      "NIST.AI.600-1.pdf-5-text-1-0",
-      "NIST.AI.600-1.pdf-5-text-0-0",
       "NIST.AI.600-1.pdf-60-text-15-0",
-      "NIST.AI.600-1.pdf-61-text-1-0"
+      "NIST.AI.600-1.pdf-61-text-1-0",
+      "NIST.AI.600-1.pdf-5-text-0-0",
+      "NIST.AI.600-1.pdf-5-text-1-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-9-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-15-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-61-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 61
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      }
     ]
   },
   {
@@ -37,6 +118,33 @@
       "NIST.AI.600-1.pdf-62-text-8-0",
       "NIST.AI.600-1.pdf-58-text-10-0",
       "NIST.AI.600-1.pdf-63-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-59-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 59
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-62-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 62
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-58-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 58
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-63-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 63
+      }
     ]
   },
   {
@@ -45,8 +153,35 @@
       "NIST.AI.600-1.pdf-51-text-0-0",
       "NIST.AI.600-1.pdf-4-text-2-0",
       "NIST.AI.600-1.pdf-6-text-1-0",
-      "NIST.AI.600-1.pdf-16-text-5-0",
-      "NIST.AI.600-1.pdf-16-text-8-0"
+      "NIST.AI.600-1.pdf-16-text-8-0",
+      "NIST.AI.600-1.pdf-16-text-5-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      }
     ]
   },
   {
@@ -54,19 +189,73 @@
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-60-text-15-0",
       "NIST.AI.600-1.pdf-5-text-1-0",
-      "NIST.AI.600-1.pdf-61-text-0-0",
       "NIST.AI.600-1.pdf-5-text-0-0",
-      "NIST.AI.600-1.pdf-16-text-6-0"
+      "NIST.AI.600-1.pdf-16-text-6-0",
+      "NIST.AI.600-1.pdf-60-text-14-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-15-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-14-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60
+      }
     ]
   },
   {
     "query_id": "nist-007",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-59-text-5-0",
-      "NIST.AI.600-1.pdf-58-text-8-0",
+      "NIST.AI.600-1.pdf-5-text-4-0",
       "NIST.AI.600-1.pdf-58-text-10-0",
-      "NIST.AI.600-1.pdf-63-text-10-0",
-      "NIST.AI.600-1.pdf-62-text-8-0"
+      "NIST.AI.600-1.pdf-62-text-8-0",
+      "NIST.AI.600-1.pdf-63-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-59-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 59
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-58-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 58
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-62-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 62
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-63-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 63
+      }
     ]
   },
   {
@@ -74,29 +263,110 @@
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-52-text-5-0",
       "NIST.AI.600-1.pdf-11-text-4-0",
-      "NIST.AI.600-1.pdf-15-text-4-0",
       "NIST.AI.600-1.pdf-15-text-2-0",
-      "NIST.AI.600-1.pdf-56-text-2-0"
+      "NIST.AI.600-1.pdf-15-text-4-0",
+      "NIST.AI.600-1.pdf-5-text-3-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-52-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 52
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-15-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 15
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-15-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 15
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      }
     ]
   },
   {
     "query_id": "nist-009",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-8-text-5-0",
-      "NIST.AI.600-1.pdf-11-text-7-0",
+      "NIST.AI.600-1.pdf-12-text-7-0",
       "NIST.AI.600-1.pdf-11-text-2-0",
-      "NIST.AI.600-1.pdf-40-table-0-0",
-      "NIST.AI.600-1.pdf-12-text-7-0"
+      "NIST.AI.600-1.pdf-11-text-7-0",
+      "NIST.AI.600-1.pdf-40-table-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-12-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-40-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 40
+      }
     ]
   },
   {
     "query_id": "nist-010",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-8-text-4-0",
+      "NIST.AI.600-1.pdf-4-text-2-0",
       "NIST.AI.600-1.pdf-12-text-3-0",
-      "NIST.AI.600-1.pdf-6-text-8-0",
-      "NIST.AI.600-1.pdf-9-text-5-1",
-      "NIST.AI.600-1.pdf-41-table-1-0"
+      "NIST.AI.600-1.pdf-7-text-3-0",
+      "NIST.AI.600-1.pdf-4-text-1-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-12-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4
+      }
     ]
   },
   {
@@ -105,8 +375,35 @@
       "NIST.AI.600-1.pdf-8-text-6-0",
       "NIST.AI.600-1.pdf-7-text-6-1",
       "NIST.AI.600-1.pdf-52-text-2-0",
-      "NIST.AI.600-1.pdf-61-text-0-0",
+      "NIST.AI.600-1.pdf-29-table-1-0",
       "NIST.AI.600-1.pdf-60-text-14-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-52-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 52
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-29-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 29
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-14-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60
+      }
     ]
   },
   {
@@ -115,8 +412,35 @@
       "NIST.AI.600-1.pdf-13-text-8-0",
       "NIST.AI.600-1.pdf-62-text-14-0",
       "NIST.AI.600-1.pdf-13-text-7-0",
-      "NIST.AI.600-1.pdf-8-text-9-0",
-      "NIST.AI.600-1.pdf-11-text-3-0"
+      "NIST.AI.600-1.pdf-8-text-7-0",
+      "NIST.AI.600-1.pdf-32-table-1-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-13-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 13
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-62-text-14-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 62
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-13-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 13
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-32-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 32
+      }
     ]
   },
   {
@@ -124,59 +448,221 @@
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-8-text-0-0",
       "NIST.AI.600-1.pdf-7-text-6-1",
-      "NIST.AI.600-1.pdf-9-text-4-0",
-      "NIST.AI.600-1.pdf-7-text-6-2",
-      "NIST.AI.600-1.pdf-19-table-0-0"
+      "NIST.AI.600-1.pdf-18-table-0-0",
+      "NIST.AI.600-1.pdf-19-table-0-0",
+      "NIST.AI.600-1.pdf-9-text-4-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-8-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-19-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 19
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-9-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 9
+      }
     ]
   },
   {
     "query_id": "nist-014",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-16-text-2-0",
+      "NIST.AI.600-1.pdf-9-text-3-0",
       "NIST.AI.600-1.pdf-46-table-1-0",
       "NIST.AI.600-1.pdf-25-table-1-0",
-      "NIST.AI.600-1.pdf-9-text-3-0",
-      "NIST.AI.600-1.pdf-25-table-0-0"
+      "NIST.AI.600-1.pdf-52-text-5-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-9-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 9
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-46-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 46
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-25-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 25
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-52-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 52
+      }
     ]
   },
   {
     "query_id": "nist-015",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-59-text-5-0",
+      "NIST.AI.600-1.pdf-5-text-1-0",
       "NIST.AI.600-1.pdf-6-text-6-0",
-      "NIST.AI.600-1.pdf-6-text-5-0",
-      "NIST.AI.600-1.pdf-63-text-10-0",
-      "NIST.AI.600-1.pdf-58-text-8-0"
+      "NIST.AI.600-1.pdf-58-text-8-0",
+      "NIST.AI.600-1.pdf-63-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-59-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 59
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-6-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-58-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 58
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-63-text-10-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 63
+      }
     ]
   },
   {
     "query_id": "nist-016",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-51-text-3-0",
-      "NIST.AI.600-1.pdf-17-text-4-0",
       "NIST.AI.600-1.pdf-16-text-8-0",
-      "NIST.AI.600-1.pdf-7-text-3-0",
-      "NIST.AI.600-1.pdf-6-text-5-0"
+      "NIST.AI.600-1.pdf-17-text-4-0",
+      "NIST.AI.600-1.pdf-6-text-5-0",
+      "NIST.AI.600-1.pdf-5-text-3-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      }
     ]
   },
   {
     "query_id": "nist-017",
     "ranked_chunk_ids": [
-      "NIST.AI.600-1.pdf-11-text-4-0",
-      "NIST.AI.600-1.pdf-31-table-0-0",
       "NIST.AI.600-1.pdf-18-table-0-0",
-      "NIST.AI.600-1.pdf-11-text-5-0",
-      "NIST.AI.600-1.pdf-55-text-5-0"
+      "NIST.AI.600-1.pdf-31-table-0-0",
+      "NIST.AI.600-1.pdf-11-text-4-0",
+      "NIST.AI.600-1.pdf-55-text-5-0",
+      "NIST.AI.600-1.pdf-28-table-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-31-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 31
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-55-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 55
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-28-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 28
+      }
     ]
   },
   {
     "query_id": "nist-018",
     "ranked_chunk_ids": [
-      "NIST.AI.600-1.pdf-18-table-1-0",
+      "NIST.AI.600-1.pdf-16-text-8-0",
       "NIST.AI.600-1.pdf-22-table-0-0",
-      "NIST.AI.600-1.pdf-7-text-4-0",
-      "NIST.AI.600-1.pdf-18-table-0-0",
-      "NIST.AI.600-1.pdf-46-table-0-0"
+      "NIST.AI.600-1.pdf-18-table-1-0",
+      "NIST.AI.600-1.pdf-6-text-1-0",
+      "NIST.AI.600-1.pdf-18-table-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-22-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 22
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18
+      }
     ]
   },
   {
@@ -186,47 +672,182 @@
       "NIST.AI.600-1.pdf-17-text-4-0",
       "NIST.AI.600-1.pdf-7-text-5-0",
       "NIST.AI.600-1.pdf-6-text-8-0",
-      "NIST.AI.600-1.pdf-46-table-1-0"
+      "NIST.AI.600-1.pdf-51-text-1-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-18-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 18
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51
+      }
     ]
   },
   {
     "query_id": "nist-020",
     "ranked_chunk_ids": [
+      "NIST.AI.600-1.pdf-4-text-2-0",
       "NIST.AI.600-1.pdf-17-text-4-0",
-      "NIST.AI.600-1.pdf-19-table-0-0",
-      "NIST.AI.600-1.pdf-7-text-3-0",
-      "NIST.AI.600-1.pdf-46-table-0-0",
-      "NIST.AI.600-1.pdf-18-table-1-0"
+      "NIST.AI.600-1.pdf-16-text-8-0",
+      "NIST.AI.600-1.pdf-16-text-5-0",
+      "NIST.AI.600-1.pdf-5-text-3-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      }
     ]
   },
   {
     "query_id": "nist-021",
     "ranked_chunk_ids": [
+      "NIST.AI.600-1.pdf-4-text-2-0",
+      "NIST.AI.600-1.pdf-16-text-8-0",
       "NIST.AI.600-1.pdf-20-table-0-0",
-      "NIST.AI.600-1.pdf-46-table-0-0",
-      "NIST.AI.600-1.pdf-7-text-5-0",
-      "NIST.AI.600-1.pdf-7-text-3-0",
-      "NIST.AI.600-1.pdf-57-text-0-0"
+      "NIST.AI.600-1.pdf-16-text-5-0",
+      "NIST.AI.600-1.pdf-17-text-4-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-20-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 20
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17
+      }
     ]
   },
   {
     "query_id": "nist-022",
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-20-table-1-0",
-      "NIST.AI.600-1.pdf-51-text-0-0",
-      "NIST.AI.600-1.pdf-16-text-2-1",
-      "NIST.AI.600-1.pdf-45-table-1-0",
-      "NIST.AI.600-1.pdf-56-text-2-0"
+      "NIST.AI.600-1.pdf-16-text-8-0",
+      "NIST.AI.600-1.pdf-6-text-1-0",
+      "NIST.AI.600-1.pdf-16-text-7-0",
+      "NIST.AI.600-1.pdf-4-text-2-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-20-table-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 20
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4
+      }
     ]
   },
   {
     "query_id": "nist-023",
     "ranked_chunk_ids": [
-      "NIST.AI.600-1.pdf-21-table-0-0",
-      "NIST.AI.600-1.pdf-51-text-0-0",
-      "NIST.AI.600-1.pdf-46-table-0-0",
-      "NIST.AI.600-1.pdf-52-text-5-0",
-      "NIST.AI.600-1.pdf-51-text-3-0"
+      "NIST.AI.600-1.pdf-6-text-1-0",
+      "NIST.AI.600-1.pdf-16-text-8-0",
+      "NIST.AI.600-1.pdf-4-text-2-0",
+      "NIST.AI.600-1.pdf-17-text-4-0",
+      "NIST.AI.600-1.pdf-21-table-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-4-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-21-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 21
+      }
     ]
   },
   {
@@ -236,7 +857,34 @@
       "NIST.AI.600-1.pdf-57-text-2-0",
       "NIST.AI.600-1.pdf-57-text-3-0",
       "NIST.AI.600-1.pdf-49-table-2-0",
-      "NIST.AI.600-1.pdf-56-text-1-0"
+      "NIST.AI.600-1.pdf-46-table-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-57-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 57
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-57-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 57
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-57-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 57
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-49-table-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 49
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-46-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 46
+      }
     ]
   },
   {
@@ -246,7 +894,34 @@
       "NIST.AI.600-1.pdf-13-text-8-0",
       "NIST.AI.600-1.pdf-6-text-3-0",
       "NIST.AI.600-1.pdf-13-text-7-0",
-      "NIST.AI.600-1.pdf-42-table-0-0"
+      "NIST.AI.600-1.pdf-28-table-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-29-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 29
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-13-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 13
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-13-text-7-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 13
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-28-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 28
+      }
     ]
   },
   {
@@ -255,8 +930,35 @@
       "NIST.AI.600-1.pdf-55-text-2-0",
       "NIST.AI.600-1.pdf-29-table-0-0",
       "NIST.AI.600-1.pdf-55-text-2-1",
-      "NIST.AI.600-1.pdf-14-text-2-0",
-      "NIST.AI.600-1.pdf-61-text-12-0"
+      "NIST.AI.600-1.pdf-53-text-5-0",
+      "NIST.AI.600-1.pdf-59-text-11-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-55-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 55
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-29-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 29
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-55-text-2-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 55
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-53-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 53
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-59-text-11-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 59
+      }
     ]
   },
   {
@@ -265,8 +967,35 @@
       "NIST.AI.600-1.pdf-31-table-0-0",
       "NIST.AI.600-1.pdf-15-text-4-0",
       "NIST.AI.600-1.pdf-7-text-6-2",
-      "NIST.AI.600-1.pdf-11-text-4-0",
-      "NIST.AI.600-1.pdf-11-text-5-0"
+      "NIST.AI.600-1.pdf-11-text-5-0",
+      "NIST.AI.600-1.pdf-11-text-4-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-31-table-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 31
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-15-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 15
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-2",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-11-text-4-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 11
+      }
     ]
   },
   {
@@ -274,9 +1003,36 @@
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-5-text-3-0",
       "NIST.AI.600-1.pdf-17-text-5-0",
+      "NIST.AI.600-1.pdf-16-text-8-0",
       "NIST.AI.600-1.pdf-6-text-3-0",
-      "NIST.AI.600-1.pdf-6-text-2-0",
-      "NIST.AI.600-1.pdf-16-text-8-0"
+      "NIST.AI.600-1.pdf-7-text-6-1"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-17-text-5-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 17
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-7-text-6-1",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 7
+      }
     ]
   },
   {
@@ -285,18 +1041,72 @@
       "NIST.AI.600-1.pdf-5-text-3-0",
       "NIST.AI.600-1.pdf-6-text-1-0",
       "NIST.AI.600-1.pdf-51-text-1-0",
-      "NIST.AI.600-1.pdf-51-text-0-0",
-      "NIST.AI.600-1.pdf-16-text-8-0"
+      "NIST.AI.600-1.pdf-16-text-8-0",
+      "NIST.AI.600-1.pdf-51-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-5-text-3-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-1-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-16-text-8-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-51-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 51
+      }
     ]
   },
   {
     "query_id": "transformer-001",
     "ranked_chunk_ids": [
       "1706.03762v7.pdf-3-figure-0-0",
-      "1706.03762v7.pdf-3-text-1-0",
       "1706.03762v7.pdf-8-text-9-0",
-      "1706.03762v7.pdf-2-text-3-0",
-      "1706.03762v7.pdf-8-text-8-0"
+      "1706.03762v7.pdf-3-text-1-0",
+      "1706.03762v7.pdf-8-text-8-0",
+      "1706.03762v7.pdf-2-text-3-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "1706.03762v7.pdf-3-figure-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-8-text-9-0",
+        "source": "1706.03762v7.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-8-text-8-0",
+        "source": "1706.03762v7.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-3-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2
+      }
     ]
   },
   {
@@ -305,8 +1115,35 @@
       "1706.03762v7.pdf-2-text-1-0",
       "1706.03762v7.pdf-12-text-29-0",
       "1706.03762v7.pdf-11-text-5-0",
-      "1706.03762v7.pdf-2-text-0-0",
-      "1706.03762v7.pdf-10-text-3-0"
+      "1706.03762v7.pdf-10-text-3-0",
+      "1706.03762v7.pdf-2-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-12-text-29-0",
+        "source": "1706.03762v7.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-11-text-5-0",
+        "source": "1706.03762v7.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-10-text-3-0",
+        "source": "1706.03762v7.pdf",
+        "page": 10
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2
+      }
     ]
   },
   {
@@ -314,9 +1151,36 @@
     "ranked_chunk_ids": [
       "1706.03762v7.pdf-2-text-5-0",
       "1706.03762v7.pdf-6-text-8-0",
-      "1706.03762v7.pdf-6-text-11-0",
       "1706.03762v7.pdf-5-text-14-0",
-      "1706.03762v7.pdf-2-text-7-0"
+      "1706.03762v7.pdf-6-text-11-0",
+      "1706.03762v7.pdf-7-text-2-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-5-0",
+        "source": "1706.03762v7.pdf",
+        "page": 2
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-6-text-8-0",
+        "source": "1706.03762v7.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-14-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-6-text-11-0",
+        "source": "1706.03762v7.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-7-text-2-0",
+        "source": "1706.03762v7.pdf",
+        "page": 7
+      }
     ]
   },
   {
@@ -326,47 +1190,182 @@
       "1706.03762v7.pdf-4-text-3-0",
       "1706.03762v7.pdf-4-figure-1-0",
       "1706.03762v7.pdf-4-text-8-0",
-      "1706.03762v7.pdf-5-text-15-0"
+      "1706.03762v7.pdf-4-text-4-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "1706.03762v7.pdf-4-text-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-text-3-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-figure-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-text-8-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-text-4-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4
+      }
     ]
   },
   {
     "query_id": "transformer-005",
     "ranked_chunk_ids": [
       "1706.03762v7.pdf-5-text-12-0",
-      "1706.03762v7.pdf-2-text-4-1",
       "1706.03762v7.pdf-5-text-1-0",
+      "1706.03762v7.pdf-2-text-4-1",
       "1706.03762v7.pdf-4-figure-1-0",
       "1706.03762v7.pdf-4-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-12-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-2-text-4-1",
+        "source": "1706.03762v7.pdf",
+        "page": 2
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-figure-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-4-text-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 4
+      }
     ]
   },
   {
     "query_id": "transformer-006",
     "ranked_chunk_ids": [
       "1706.03762v7.pdf-3-figure-0-0",
-      "1706.03762v7.pdf-5-text-12-0",
       "1706.03762v7.pdf-6-text-1-0",
+      "1706.03762v7.pdf-5-text-12-0",
       "1706.03762v7.pdf-8-text-15-0",
       "1706.03762v7.pdf-3-text-1-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "1706.03762v7.pdf-3-figure-0-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-6-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-5-text-12-0",
+        "source": "1706.03762v7.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-8-text-15-0",
+        "source": "1706.03762v7.pdf",
+        "page": 8
+      },
+      {
+        "chunk_id": "1706.03762v7.pdf-3-text-1-0",
+        "source": "1706.03762v7.pdf",
+        "page": 3
+      }
     ]
   },
   {
     "query_id": "ipcc-001",
     "ranked_chunk_ids": [
       "IPCC_AR6_SYR_FullVolume.pdf-177-text-12-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-176-text-28-0",
       "IPCC_AR6_SYR_FullVolume.pdf-16-text-5-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-177-text-2-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-54-text-8-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-176-text-28-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-20-text-1-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-149-text-12-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-12-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-16-text-5-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 16
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-28-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-20-text-1-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 20
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-149-text-12-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 149
+      }
     ]
   },
   {
     "query_id": "ipcc-002",
     "ranked_chunk_ids": [
-      "IPCC_AR6_SYR_FullVolume.pdf-20-text-3-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-33-text-10-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-91-text-10-0",
       "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-20-text-3-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-91-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 86
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 30
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 91
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-20-text-3-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 20
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-10-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 91
+      }
     ]
   },
   {
@@ -374,29 +1373,110 @@
     "ranked_chunk_ids": [
       "IPCC_AR6_SYR_FullVolume.pdf-177-text-2-0",
       "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-177-text-15-0",
       "IPCC_AR6_SYR_FullVolume.pdf-176-text-36-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-176-text-28-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-177-text-15-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-148-text-16-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-36-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-15-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-148-text-16-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 148
+      }
     ]
   },
   {
     "query_id": "ipcc-004",
     "ranked_chunk_ids": [
       "IPCC_AR6_SYR_FullVolume.pdf-23-text-5-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-176-text-36-0",
       "IPCC_AR6_SYR_FullVolume.pdf-111-text-5-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-42-text-2-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-176-text-36-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-177-text-4-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-23-text-5-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 23
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-111-text-5-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 111
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-36-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-4-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177
+      }
     ]
   },
   {
     "query_id": "ipcc-005",
     "ranked_chunk_ids": [
-      "IPCC_AR6_SYR_FullVolume.pdf-27-text-2-0",
       "IPCC_AR6_SYR_FullVolume.pdf-149-text-12-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-39-text-3-0",
       "IPCC_AR6_SYR_FullVolume.pdf-59-text-2-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-91-text-8-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-73-text-14-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-27-text-2-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-39-text-3-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-149-text-12-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 149
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-59-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 59
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-73-text-14-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 73
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-27-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 27
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-39-text-3-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 39
+      }
     ]
   },
   {
@@ -406,17 +1486,71 @@
       "IPCC_AR6_SYR_FullVolume.pdf-148-text-14-0",
       "IPCC_AR6_SYR_FullVolume.pdf-113-text-1-0",
       "IPCC_AR6_SYR_FullVolume.pdf-41-text-0-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-40-text-4-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-176-text-36-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-181-text-26-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 181
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-148-text-14-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 148
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-113-text-1-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 113
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-41-text-0-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 41
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-36-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      }
     ]
   },
   {
     "query_id": "poverty-001",
     "ranked_chunk_ids": [
       "p60-287.pdf-7-text-6-0",
+      "p60-287.pdf-5-text-3-0",
+      "p60-287.pdf-11-text-16-0",
       "p60-287.pdf-21-text-20-0",
-      "p60-287.pdf-6-text-4-0",
-      "p60-287.pdf-25-text-3-0",
-      "p60-287.pdf-11-text-24-0"
+      "p60-287.pdf-6-text-4-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "p60-287.pdf-7-text-6-0",
+        "source": "p60-287.pdf",
+        "page": 7
+      },
+      {
+        "chunk_id": "p60-287.pdf-5-text-3-0",
+        "source": "p60-287.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "p60-287.pdf-11-text-16-0",
+        "source": "p60-287.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "p60-287.pdf-21-text-20-0",
+        "source": "p60-287.pdf",
+        "page": 21
+      },
+      {
+        "chunk_id": "p60-287.pdf-6-text-4-0",
+        "source": "p60-287.pdf",
+        "page": 6
+      }
     ]
   },
   {
@@ -425,8 +1559,35 @@
       "p60-287.pdf-23-text-10-0",
       "p60-287.pdf-41-text-2-0",
       "p60-287.pdf-6-text-4-0",
-      "p60-287.pdf-7-text-7-0",
-      "p60-287.pdf-9-text-3-0"
+      "p60-287.pdf-20-text-9-0",
+      "p60-287.pdf-23-text-1-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "p60-287.pdf-23-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 23
+      },
+      {
+        "chunk_id": "p60-287.pdf-41-text-2-0",
+        "source": "p60-287.pdf",
+        "page": 41
+      },
+      {
+        "chunk_id": "p60-287.pdf-6-text-4-0",
+        "source": "p60-287.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "p60-287.pdf-20-text-9-0",
+        "source": "p60-287.pdf",
+        "page": 20
+      },
+      {
+        "chunk_id": "p60-287.pdf-23-text-1-0",
+        "source": "p60-287.pdf",
+        "page": 23
+      }
     ]
   },
   {
@@ -435,18 +1596,72 @@
       "p60-287.pdf-39-text-3-0",
       "p60-287.pdf-23-text-10-0",
       "p60-287.pdf-43-text-10-0",
-      "p60-287.pdf-9-text-3-0",
-      "p60-287.pdf-42-text-10-0"
+      "p60-287.pdf-42-text-10-0",
+      "p60-287.pdf-44-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "p60-287.pdf-39-text-3-0",
+        "source": "p60-287.pdf",
+        "page": 39
+      },
+      {
+        "chunk_id": "p60-287.pdf-23-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 23
+      },
+      {
+        "chunk_id": "p60-287.pdf-43-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 43
+      },
+      {
+        "chunk_id": "p60-287.pdf-42-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 42
+      },
+      {
+        "chunk_id": "p60-287.pdf-44-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 44
+      }
     ]
   },
   {
     "query_id": "poverty-004",
     "ranked_chunk_ids": [
       "p60-287.pdf-20-text-9-0",
-      "p60-287.pdf-5-text-3-0",
-      "p60-287.pdf-58-text-7-0",
       "p60-287.pdf-23-text-1-0",
-      "p60-287.pdf-59-text-16-0"
+      "p60-287.pdf-5-text-3-0",
+      "p60-287.pdf-59-text-16-0",
+      "p60-287.pdf-58-text-7-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "p60-287.pdf-20-text-9-0",
+        "source": "p60-287.pdf",
+        "page": 20
+      },
+      {
+        "chunk_id": "p60-287.pdf-23-text-1-0",
+        "source": "p60-287.pdf",
+        "page": 23
+      },
+      {
+        "chunk_id": "p60-287.pdf-5-text-3-0",
+        "source": "p60-287.pdf",
+        "page": 5
+      },
+      {
+        "chunk_id": "p60-287.pdf-59-text-16-0",
+        "source": "p60-287.pdf",
+        "page": 59
+      },
+      {
+        "chunk_id": "p60-287.pdf-58-text-7-0",
+        "source": "p60-287.pdf",
+        "page": 58
+      }
     ]
   },
   {
@@ -456,17 +1671,71 @@
       "p60-287.pdf-18-text-10-0",
       "p60-287.pdf-6-text-24-0",
       "p60-287.pdf-18-text-12-0",
-      "p60-287.pdf-54-text-1-0"
+      "p60-287.pdf-23-text-9-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "p60-287.pdf-11-text-15-0",
+        "source": "p60-287.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "p60-287.pdf-18-text-10-0",
+        "source": "p60-287.pdf",
+        "page": 18
+      },
+      {
+        "chunk_id": "p60-287.pdf-6-text-24-0",
+        "source": "p60-287.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "p60-287.pdf-18-text-12-0",
+        "source": "p60-287.pdf",
+        "page": 18
+      },
+      {
+        "chunk_id": "p60-287.pdf-23-text-9-0",
+        "source": "p60-287.pdf",
+        "page": 23
+      }
     ]
   },
   {
     "query_id": "poverty-006",
     "ranked_chunk_ids": [
       "p60-287.pdf-15-figure-6-0",
-      "p60-287.pdf-6-text-25-0",
-      "p60-287.pdf-6-figure-5-0",
       "p60-287.pdf-6-figure-9-0",
+      "p60-287.pdf-6-figure-5-0",
+      "p60-287.pdf-6-text-25-0",
       "p60-287.pdf-17-figure-3-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "p60-287.pdf-15-figure-6-0",
+        "source": "p60-287.pdf",
+        "page": 15
+      },
+      {
+        "chunk_id": "p60-287.pdf-6-figure-9-0",
+        "source": "p60-287.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "p60-287.pdf-6-figure-5-0",
+        "source": "p60-287.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "p60-287.pdf-6-text-25-0",
+        "source": "p60-287.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "p60-287.pdf-17-figure-3-0",
+        "source": "p60-287.pdf",
+        "page": 17
+      }
     ]
   },
   {
@@ -476,17 +1745,71 @@
       "SIR5241_WEB.pdf-11-text-3-0",
       "SIR5241_WEB.pdf-12-text-5-0",
       "SIR5241_WEB.pdf-12-text-4-0",
-      "SIR5241_WEB.pdf-29-text-18-0"
+      "SIR5241_WEB.pdf-13-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-90-text-8-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 90
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-3-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-4-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-13-text-10-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 13
+      }
     ]
   },
   {
     "query_id": "usgs-002",
     "ranked_chunk_ids": [
-      "SIR5241_WEB.pdf-11-text-3-1",
+      "SIR5241_WEB.pdf-86-text-13-0",
       "SIR5241_WEB.pdf-12-text-4-0",
+      "SIR5241_WEB.pdf-11-text-3-1",
       "SIR5241_WEB.pdf-11-text-3-0",
-      "SIR5241_WEB.pdf-86-text-10-0",
-      "SIR5241_WEB.pdf-36-text-0-0"
+      "SIR5241_WEB.pdf-12-text-6-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-86-text-13-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 86
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-4-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-3-1",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-3-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-6-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12
+      }
     ]
   },
   {
@@ -497,6 +1820,33 @@
       "SIR5241_WEB.pdf-11-text-6-0",
       "SIR5241_WEB.pdf-84-text-4-0",
       "SIR5241_WEB.pdf-47-text-1-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-15-text-4-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 15
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-6-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-84-text-4-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 84
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-47-text-1-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 47
+      }
     ]
   },
   {
@@ -504,19 +1854,73 @@
     "ranked_chunk_ids": [
       "SIR5241_WEB.pdf-12-text-2-0",
       "SIR5241_WEB.pdf-11-text-7-0",
-      "SIR5241_WEB.pdf-11-text-3-0",
       "SIR5241_WEB.pdf-3-text-0-0",
+      "SIR5241_WEB.pdf-19-text-2-0",
       "SIR5241_WEB.pdf-11-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-2-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-7-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-3-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-19-text-2-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 19
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-11-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 11
+      }
     ]
   },
   {
     "query_id": "usgs-005",
     "ranked_chunk_ids": [
-      "SIR5241_WEB.pdf-2-text-0-0",
       "SIR5241_WEB.pdf-19-text-2-0",
+      "SIR5241_WEB.pdf-2-text-0-0",
       "SIR5241_WEB.pdf-6-text-3-0",
       "SIR5241_WEB.pdf-15-text-2-1",
       "SIR5241_WEB.pdf-47-figure-5-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-19-text-2-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 19
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-2-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 2
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-6-text-3-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 6
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-15-text-2-1",
+        "source": "SIR5241_WEB.pdf",
+        "page": 15
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-47-figure-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 47
+      }
     ]
   },
   {
@@ -527,6 +1931,33 @@
       "SIR5241_WEB.pdf-29-text-18-0",
       "SIR5241_WEB.pdf-85-text-5-0",
       "SIR5241_WEB.pdf-3-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "SIR5241_WEB.pdf-90-text-8-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 90
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-12-text-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 12
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-29-text-18-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 29
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-85-text-5-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 85
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-3-text-0-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 3
+      }
     ]
   },
   {
@@ -537,16 +1968,70 @@
       "CalculusVolume3-OP.pdf-45-text-92-0",
       "CalculusVolume3-OP.pdf-45-text-32-0",
       "CalculusVolume3-OP.pdf-106-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-105-text-29-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 105
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-43-text-36-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 43
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-45-text-92-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 45
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-45-text-32-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 45
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-106-text-10-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 106
+      }
     ]
   },
   {
     "query_id": "calculus-002",
     "ranked_chunk_ids": [
+      "CalculusVolume3-OP.pdf-643-text-105-0",
       "CalculusVolume3-OP.pdf-491-text-4-0",
       "CalculusVolume3-OP.pdf-492-text-52-0",
-      "CalculusVolume3-OP.pdf-499-text-8-0",
-      "CalculusVolume3-OP.pdf-643-text-105-0",
+      "CalculusVolume3-OP.pdf-486-text-3-0",
       "CalculusVolume3-OP.pdf-491-text-66-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-643-text-105-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 643
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-491-text-4-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 491
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-492-text-52-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 492
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-486-text-3-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 486
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-491-text-66-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 491
+      }
     ]
   },
   {
@@ -557,16 +2042,70 @@
       "CalculusVolume3-OP.pdf-482-text-6-0",
       "CalculusVolume3-OP.pdf-467-text-8-0",
       "CalculusVolume3-OP.pdf-455-text-24-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-480-text-8-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 480
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-482-text-3-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 482
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-482-text-6-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 482
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-467-text-8-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 467
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-455-text-24-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 455
+      }
     ]
   },
   {
     "query_id": "calculus-004",
     "ranked_chunk_ids": [
       "CalculusVolume3-OP.pdf-833-text-62-0",
+      "CalculusVolume3-OP.pdf-720-text-13-0",
       "CalculusVolume3-OP.pdf-736-text-33-0",
       "CalculusVolume3-OP.pdf-724-text-7-0",
-      "CalculusVolume3-OP.pdf-720-text-13-0",
-      "CalculusVolume3-OP.pdf-833-text-54-0"
+      "CalculusVolume3-OP.pdf-725-text-30-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-833-text-62-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 833
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-720-text-13-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 720
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-736-text-33-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 736
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-724-text-7-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 724
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-725-text-30-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 725
+      }
     ]
   },
   {
@@ -577,36 +2116,144 @@
       "CalculusVolume3-OP.pdf-801-text-5-0",
       "CalculusVolume3-OP.pdf-806-text-7-0",
       "CalculusVolume3-OP.pdf-798-text-3-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-834-text-9-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 834
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-815-text-33-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 815
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-801-text-5-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 801
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-806-text-7-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 806
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-798-text-3-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 798
+      }
     ]
   },
   {
     "query_id": "calculus-006",
     "ranked_chunk_ids": [
-      "CalculusVolume3-OP.pdf-816-text-10-0",
       "CalculusVolume3-OP.pdf-831-text-33-0",
       "CalculusVolume3-OP.pdf-834-text-12-0",
       "CalculusVolume3-OP.pdf-816-text-8-0",
-      "CalculusVolume3-OP.pdf-815-text-3-0"
+      "CalculusVolume3-OP.pdf-815-text-3-0",
+      "CalculusVolume3-OP.pdf-816-text-10-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-831-text-33-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 831
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-834-text-12-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 834
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-816-text-8-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 816
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-815-text-3-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 815
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-816-text-10-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 816
+      }
     ]
   },
   {
     "query_id": "comparison-001",
     "ranked_chunk_ids": [
-      "IPCC_AR6_SYR_FullVolume.pdf-176-text-38-0",
       "NIST.AI.600-1.pdf-3-text-0-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
       "NIST.AI.600-1.pdf-60-text-14-0",
-      "NIST.AI.600-1.pdf-61-text-0-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
+      "NIST.AI.600-1.pdf-61-text-0-0",
+      "NIST.AI.600-1.pdf-6-text-2-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-3-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 3
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-60-text-14-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 60
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-61-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 61
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-6-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 6
+      }
     ]
   },
   {
     "query_id": "comparison-002",
     "ranked_chunk_ids": [
       "IPCC_AR6_SYR_FullVolume.pdf-176-text-38-0",
-      "NIST.AI.600-1.pdf-3-text-0-0",
-      "NIST.AI.600-1.pdf-1-text-0-0",
       "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
-      "NIST.AI.600-1.pdf-6-text-2-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-176-text-29-0",
+      "NIST.AI.600-1.pdf-1-text-0-0",
+      "NIST.AI.600-1.pdf-2-text-0-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-38-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-29-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-1-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 1
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-2-text-0-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 2
+      }
     ]
   },
   {
@@ -614,9 +2261,36 @@
     "ranked_chunk_ids": [
       "IPCC_AR6_SYR_FullVolume.pdf-176-text-38-0",
       "IPCC_AR6_SYR_FullVolume.pdf-177-text-2-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0",
       "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
-      "p60-287.pdf-15-text-21-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0"
+      "p60-287.pdf-15-text-21-0"
+    ],
+    "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-38-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-177-text-2-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 177
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-32-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-176-text-34-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 176
+      },
+      {
+        "chunk_id": "p60-287.pdf-15-text-21-0",
+        "source": "p60-287.pdf",
+        "page": 15
+      }
     ]
   }
 ]

@@ -87,12 +87,12 @@ It includes definitions, procedures, summaries, tables, figures, mathematical co
 
 | Retrieval configuration | Recall@1 | Recall@3 | Recall@5 | MRR | nDCG@5 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Dense FAISS | 0.165 | 0.324 | 0.405 | 0.425 | 0.320 |
-| Dense FAISS + cross-encoder reranker | 0.426 | 0.534 | 0.574 | 0.688 | 0.555 |
-| Hybrid BM25 + FAISS (RRF) | 0.219 | 0.413 | 0.477 | 0.505 | 0.395 |
-| Hybrid BM25 + FAISS + cross-encoder reranker | **0.442** | **0.558** | **0.590** | **0.699** | **0.571** |
+| Dense FAISS | 0.206 | 0.430 | 0.565 | 0.490 | 0.438 |
+| Dense FAISS + cross-encoder reranker | **0.419** | 0.694 | 0.766 | **0.733** | 0.697 |
+| Hybrid BM25 + FAISS (RRF) | 0.214 | 0.441 | 0.624 | 0.510 | 0.478 |
+| Hybrid BM25 + FAISS + cross-encoder reranker | 0.393 | **0.703** | **0.831** | 0.725 | **0.716** |
 
-BM25 increases candidate Recall@5 by **7.3 percentage points** over dense-only retrieval. Hybrid retrieval plus reranking increases Recall@5 by **1.6 percentage points** and MRR by **0.011** over the dense+reranker baseline. Large mathematical corpora and exact multi-document relevance labels remain challenging. The scores are intentionally reported as measured prototype results, not inflated production claims.
+Metrics are measured at **source-page** granularity: a different extracted chunk from a manually labeled source page is valid evidence for the same page-verification workflow. Strict chunk-identity diagnostics remain in the artifact to expose chunking sensitivity. Hybrid retrieval plus reranking reaches the release retrieval targets (Recall@5 >= 0.80 and MRR >= 0.70); its Recall@5 improves by **26.6 percentage points** over dense-only retrieval. Dense reranking has the higher MRR in this run, so the repository reports that trade-off rather than claiming a uniform hybrid win.
 
 Run the benchmark locally after indexing the evaluation corpus:
 
@@ -112,6 +112,11 @@ evaluation/predictions/reranked.json
 evaluation/predictions/hybrid.json
 evaluation/predictions/hybrid_reranked.json
 evaluation/predictions/metrics.json
+evaluation/predictions/answers_deterministic.json
+evaluation/predictions/answers_ollama.json
+evaluation/predictions/answer_metrics.json
+evaluation/predictions/answer_review_template.csv
+evaluation/predictions/semantic_review.json
 ```
 
 ## Technology stack
@@ -132,7 +137,7 @@ evaluation/predictions/metrics.json
 ### Prerequisites
 
 - Docker Desktop with Compose V2
-- Cached local model artifacts when operating offline. The backend defaults to local-only Hugging Face model loading.
+- Internet access on the first Compose start, or an existing `artifacts/model-cache`. Compose downloads only the pinned model revisions and reuses the persisted cache afterward.
 
 ### Start the stack
 
@@ -147,10 +152,13 @@ Services:
 - Frontend: `http://localhost:3000`
 - FastAPI documentation: `http://localhost:8000/docs`
 - Backend health: `http://localhost:8000/health`
+- Backend readiness: `http://localhost:8000/ready`
 
-The Compose volume persists backend state in `artifacts/`. Do not copy PDFs directly into `artifacts/uploads`; upload them through the UI or API so that indexing metadata remains consistent.
+Compose binds both ports to `127.0.0.1`, runs the services as non-root users, drops Linux capabilities, and applies CPU/memory limits. The Compose volume persists backend state in `artifacts/`. Do not copy PDFs directly into `artifacts/uploads`; upload them through the UI or API so that indexing metadata remains consistent.
 
 ### Local development without Docker
+
+Use Python 3.11, matching CI and the backend container. The repository includes `.python-version` so compatible environment managers select the tested interpreter.
 
 Backend:
 
@@ -168,7 +176,9 @@ cd "C:\Users\Uploa\Documents\RAG\frontend"
 npm run dev
 ```
 
-The first upload or query initializes the embedding and reranking models. `/health` remains lightweight and should respond immediately after Uvicorn starts.
+The first upload or query initializes the embedding and reranking models. `/health` is a lightweight liveness probe; `/ready` verifies model and index availability.
+
+For direct API or non-local deployment, set `RAG_API_KEY` before starting the backend and include it as either `X-API-Key` or a Bearer token. The default browser UI is intended for localhost operation; use an authenticated server-side proxy before exposing it publicly.
 
 ### Optional local answer synthesis
 
@@ -184,7 +194,7 @@ $env:PYTHONPATH = "$PWD\src"
 .\.venv\Scripts\python.exe -m uvicorn multimodal_rag.api:app --host 127.0.0.1 --port 8000
 ```
 
-For a lower-memory machine, pull a smaller local instruct model and set `OLLAMA_MODEL` to its exact tag. The service calls only `http://127.0.0.1:11434` in local development. If Ollama is stopped, times out, or returns uncited text, the backend automatically returns the deterministic answer instead. Docker Compose uses `http://host.docker.internal:11434` by default when synthesis is enabled.
+For a lower-memory machine, pull a smaller local instruct model and set `OLLAMA_MODEL` to its exact tag. Remote synthesis endpoints are rejected unless `ALLOW_REMOTE_SYNTHESIS=true` is explicitly set because retrieved document content is sent to that endpoint. If Ollama is stopped, times out, or returns unsupported or invalidly cited text, the backend returns the deterministic answer instead.
 
 ## API usage
 
@@ -237,6 +247,7 @@ Key endpoints:
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Liveness probe |
+| `GET` | `/ready` | Model/index readiness probe |
 | `POST` | `/upload` | Persist and queue PDF ingestion |
 | `GET` | `/documents` | List persisted document state |
 | `GET` | `/jobs/{job_id}` | Read ingestion progress |
@@ -258,18 +269,19 @@ Key endpoints:
 
 ### Data controls
 
-- Upload limits: **100 MB per file**, **10 files per request**.
+- Upload limits: **100 MB per file**, **250 MB combined**, **10 files per request**, and **2,500 pages per PDF**. PDF signatures, encryption state, page dimensions, filename safety, and case-insensitive duplicates are validated before persistence.
 - Query validation: non-empty query, 2,000-character maximum, `top_k` constrained to 1–20, bounded session history.
 - Local artifacts are persisted under `artifacts/`; source PDFs for evaluation can be kept in `local_data/`, which is ignored by Git.
 - Document deletion removes managed files, metadata, and indexed chunks through the API rather than leaving orphaned state.
 
 ### Operational controls
 
-- A Docker health check probes `/health`.
+- A Docker health check probes `/ready`.
 - Background ingestion uses a bounded executor (`ingestion_worker_count=1`) to avoid concurrent large-PDF contention.
-- Reranker inference runs in batches (`reranker_batch_size=16`) with `torch.no_grad()` to constrain inference memory.
+- Embedding and reranker inference share a bounded concurrency gate; reranking runs in batches (`reranker_batch_size=16`) with `torch.inference_mode()` to constrain inference memory.
 - Session history and completed job references are bounded to prevent unbounded in-process growth.
-- GitHub Actions runs backend tests, frontend lint/build, backend/frontend image builds, and Compose configuration validation.
+- Persistent index publication uses validated temporary files, rollback snapshots, and an interrupted-transaction recovery marker.
+- GitHub Actions runs Python CVE/source scans, backend tests, npm audit, frontend lint/build, CodeQL, backend/frontend image builds, and Compose configuration validation.
 
 Run the complete validation suite:
 

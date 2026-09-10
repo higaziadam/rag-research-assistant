@@ -4,17 +4,31 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - PYTHONPATH=/app/src
+      - HF_HOME=/app/artifacts/model-cache
+      # Download only the pinned model revisions on first container startup;
+      # the artifacts volume retains them for subsequent offline starts.
+      - MODEL_LOCAL_FILES_ONLY=${MODEL_LOCAL_FILES_ONLY:-false}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
       # Ollama is optional and runs on the local host, not in this container.
       - ANSWER_SYNTHESIS_ENABLED=${ANSWER_SYNTHESIS_ENABLED:-false}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      - ALLOW_REMOTE_SYNTHESIS=${ALLOW_REMOTE_SYNTHESIS:-false}
+      - RAG_API_KEY=${RAG_API_KEY:-}
     volumes:
       - ../artifacts:/app/artifacts
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-8g}
+    cpus: ${BACKEND_CPU_LIMIT:-4.0}
+    tmpfs:
+      - /tmp:size=512m,noexec,nosuid
 
   frontend:
     build:
@@ -23,8 +37,16 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-1g}
+    cpus: ${FRONTEND_CPU_LIMIT:-1.0}
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid

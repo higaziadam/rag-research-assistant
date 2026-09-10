@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -12,6 +13,37 @@ import pymupdf
 
 
 BoundingBox = list[float]
+
+
+def validate_pdf(
+    file_bytes: bytes,
+    *,
+    max_pages: int,
+    max_page_area_points: float,
+) -> int:
+    """Reject malformed or resource-amplifying PDFs before extraction."""
+    if b"%PDF-" not in file_bytes[:1024]:
+        raise ValueError("The uploaded file does not have a valid PDF signature.")
+    try:
+        document = pymupdf.open(stream=file_bytes, filetype="pdf")
+    except Exception as exc:
+        raise ValueError("The uploaded PDF could not be opened safely.") from exc
+    try:
+        if document.needs_pass:
+            raise ValueError("Password-protected PDFs are not supported.")
+        if document.page_count < 1:
+            raise ValueError("The uploaded PDF has no pages.")
+        if document.page_count > max_pages:
+            raise ValueError(f"The uploaded PDF exceeds the {max_pages}-page limit.")
+        for page_number in range(document.page_count):
+            rectangle = document[page_number].rect
+            if not all(math.isfinite(value) for value in (rectangle.width, rectangle.height)):
+                raise ValueError("The uploaded PDF contains invalid page dimensions.")
+            if rectangle.width <= 0 or rectangle.height <= 0 or rectangle.get_area() > max_page_area_points:
+                raise ValueError("The uploaded PDF contains an unsupported oversized page.")
+        return document.page_count
+    finally:
+        document.close()
 
 
 @dataclass
@@ -274,7 +306,13 @@ class StructuredPdfExtractor:
         return [round(value, 2) for value in (rectangle.x0, rectangle.y0, rectangle.x1, rectangle.y1)]
 
 
-def render_pdf_region(pdf_path: Path, page_number: int, bounding_box: BoundingBox) -> bytes:
+def render_pdf_region(
+    pdf_path: Path,
+    page_number: int,
+    bounding_box: BoundingBox,
+    *,
+    max_pixels: int = 12_000_000,
+) -> bytes:
     """Render a cited PDF region as a PNG for the source viewer."""
     document = pymupdf.open(pdf_path)
     try:
@@ -284,6 +322,8 @@ def render_pdf_region(pdf_path: Path, page_number: int, bounding_box: BoundingBo
         rectangle = pymupdf.Rect(bounding_box) & page.rect
         if rectangle.is_empty or rectangle.width < 1 or rectangle.height < 1:
             raise ValueError("The cited region is outside this PDF page.")
+        if rectangle.width * 1.8 * rectangle.height * 1.8 > max_pixels:
+            raise ValueError("The requested preview region is too large.")
         pixmap = page.get_pixmap(matrix=pymupdf.Matrix(1.8, 1.8), clip=rectangle, alpha=False)
         return pixmap.tobytes("png")
     finally:

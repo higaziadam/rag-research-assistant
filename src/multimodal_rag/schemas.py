@@ -85,11 +85,11 @@ class QueryResponse(BaseModel):
 
 
 class EvaluationSummary(BaseModel):
-    recall_at_5: float
-    mrr: float
-    citation_accuracy: float
-    answer_faithfulness: float
-    latency_ms: float
+    recall_at_5: float | None = None
+    mrr: float | None = None
+    citation_accuracy: float | None = None
+    answer_faithfulness: float | None = None
+    latency_ms: float | None = None
     comparison: Dict[str, Dict[str, float]]
 
 

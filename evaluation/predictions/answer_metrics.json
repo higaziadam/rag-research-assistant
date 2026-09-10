@@ -1,0 +1,82 @@
+{
+  "benchmark": "evaluation",
+  "questions": 66,
+  "modes": [
+    "deterministic",
+    "ollama"
+  ],
+  "automatic_metrics": {
+    "deterministic": {
+      "queries": 66,
+      "expected_supported_queries": 62,
+      "expected_unsupported_queries": 4,
+      "support_classification_accuracy": 0.9697,
+      "unsupported_answer_accuracy": 1.0,
+      "citation_block_coverage": 0.9714,
+      "citation_reference_validity": 1.0,
+      "labeled_citation_pair_overlap": 0.2892,
+      "answers_with_labeled_citation": 0.6935,
+      "synthesis_acceptance_rate": 0.0,
+      "fallback_rate": null,
+      "latency_ms": {
+        "median": 506.852,
+        "p95": 1504.968
+      },
+      "metric_notes": {
+        "citation_reference_validity": "Checks that every answer citation names a source/page returned by retrieval; it does not prove semantic entailment.",
+        "labeled_citation_pair_overlap": "Lower-bound overlap with the benchmark's labeled relevance pages; citations to other valid supporting pages are not counted as matches."
+      }
+    },
+    "ollama": {
+      "queries": 66,
+      "expected_supported_queries": 62,
+      "expected_unsupported_queries": 4,
+      "support_classification_accuracy": 0.9697,
+      "unsupported_answer_accuracy": 1.0,
+      "citation_block_coverage": 1.0,
+      "citation_reference_validity": 1.0,
+      "labeled_citation_pair_overlap": 0.4062,
+      "answers_with_labeled_citation": 0.7742,
+      "synthesis_acceptance_rate": 0.8387,
+      "fallback_rate": 0.1613,
+      "latency_ms": {
+        "median": 5612.966,
+        "p95": 13534.146
+      },
+      "metric_notes": {
+        "citation_reference_validity": "Checks that every answer citation names a source/page returned by retrieval; it does not prove semantic entailment.",
+        "labeled_citation_pair_overlap": "Lower-bound overlap with the benchmark's labeled relevance pages; citations to other valid supporting pages are not counted as matches."
+      }
+    }
+  },
+  "human_review": {
+    "template": "evaluation\\predictions\\answer_review_template.csv",
+    "sample_query_ids": [
+      "calculus-007",
+      "ipcc-007",
+      "nist-030",
+      "transformer-007",
+      "comparison-001",
+      "ipcc-002",
+      "ipcc-006",
+      "ipcc-001",
+      "usgs-005",
+      "nist-005",
+      "calculus-001",
+      "poverty-004",
+      "nist-016",
+      "ipcc-004",
+      "nist-028",
+      "nist-017",
+      "comparison-002",
+      "poverty-001",
+      "nist-001",
+      "ipcc-003",
+      "usgs-002",
+      "calculus-002",
+      "transformer-004",
+      "ipcc-005"
+    ],
+    "instructions": "Score the CSV with evaluation/rubric.md. Automated provenance checks do not establish semantic correctness or faithfulness."
+  }
+}

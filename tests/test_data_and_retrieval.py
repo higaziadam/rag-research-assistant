@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 
 from multimodal_rag.data_models import DocumentChunk, RetrievalResult
+from multimodal_rag.answer_evaluation import citation_coverage, extract_citations, select_review_query_ids, summarize_answer_records
+from multimodal_rag.semantic_evaluation import summarize_semantic_reviews
 from multimodal_rag.evaluation import evaluate_ranking_predictions
 from multimodal_rag.jobs import IngestionJob
 from multimodal_rag.retrieval import FAISSRetriever
@@ -156,6 +158,148 @@ def test_evaluation_counts_relevant_chunks_missing_from_predictions(tmp_path):
     assert metrics["recall@1"] == 0.5
 
 
+def test_page_level_evaluation_counts_a_different_chunk_from_the_same_answer_page(tmp_path):
+    predictions_path = tmp_path / "predictions.json"
+    ground_truth_path = tmp_path / "ground_truth.json"
+    predictions_path.write_text(
+        json.dumps(
+            [
+                {
+                    "query_id": "q1",
+                    "ranked_chunk_ids": ["report.pdf-4-text-9-0"],
+                    "ranked_results": [{"chunk_id": "report.pdf-4-text-9-0", "source": "report.pdf", "page": 4}],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    ground_truth_path.write_text(
+        json.dumps([{"query_id": "q1", "relevance": ["report.pdf-4-text-1-0"], "relevant_pages": [4]}]),
+        encoding="utf-8",
+    )
+
+    metrics = evaluate_ranking_predictions(
+        str(predictions_path),
+        str(ground_truth_path),
+        k=1,
+        relevance_level="source_page",
+    )
+
+    assert metrics["recall@1"] == 1.0
+
+
+def test_answer_evaluation_extracts_citations_and_excludes_source_footer_from_coverage():
+    answer = (
+        "**Answer**\n\n"
+        "The report defines a risk-management process. [report.pdf, p. 4]\n\n"
+        "- It requires periodic review. [report.pdf, p. 8]\n\n"
+        "**Sources**\n"
+        "report.pdf (pp. 4, 8)"
+    )
+
+    assert extract_citations(answer) == [("report.pdf", 4), ("report.pdf", 8)]
+    assert citation_coverage(answer) == {"factual_blocks": 2, "cited_blocks": 2}
+
+
+def test_answer_evaluation_metrics_keep_provenance_checks_separate_from_semantic_judgment():
+    records = [
+        {
+            "mode": "ollama",
+            "expected_supported": True,
+            "unsupported": False,
+            "citation_coverage": {"factual_blocks": 2, "cited_blocks": 2},
+            "citations": [("report.pdf", 4)],
+            "returned_source_pages": [("report.pdf", 4)],
+            "ground_truth_source_pages": [("report.pdf", 4)],
+            "synthesis_mode": "ollama",
+            "latency_ms": 100.0,
+        },
+        {
+            "mode": "ollama",
+            "expected_supported": False,
+            "unsupported": True,
+            "citation_coverage": {"factual_blocks": 0, "cited_blocks": 0},
+            "citations": [],
+            "returned_source_pages": [],
+            "ground_truth_source_pages": [],
+            "synthesis_mode": "deterministic",
+            "latency_ms": 20.0,
+        },
+    ]
+
+    metrics = summarize_answer_records(records)["ollama"]
+
+    assert metrics["support_classification_accuracy"] == 1.0
+    assert metrics["citation_reference_validity"] == 1.0
+    assert metrics["labeled_citation_pair_overlap"] == 1.0
+    assert metrics["synthesis_acceptance_rate"] == 1.0
+    assert "does not prove semantic entailment" in metrics["metric_notes"]["citation_reference_validity"]
+
+
+def test_semantic_review_requires_all_scores_and_applies_release_thresholds():
+    reviewed_rows = [
+        {
+            "query_id": "supported",
+            "mode": "deterministic",
+            "expected_supported": "True",
+            "correctness": "2",
+            "completeness": "2",
+            "citation_correctness": "2",
+            "faithfulness": "2",
+            "clarity": "2",
+            "multimodal_accuracy": "2",
+            "unsupported_behavior": "",
+        },
+        {
+            "query_id": "unsupported",
+            "mode": "deterministic",
+            "expected_supported": "False",
+            "correctness": "",
+            "completeness": "",
+            "citation_correctness": "",
+            "faithfulness": "",
+            "clarity": "",
+            "multimodal_accuracy": "",
+            "unsupported_behavior": "2",
+        },
+    ]
+
+    summary = summarize_semantic_reviews(reviewed_rows)["modes"]["deterministic"]
+
+    assert summary["mean_primary_score_out_of_10"] == 10.0
+    assert summary["criterion_rates"]["faithfulness"] == 1.0
+    assert summary["unsupported_answer_accuracy"] == 1.0
+    assert summary["release_gate_passed"] is True
+
+
+def test_semantic_review_rejects_missing_supported_scores():
+    with pytest.raises(ValueError, match="missing required completeness"):
+        summarize_semantic_reviews(
+            [
+                {
+                    "query_id": "incomplete",
+                    "mode": "deterministic",
+                    "expected_supported": "True",
+                    "correctness": "2",
+                    "completeness": "",
+                    "citation_correctness": "2",
+                    "faithfulness": "2",
+                    "clarity": "2",
+                }
+            ]
+        )
+
+
+def test_answer_evaluation_review_sample_includes_unsupported_and_multiple_categories():
+    questions = [
+        {"query_id": "unsupported", "category": "unsupported", "expected_supported": False},
+        {"query_id": "definition", "category": "definition", "expected_supported": True},
+        {"query_id": "summary", "category": "summary", "expected_supported": True},
+    ]
+
+    assert select_review_query_ids(questions, sample_size=3) == ["unsupported", "definition", "summary"]
+
+
 def test_training_dataset_accepts_jsonl(tmp_path):
     training_path = tmp_path / "training.jsonl"
     training_path.write_text(
@@ -235,3 +379,78 @@ def test_background_ingestion_indexes_a_queued_document_and_persists_progress(tm
     assert service.documents[0]["status"] == "indexed"
     assert service.documents[0]["chunks"] == 1
     assert (tmp_path / "jobs.json").is_file()
+
+
+def test_failed_state_publication_does_not_mutate_the_live_index(tmp_path, monkeypatch):
+    monkeypatch.setattr(api.settings, "artifacts_dir", tmp_path)
+    monkeypatch.setattr(api.settings, "uploads_dir", tmp_path / "uploads")
+    monkeypatch.setattr(api.settings, "documents_path", tmp_path / "documents.json")
+    monkeypatch.setattr(api.settings, "jobs_path", tmp_path / "jobs.json")
+
+    class FakeEmbeddings:
+        def encode(self, texts):
+            return np.asarray([[1.0, 0.0] for _ in texts], dtype=np.float32)
+
+    service = api.RAGService.__new__(api.RAGService)
+    service.embedding_store = FakeEmbeddings()
+    service.retriever = FAISSRetriever(embedding_dim=2)
+    service.sparse_retriever = BM25Retriever([])
+    service.storage_lock = RLock()
+    job = IngestionJob.create("queued.pdf")
+    service.jobs = {job.job_id: job}
+    service.documents = [{"filename": job.filename, "pages": 0, "chunks": 0, "status": "queued", "progress": 0, "message": "Queued.", "job_id": job.job_id}]
+    (tmp_path / "uploads").mkdir()
+    (tmp_path / "uploads" / job.filename).write_bytes(b"placeholder")
+    service._parse_pdf_to_chunks = lambda filename, data: [
+        DocumentChunk(chunk_id="queued-1", text="content", source=filename, metadata={"page": 1})
+    ]
+    service._persist_state = lambda **kwargs: (_ for _ in ()).throw(OSError("simulated disk failure"))
+
+    service._run_ingestion_job(job.job_id)
+
+    assert service.retriever.index.ntotal == 0
+    assert service.documents[0]["status"] == "failed"
+    assert service.jobs[job.job_id].status == "failed"
+
+
+def test_terminal_job_retention_is_bounded(tmp_path, monkeypatch):
+    monkeypatch.setattr(api.settings, "jobs_path", tmp_path / "jobs.json")
+    monkeypatch.setattr(api.settings, "max_terminal_jobs", 2)
+    service = api.RAGService.__new__(api.RAGService)
+    service.documents = []
+    service.jobs = {}
+    for index in range(4):
+        job = IngestionJob.create(f"{index}.pdf")
+        job.update("failed", 0, "failed")
+        service.jobs[job.job_id] = job
+
+    service._persist_jobs()
+
+    assert len(service.jobs) == 2
+    assert len(json.loads((tmp_path / "jobs.json").read_text(encoding="utf-8"))) == 2
+
+
+def test_interrupted_state_transaction_restores_the_previous_generation(tmp_path, monkeypatch):
+    paths = {
+        "artifacts_dir": tmp_path,
+        "faiss_index_path": tmp_path / "faiss.index",
+        "metadata_path": tmp_path / "metadata.jsonl",
+        "documents_path": tmp_path / "documents.json",
+        "jobs_path": tmp_path / "jobs.json",
+    }
+    for setting_name, path in paths.items():
+        monkeypatch.setattr(api.settings, setting_name, path)
+
+    state_paths = api.RAGService._state_paths()
+    for path in state_paths:
+        path.write_text("new", encoding="utf-8")
+        path.with_name(f".{path.name}.rollback").write_text("previous", encoding="utf-8")
+    (tmp_path / "state-transaction.json").write_text(
+        json.dumps({"existed": {path.name: True for path in state_paths}}),
+        encoding="utf-8",
+    )
+
+    api.RAGService._recover_interrupted_state()
+
+    assert all(path.read_text(encoding="utf-8") == "previous" for path in state_paths)
+    assert not (tmp_path / "state-transaction.json").exists()
