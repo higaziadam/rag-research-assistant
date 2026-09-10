@@ -681,6 +681,15 @@ def test_table_identifier_is_prioritized_and_counts_as_direct_support():
     assert service._evidence_supports_query("What recommendations does GOVERN 1.2 make?", evidence, "visual")
 
 
+def test_structured_identifier_matching_uses_literal_linear_parsing():
+    query = "What does GOVERN 1 . 2 recommend? " + "(" * 5000
+    source_text = "Table GOVERN 1.2 lists its suggested actions."
+
+    assert RAGService._structured_identifier(query) == "govern 1.2"
+    assert RAGService._identifier_matches("govern 1.2", source_text)
+    assert not RAGService._identifier_matches("govern 1.3", source_text)
+
+
 def test_table_recommendation_answer_uses_structured_action_rows_not_flattened_prose():
     evidence = [
         {
