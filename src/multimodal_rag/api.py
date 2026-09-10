@@ -2823,6 +2823,10 @@ class RAGService:
             "hybrid_bm25_faiss": retrieval.get("hybrid", {}).get("5", {}),
             "hybrid_plus_reranker": retrieval_rows,
         }
+        for name in ("comparison_reranked", "comparison_hybrid_reranked"):
+            values = retrieval.get(name, {}).get("5", {})
+            if values:
+                configurations[name] = values
         comparison = {
             name: {
                 "recall@5": float(values["recall@5"]),

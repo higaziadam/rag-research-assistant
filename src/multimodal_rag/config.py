@@ -12,8 +12,15 @@ class Settings:
     results_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "results")
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     model_revision: str = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
-    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-    reranker_revision: str = "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+    reranker_model: str = field(
+        default_factory=lambda: os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2").strip()
+        or "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    )
+    # Set RERANKER_REVISION to an empty string when loading a locally trained
+    # checkpoint. Hugging Face revisions apply to remote repositories only.
+    reranker_revision: str | None = field(
+        default_factory=lambda: os.getenv("RERANKER_REVISION", "233902d25c440f23af6f7d6e94d2946bac0bee0a").strip() or None
+    )
     model_local_files_only: bool = field(default_factory=lambda: os.getenv("MODEL_LOCAL_FILES_ONLY", "true").lower() == "true")
     faiss_index_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "faiss_index.index")
     metadata_path: Path = field(default_factory=lambda: Path(__file__).resolve().parents[2] / "artifacts" / "metadata.jsonl")

@@ -132,6 +132,22 @@ def reranker_text(candidate: Any) -> str:
     return "\n".join(part for part in parts if part)
 
 
+def reranked_prediction_record(
+    *,
+    query_id: str,
+    reranker: Reranker,
+    query: str,
+    candidates: list[Any],
+    top_k: int,
+    is_comparison: bool,
+    source_scope: set[str],
+) -> dict[str, Any]:
+    """Record one reranker's ranking over an already-retrieved candidate set."""
+    candidates_by_id = {candidate.chunk_id: candidate for candidate in candidates}
+    ranked_ids = reranked_ids(reranker, query, candidates, top_k, is_comparison, source_scope)
+    return prediction_record(query_id, [candidates_by_id[chunk_id] for chunk_id in ranked_ids])
+
+
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -144,6 +160,11 @@ def main() -> None:
     parser.add_argument("--candidate-k", type=int, default=settings.retrieval_candidate_k)
     parser.add_argument("--sparse-candidate-k", type=int, default=settings.sparse_candidate_k)
     parser.add_argument("--rerank-candidate-k", type=int, default=settings.rerank_candidate_k)
+    parser.add_argument("--reranker-model", type=str, default=settings.reranker_model, help="Selected pretrained or local reranker checkpoint")
+    parser.add_argument("--reranker-revision", type=str, default=settings.reranker_revision or "", help="Selected model revision; use an empty value for a local checkpoint")
+    parser.add_argument("--compare-reranker-model", type=str, default=None, help="Optional second reranker checkpoint for a like-for-like comparison")
+    parser.add_argument("--compare-reranker-revision", type=str, default="", help="Optional comparison-model revision")
+    parser.add_argument("--output-dir", type=Path, default=None, help="Directory for prediction and metric artifacts")
     args = parser.parse_args()
 
     if (
@@ -163,23 +184,44 @@ def main() -> None:
     if not settings.faiss_index_path.exists() or not settings.metadata_path.exists():
         raise FileNotFoundError("No persisted FAISS index was found. Upload and finish indexing the evaluation documents first.")
 
-    embeddings = EmbeddingStore(settings.model_name, local_files_only=settings.model_local_files_only)
+    # Use the exact embedding revision used by the API so benchmark queries
+    # remain compatible with the persisted FAISS index.
+    embeddings = EmbeddingStore(
+        settings.model_name,
+        local_files_only=settings.model_local_files_only,
+        revision=settings.model_revision,
+    )
     retriever = FAISSRetriever(
         embedding_dim=embeddings.embedding_dimension,
         index_path=str(settings.faiss_index_path),
         metadata_path=str(settings.metadata_path),
     )
+    selected_revision = args.reranker_revision.strip() or None
+    comparison_revision = args.compare_reranker_revision.strip() or None
     reranker = Reranker(
-        settings.reranker_model,
+        args.reranker_model,
         local_files_only=settings.model_local_files_only,
         batch_size=settings.reranker_batch_size,
+        revision=selected_revision,
     )
+    comparison_reranker = None
+    if args.compare_reranker_model:
+        if args.compare_reranker_model == args.reranker_model and comparison_revision == selected_revision:
+            raise ValueError("The comparison reranker must differ from the selected reranker.")
+        comparison_reranker = Reranker(
+            args.compare_reranker_model,
+            local_files_only=settings.model_local_files_only,
+            batch_size=settings.reranker_batch_size,
+            revision=comparison_revision,
+        )
     sparse_retriever = BM25Retriever(retriever.chunks)
 
     baseline_predictions = []
     reranked_predictions = []
     hybrid_predictions = []
     hybrid_reranked_predictions = []
+    comparison_reranked_predictions = []
+    comparison_hybrid_reranked_predictions = []
     for question in questions:
         # Unsupported questions are exercised by answer-level review, not retrieval metrics.
         if not question.get("expected_supported", True):
@@ -215,50 +257,60 @@ def main() -> None:
         hybrid_predictions.append(
             prediction_record(question["query_id"], hybrid_candidates[: args.top_k])
         )
+        dense_rerank_candidates = dense_candidates[: args.rerank_candidate_k]
+        hybrid_rerank_input = hybrid_rerank_candidates(
+            hybrid_candidates,
+            dense_candidates,
+            args.rerank_candidate_k,
+            settings.hybrid_dense_backfill_k,
+        )
         reranked_predictions.append(
-            prediction_record(
-                question["query_id"],
-                [
-                    next(candidate for candidate in dense_candidates if candidate.chunk_id == chunk_id)
-                    for chunk_id in reranked_ids(
-                    reranker,
-                    query,
-                    dense_candidates[: args.rerank_candidate_k],
-                    args.top_k,
-                    is_comparison,
-                    source_scope,
-                    )
-                ],
+            reranked_prediction_record(
+                query_id=question["query_id"],
+                reranker=reranker,
+                query=query,
+                candidates=dense_rerank_candidates,
+                top_k=args.top_k,
+                is_comparison=is_comparison,
+                source_scope=source_scope,
             )
         )
         hybrid_reranked_predictions.append(
-            prediction_record(
-                question["query_id"],
-                [
-                    next(candidate for candidate in hybrid_rerank_candidates(
-                        hybrid_candidates,
-                        dense_candidates,
-                        args.rerank_candidate_k,
-                        settings.hybrid_dense_backfill_k,
-                    ) if candidate.chunk_id == chunk_id)
-                    for chunk_id in reranked_ids(
-                    reranker,
-                    query,
-                    hybrid_rerank_candidates(
-                        hybrid_candidates,
-                        dense_candidates,
-                        args.rerank_candidate_k,
-                        settings.hybrid_dense_backfill_k,
-                    ),
-                    args.top_k,
-                    is_comparison,
-                    source_scope,
-                    )
-                ],
+            reranked_prediction_record(
+                query_id=question["query_id"],
+                reranker=reranker,
+                query=query,
+                candidates=hybrid_rerank_input,
+                top_k=args.top_k,
+                is_comparison=is_comparison,
+                source_scope=source_scope,
             )
         )
+        if comparison_reranker is not None:
+            comparison_reranked_predictions.append(
+                reranked_prediction_record(
+                    query_id=question["query_id"],
+                    reranker=comparison_reranker,
+                    query=query,
+                    candidates=dense_rerank_candidates,
+                    top_k=args.top_k,
+                    is_comparison=is_comparison,
+                    source_scope=source_scope,
+                )
+            )
+            comparison_hybrid_reranked_predictions.append(
+                reranked_prediction_record(
+                    query_id=question["query_id"],
+                    reranker=comparison_reranker,
+                    query=query,
+                    candidates=hybrid_rerank_input,
+                    top_k=args.top_k,
+                    is_comparison=is_comparison,
+                    source_scope=source_scope,
+                )
+            )
 
-    predictions_dir = args.dataset_dir / "predictions"
+    predictions_dir = args.output_dir or args.dataset_dir / "predictions"
     baseline_path = predictions_dir / "baseline.json"
     reranked_path = predictions_dir / "reranked.json"
     hybrid_path = predictions_dir / "hybrid.json"
@@ -267,6 +319,11 @@ def main() -> None:
     write_json(reranked_path, reranked_predictions)
     write_json(hybrid_path, hybrid_predictions)
     write_json(hybrid_reranked_path, hybrid_reranked_predictions)
+    comparison_reranked_path = predictions_dir / "comparison_reranked.json"
+    comparison_hybrid_reranked_path = predictions_dir / "comparison_hybrid_reranked.json"
+    if comparison_reranker is not None:
+        write_json(comparison_reranked_path, comparison_reranked_predictions)
+        write_json(comparison_hybrid_reranked_path, comparison_hybrid_reranked_predictions)
 
     ground_truth_path = args.dataset_dir / "ground_truth.json"
     metrics = {
@@ -277,6 +334,14 @@ def main() -> None:
         "candidate_k": args.candidate_k,
         "sparse_candidate_k": args.sparse_candidate_k,
         "rerank_candidate_k": args.rerank_candidate_k,
+        "reranker": {
+            "selected": {"model": args.reranker_model, "revision": selected_revision},
+            "comparison": (
+                {"model": args.compare_reranker_model, "revision": comparison_revision}
+                if comparison_reranker is not None
+                else None
+            ),
+        },
         "primary_relevance_level": "source_page",
         "baseline": {
             str(k): evaluate_ranking_predictions(str(baseline_path), str(ground_truth_path), k=k, relevance_level="source_page")
@@ -304,6 +369,15 @@ def main() -> None:
             },
         },
     }
+    if comparison_reranker is not None:
+        metrics["comparison_reranked"] = {
+            str(k): evaluate_ranking_predictions(str(comparison_reranked_path), str(ground_truth_path), k=k, relevance_level="source_page")
+            for k in (1, 3, args.top_k)
+        }
+        metrics["comparison_hybrid_reranked"] = {
+            str(k): evaluate_ranking_predictions(str(comparison_hybrid_reranked_path), str(ground_truth_path), k=k, relevance_level="source_page")
+            for k in (1, 3, args.top_k)
+        }
     metrics_path = predictions_dir / "metrics.json"
     write_json(metrics_path, metrics)
 

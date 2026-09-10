@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, List, Sequence, Tuple
 
 import torch
@@ -30,10 +31,12 @@ class Reranker:
         device: str | None = None,
         local_files_only: bool = True,
         batch_size: int = 16,
-        revision: str = "233902d25c440f23af6f7d6e94d2946bac0bee0a",
+        revision: str | None = "233902d25c440f23af6f7d6e94d2946bac0bee0a",
     ):
         if batch_size < 1:
             raise ValueError("batch_size must be at least 1")
+        if revision is None and not Path(model_name).is_dir():
+            raise ValueError("Remote reranker models require a pinned revision; omit it only for a local checkpoint directory.")
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.batch_size = batch_size
         self.tokenizer = AutoTokenizer.from_pretrained(

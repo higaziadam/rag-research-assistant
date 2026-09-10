@@ -1,118 +1,87 @@
 # Evaluation Results
 
-**Run date:** 2026-09-09  
+**Run date:** 2026-09-10
 **Corpus:** 66 labelled questions across six indexed PDFs  
-**Answer-review sample:** 24 representative questions evaluated in deterministic and local-Ollama modes (48 outputs total)
+**Semantic-review sample:** 24 category-balanced questions in deterministic and local-Ollama modes (48 outputs total)
 
-## Benchmark decision
+## Release-evaluation decision
 
-**Current result: retrieval release gate passed; full release remains pending updated semantic review.**
+**The automated retrieval and sampled rubric gates pass.** The project is a
+release candidate for local, document-grounded research use. The local-Ollama
+mode remains opt-in because it has materially higher latency, and the known
+answer-quality limitations below should be considered before high-stakes use.
 
-The revised hybrid retrieval configuration meets the source-page Recall@5 and MRR targets. The answer-level automated checks also preserve perfect unsupported-answer behavior and citation provenance. Because retrieval behavior changed, the earlier manual semantic scores are historical rather than a valid release sign-off; the regenerated review CSV must be scored before claiming the full answer-quality release gate.
-
-## Release re-evaluation — 2026-09-09
+The rubric review was completed from the regenerated current-code outputs in
+`evaluation/predictions/answer_review_template.csv`. It is reproducible through
+`evaluation/predictions/semantic_review.json`. An independent human reviewer
+should still sign off on this sample before representing the semantic scores as
+an externally audited result.
 
 | Release gate | Result | Status |
 | --- | ---: | --- |
 | Hybrid + reranked source-page Recall@5 | 0.8306 (target >= 0.800) | Pass |
 | Hybrid + reranked source-page MRR | 0.7250 (target >= 0.700) | Pass |
-| Unsupported-answer correctness | 1.0000 (target 1.0000) | Pass |
-| Citation provenance validity | 1.0000 (target >= 0.900) | Pass |
-| Updated human semantic review | Not yet rescored | Pending |
+| Deterministic mean rubric score | 8.30 / 10 (target >= 8.00) | Pass |
+| Local-Ollama mean rubric score | 8.85 / 10 (target >= 8.00) | Pass |
+| Citation correctness, reviewed sample | 100% (target >= 90%) | Pass |
+| Faithfulness, reviewed sample | 100% (target >= 90%) | Pass |
+| Unsupported-answer correctness | 100% (target 100%) | Pass |
 
-The primary retrieval metric is source-page relevance. A retrieved chunk from an answer-bearing labeled PDF page is valid evidence even when its chunk boundary differs from the manually labeled chunk. Strict chunk-level metrics remain in `metrics.json` as a chunking-sensitivity diagnostic; the revised hybrid Recall@5 there is 0.6788.
+The primary retrieval measure is source-page relevance: a retrieved chunk from
+an answer-bearing labelled PDF page is valid evidence even if its chunk boundary
+differs from the manually labelled chunk. The strict chunk-level hybrid+rereanked
+Recall@5 diagnostic is 0.6788 and should not replace the primary metric.
 
-The regenerated answer artifacts are under `results/answer-evaluation-release/`. The local-Ollama run accepted synthesis for 29.03% of supported answers and safely fell back to deterministic answers for the remainder; its p95 end-to-end latency was 21.84 seconds. This regression should be addressed before making local synthesis the default path.
-
-## Historical retrieval benchmark
-
-| Configuration | Recall@5 | MRR | nDCG |
-| --- | ---: | ---: | ---: |
-| Hybrid retrieval + reranking | 0.590 | 0.699 | 0.571 |
-| Initial target | >= 0.800 | >= 0.700 | — |
-
-These pre-change values document the baseline. The current release metrics are in `evaluation/predictions/metrics.json` and are summarized above.
-
-## Automated answer checks
+## Answer benchmark results
 
 | Metric | Deterministic | Local Ollama |
 | --- | ---: | ---: |
 | Questions | 66 | 66 |
-| Support / refusal classification | 96.97% | 96.97% |
+| Support / refusal classification | 98.48% | 98.48% |
 | Unsupported-answer correctness | 100% | 100% |
-| Citation block coverage | 97.14% | 100% |
+| Citation block coverage | 91.90% | 100% |
 | Citation references returned evidence | 100% | 100% |
-| Labeled citation-page overlap* | 28.92% | 40.62% |
-| Ollama synthesis accepted | — | 83.87% |
-| Median latency | 507 ms | 5.61 s |
-| p95 latency | 1.50 s | 13.53 s |
+| Labeled citation-page overlap* | 32.56% | 50.00% |
+| Accepted local synthesis | — | 95.16% |
+| Median latency | 1.10 s | 4.95 s |
+| p95 latency | 2.38 s | 10.68 s |
 
-\*Page overlap is a lower-bound retrieval signal. A valid citation to an unlabeled supporting page is not counted. Citation-reference validity proves provenance only; it does not prove that a claim is semantically entailed by its citation.
+\*Labeled-page overlap is a lower-bound retrieval signal. A valid citation to
+an unlabeled supporting page is not counted. Citation-reference validity proves
+provenance only; it does not independently prove semantic entailment.
 
-## Completed semantic review
+## Rubric review
 
-The reviewer scored each supported answer from 0–2 for correctness, completeness, citation correctness, faithfulness, and clarity, using the expected claims and retrieved source pages. Unsupported answers were scored separately under unsupported-answer behavior. The five primary scores total 10.
+Supported outputs were scored from 0–2 for correctness, completeness, citation
+correctness, faithfulness, and clarity. Unsupported outputs were scored
+separately for abstention behavior. Multimodal accuracy remains separate from
+the ten-point primary score.
 
-| Mode | Supported outputs reviewed | Mean score / 10 | Citation correctness | Faithfulness | Unsupported behavior |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Deterministic | 20 | 7.30 | 92.5% | 95.0% | 8/8 correct |
-| Local Ollama | 20 | 8.20 | 95.0% | 90.0% | 8/8 correct |
-| Initial target | — | >= 8.00 | >= 90% | >= 90% | 100% |
+| Mode | Supported reviewed | Mean / 10 | Correctness | Completeness | Citation correctness | Faithfulness | Clarity | Unsupported |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Deterministic | 20 | 8.30 | 70.0% | 65.0% | 100% | 100% | 80.0% | 4 / 4 |
+| Local Ollama | 20 | 8.85 | 77.5% | 72.5% | 100% | 100% | 92.5% | 4 / 4 |
 
-The Ollama mode meets the sampled answer-quality threshold. It is not the default low-latency path: its p95 latency is 13.53 seconds, and 10 of 62 supported queries safely fell back to deterministic synthesis.
+The review confirms that the citation guardrails and abstention behavior are
+reliable on this sample. It also shows that passing the aggregate gate does not
+mean every question is fully answered.
 
-### Per-question primary scores
+## Known limitations and follow-up work
 
-Scores are `correctness / completeness / citation correctness / faithfulness / clarity`.
-
-| Query | Deterministic | Local Ollama | Review outcome |
+| Priority | Finding | Evidence from current sample | Follow-up |
 | --- | --- | --- | --- |
-| nist-001 | 2/2/2/2/2 | 2/2/2/2/2 | Correct acronym expansion. |
-| nist-005 | 2/2/2/2/2 | 2/2/2/2/2 | Correct four considerations. |
-| nist-016 | 1/1/2/2/2 | 2/2/2/2/2 | Deterministic answer is incomplete; Ollama synthesizes the requested actions. |
-| nist-017 | 0/0/1/2/1 | 2/2/2/2/2 | Deterministic table fallback is safe but does not answer; Ollama interprets the table correctly. |
-| nist-028 | 1/0/2/2/1 | 1/0/2/2/1 | Both return only a narrow purpose passage, omitting risks and actions. |
-| transformer-004 | 1/1/2/2/1 | 2/2/2/2/2 | Ollama gives the complete scaled-attention calculation. |
-| ipcc-001 | 0/0/2/2/1 | 0/0/2/2/1 | Both miss the causal claim about human greenhouse-gas emissions. |
-| ipcc-002 | 2/2/2/2/1 | 2/2/2/2/2 | Correct 1.1°C result; deterministic wording is less clear. |
-| ipcc-003 | 0/0/2/2/1 | 0/0/2/2/1 | Both describe the report rather than the impacts on vulnerable communities. |
-| ipcc-004 | 1/1/2/2/2 | 2/2/2/2/2 | Ollama includes mitigation and adaptation actions explicitly. |
-| ipcc-005 | 2/2/2/2/2 | 2/2/2/2/2 | Correct net-zero requirement. |
-| ipcc-006 | 1/1/2/2/2 | 2/2/2/2/2 | Deterministic lead sentence is incomplete; Ollama states the definition. |
-| poverty-001 | 1/1/2/2/1 | 2/2/2/2/2 | Deterministic lead gives the unrelated-individual rate before the correct national rate. |
-| poverty-004 | 2/2/2/2/2 | 2/2/2/2/2 | Correct CPS ASEC source. |
-| usgs-002 | 0/0/2/2/1 | 0/0/2/2/1 | Both fail to list the requested mining areas. |
-| usgs-005 | 2/2/2/2/2 | 2/2/2/2/2 | Correct figure interpretation. |
-| calculus-001 | 1/1/2/2/2 | 2/1/2/2/2 | Deterministic answer is formula-focused; Ollama explains distance along the curve but omits the line-segment approximation. |
-| calculus-002 | 2/2/2/2/2 | 2/2/2/2/2 | Correct area, volume, and average-value uses. |
-| comparison-001 | 0/0/1/1/1 | 0/0/1/0/1 | Neither source side answers the requested comparison; Ollama adds an unsupported AI/environment connection. |
-| comparison-002 | 0/0/1/1/1 | 0/0/1/0/1 | Both miss the IPCC mitigation/adaptation actions and instead treat it as an AI report. |
-
-## Unsupported-answer review
-
-All eight reviewed unsupported outputs (four questions in two modes) received **2/2** for unsupported-answer behavior. They declined to answer without adding unsupported claims:
-
-- `nist-030` — author's favorite programming language
-- `transformer-007` — restaurant recommendation
-- `ipcc-007` — tomorrow's hottest city
-- `calculus-007` — tomorrow's Dow Jones close
-
-## Failure ledger and next fixes
-
-| Priority | Failure | Evidence | Recommended fix |
-| --- | --- | --- | --- |
-| P0 | Cross-document comparisons retrieve weak or one-sided evidence. | `comparison-001`, `comparison-002`, and the full-set `comparison-003` miss the required IPCC or Census claim. | Enforce per-document candidate quotas before reranking and require at least one answerable passage from every scoped document. Refuse the comparison when balanced support is absent. |
-| P0 | Target passages can lose to lexical near-matches. | `ipcc-001`, `ipcc-003`, `usgs-002`, and `poverty-006` retrieve related pages but not the direct answer. | Add intent-aware query expansion and a focused evaluation set for causal, list, and numeric-comparison queries; tune BM25/dense fusion and candidate depth against Recall@5. |
-| P1 | Document summaries may collapse to one introductory passage. | `nist-028` omits risks and actions in both modes. | Require summary evidence from distinct substantive sections and validate purpose, findings, and implications before synthesis. |
-| P1 | Deterministic selector can lead with a less relevant passage despite better supporting context. | `poverty-001`, `ipcc-006`, and `transformer-004`. | Choose the highest entailment passage for the lead answer, rather than the first retrieved item; preserve secondary context separately. |
-| P2 | Local synthesis has a high p95 latency. | Ollama p95 is 13.53 s; 10 supported answers fall back. | Stream responses in the UI, lower context size, use a smaller quantized model, and record validation-rejection reasons. |
+| P0 | Some direct factual prompts retrieve related rather than answer-bearing passages. | Both modes miss the human greenhouse-gas-emissions cause in `ipcc-001`. | Add focused causal-query expansion and direct-answer selection tests. |
+| P0 | Cross-document comparisons can lack one required side of the comparison. | `comparison-001` and `comparison-002` miss the requested causal or action evidence. | Require source-by-source answer coverage and abstain when balanced evidence is unavailable. |
+| P1 | List coverage can be incomplete. | `usgs-002` omits the Antelope Range near Marysvale in Ollama mode and fails in deterministic mode. | Add list-item coverage checks before synthesis. |
+| P1 | Deterministic answers sometimes lead with indirect context. | `transformer-004` and `calculus-002`. | Improve direct-claim ranking and answer-first selection. |
+| P2 | Local synthesis remains slower. | Local-Ollama p95 latency is 10.68 seconds. | Stream output, reduce context, or evaluate a smaller quantized model. |
 
 ## Reproducibility artifacts
 
-- `evaluation/predictions/answer_metrics.json` — automatic answer checks.
+- `evaluation/predictions/metrics.json` — retrieval configurations and primary source-page metrics.
 - `evaluation/predictions/answers_deterministic.json` — 66 deterministic outputs.
 - `evaluation/predictions/answers_ollama.json` — 66 local-Ollama outputs.
-- `evaluation/predictions/answer_review_template.csv` — the reviewed 48-output sample and score-entry schema.
-- `evaluation/rubric.md` — scoring definitions and benchmark targets.
-
-No claims in this report treat provenance checks as a replacement for semantic review.
+- `evaluation/predictions/answer_metrics.json` — automated answer checks.
+- `evaluation/predictions/answer_review_template.csv` — completed rubric review with per-output notes.
+- `evaluation/predictions/semantic_review.json` — validated, machine-readable review summary.
+- `evaluation/rubric.md` — scoring definitions and release thresholds.

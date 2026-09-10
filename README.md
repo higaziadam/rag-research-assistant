@@ -61,6 +61,7 @@ flowchart LR
 - **Persistent local corpus:** Uploaded PDFs, FAISS index, JSONL chunk metadata, document manifest, and job state are stored under `artifacts/` and restored after restart.
 - **Layout-aware evidence:** Text, tables, figures, section labels, pages, bounding boxes, extraction-quality flags, and equation regions remain associated with their source page.
 - **Hybrid retrieval:** Dense FAISS semantic search and local BM25 lexical search fused with Reciprocal Rank Fusion, followed by transformer cross-encoder reranking.
+- **Adaptable reranking:** The runtime can load either the pinned pretrained cross-encoder or a locally fine-tuned checkpoint, and the benchmark can compare both over identical retrieved candidate pools.
 - **Source-aware comparisons:** Explicit document scopes are enforced before reranking; comparison questions allocate candidates to each requested document and diversify the final evidence by source and page.
 - **Intent-aware synthesis:** Definitions, explanations, procedures, comparisons, document summaries, and visual questions receive evidence-specific response structures.
 - **Optional local answer synthesis:** A local Ollama provider can transform selected evidence into concise, citation-required research prose. A citation validator and a short failure cooldown preserve deterministic retrieval behavior when the provider is unavailable or returns invalid output.
@@ -100,6 +101,41 @@ Run the benchmark locally after indexing the evaluation corpus:
 $env:PYTHONPATH = "$PWD\src"
 .\.venv\Scripts\python.exe scripts\run_evaluation.py
 ```
+
+### Fine-tuned reranker workflow
+
+The repository includes a bounded local cross-encoder fine-tuning workflow for
+binary query/passage relevance data. Supply JSON or JSONL records with
+`query`, `passage`, and a `label` of `0` or `1`; the training command rejects
+one-class datasets and writes a reproducibility manifest with the checkpoint.
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.\.venv\Scripts\python.exe -m multimodal_rag.train_reranker `
+  --data-path local_data\reranker_training.jsonl `
+  --output-dir artifacts\reranker
+```
+
+Compare the local checkpoint with the pinned pretrained baseline against the
+same corpus, candidate pools, and source-page labels. Keep comparison output
+outside `evaluation/predictions/` unless you intend to replace the dashboard's
+published default benchmark.
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+.\.venv\Scripts\python.exe scripts\run_evaluation.py `
+  --reranker-model artifacts\reranker `
+  --reranker-revision "" `
+  --compare-reranker-model cross-encoder/ms-marco-MiniLM-L-6-v2 `
+  --compare-reranker-revision 233902d25c440f23af6f7d6e94d2946bac0bee0a `
+  --output-dir results\reranker-comparison
+```
+
+To serve the locally trained checkpoint, set `RERANKER_MODEL` to its directory
+and set `RERANKER_REVISION` to an empty string before starting the backend. In
+Docker Compose, the persisted artifacts directory is mounted at `/app/artifacts`,
+so use `RERANKER_MODEL=/app/artifacts/reranker`. The evaluation dashboard shows
+all measured retrieval configurations in the active metrics artifact.
 
 Outputs:
 

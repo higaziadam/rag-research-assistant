@@ -41,8 +41,8 @@
     "ranked_chunk_ids": [
       "NIST.AI.600-1.pdf-3-text-0-0",
       "NIST.AI.600-1.pdf-3-text-3-0",
-      "NIST.AI.600-1.pdf-1-text-2-0",
       "NIST.AI.600-1.pdf-2-text-2-0",
+      "NIST.AI.600-1.pdf-1-text-2-0",
       "NIST.AI.600-1.pdf-3-text-2-0"
     ],
     "ranked_results": [
@@ -57,14 +57,14 @@
         "page": 3
       },
       {
-        "chunk_id": "NIST.AI.600-1.pdf-1-text-2-0",
-        "source": "NIST.AI.600-1.pdf",
-        "page": 1
-      },
-      {
         "chunk_id": "NIST.AI.600-1.pdf-2-text-2-0",
         "source": "NIST.AI.600-1.pdf",
         "page": 2
+      },
+      {
+        "chunk_id": "NIST.AI.600-1.pdf-1-text-2-0",
+        "source": "NIST.AI.600-1.pdf",
+        "page": 1
       },
       {
         "chunk_id": "NIST.AI.600-1.pdf-3-text-2-0",
@@ -1334,13 +1334,18 @@
   {
     "query_id": "ipcc-002",
     "ranked_chunk_ids": [
+      "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
       "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
       "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
       "IPCC_AR6_SYR_FullVolume.pdf-91-text-10-0",
       "IPCC_AR6_SYR_FullVolume.pdf-33-text-10-0"
     ],
     "ranked_results": [
+      {
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
+        "source": "IPCC_AR6_SYR_FullVolume.pdf",
+        "page": 91
+      },
       {
         "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
         "source": "IPCC_AR6_SYR_FullVolume.pdf",
@@ -1350,11 +1355,6 @@
         "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
         "source": "IPCC_AR6_SYR_FullVolume.pdf",
         "page": 30
-      },
-      {
-        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
-        "source": "IPCC_AR6_SYR_FullVolume.pdf",
-        "page": 91
       },
       {
         "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-10-0",
@@ -1448,8 +1448,8 @@
       "IPCC_AR6_SYR_FullVolume.pdf-76-text-1-0",
       "IPCC_AR6_SYR_FullVolume.pdf-7-text-7-0",
       "IPCC_AR6_SYR_FullVolume.pdf-35-text-5-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-104-text-13-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-104-text-14-0"
+      "IPCC_AR6_SYR_FullVolume.pdf-104-text-14-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-104-text-13-0"
     ],
     "ranked_results": [
       {
@@ -1468,12 +1468,12 @@
         "page": 35
       },
       {
-        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-104-text-13-0",
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-104-text-14-0",
         "source": "IPCC_AR6_SYR_FullVolume.pdf",
         "page": 104
       },
       {
-        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-104-text-14-0",
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-104-text-13-0",
         "source": "IPCC_AR6_SYR_FullVolume.pdf",
         "page": 104
       }
@@ -1521,8 +1521,8 @@
     "ranked_chunk_ids": [
       "p60-287.pdf-5-text-3-0",
       "p60-287.pdf-4-text-4-0",
-      "p60-287.pdf-1-text-0-0",
       "p60-287.pdf-7-text-0-0",
+      "p60-287.pdf-1-text-0-0",
       "p60-287.pdf-7-text-6-0"
     ],
     "ranked_results": [
@@ -1537,14 +1537,14 @@
         "page": 4
       },
       {
-        "chunk_id": "p60-287.pdf-1-text-0-0",
-        "source": "p60-287.pdf",
-        "page": 1
-      },
-      {
         "chunk_id": "p60-287.pdf-7-text-0-0",
         "source": "p60-287.pdf",
         "page": 7
+      },
+      {
+        "chunk_id": "p60-287.pdf-1-text-0-0",
+        "source": "p60-287.pdf",
+        "page": 1
       },
       {
         "chunk_id": "p60-287.pdf-7-text-6-0",
@@ -1594,10 +1594,10 @@
     "query_id": "poverty-003",
     "ranked_chunk_ids": [
       "p60-287.pdf-39-text-3-0",
-      "p60-287.pdf-43-text-10-0",
-      "p60-287.pdf-42-text-10-0",
-      "p60-287.pdf-44-text-10-0",
-      "p60-287.pdf-45-text-10-0"
+      "p60-287.pdf-49-text-19-0",
+      "p60-287.pdf-48-text-11-0",
+      "p60-287.pdf-47-text-10-0",
+      "p60-287.pdf-46-text-10-0"
     ],
     "ranked_results": [
       {
@@ -1606,24 +1606,24 @@
         "page": 39
       },
       {
-        "chunk_id": "p60-287.pdf-43-text-10-0",
+        "chunk_id": "p60-287.pdf-49-text-19-0",
         "source": "p60-287.pdf",
-        "page": 43
+        "page": 49
       },
       {
-        "chunk_id": "p60-287.pdf-42-text-10-0",
+        "chunk_id": "p60-287.pdf-48-text-11-0",
         "source": "p60-287.pdf",
-        "page": 42
+        "page": 48
       },
       {
-        "chunk_id": "p60-287.pdf-44-text-10-0",
+        "chunk_id": "p60-287.pdf-47-text-10-0",
         "source": "p60-287.pdf",
-        "page": 44
+        "page": 47
       },
       {
-        "chunk_id": "p60-287.pdf-45-text-10-0",
+        "chunk_id": "p60-287.pdf-46-text-10-0",
         "source": "p60-287.pdf",
-        "page": 45
+        "page": 46
       }
     ]
   },
