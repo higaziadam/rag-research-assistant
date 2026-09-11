@@ -1083,25 +1083,42 @@ class RAGService:
     @staticmethod
     def _compound_aspects(query: str) -> List[str]:
         """Return explicit coordinated aspects without inventing query terms."""
-        normalized = re.sub(r"\s+", " ", query).strip()
-        match = re.search(
-            r"\b(?:across|including|covering|in terms of)\s+(.+?)(?:[?.]|$)",
-            normalized,
-            re.IGNORECASE,
-        )
+        # QueryRequest bounds input to 2,000 characters. Keep this helper
+        # bounded as well because it is also called directly by ranking code
+        # and tests. String operations avoid backtracking over user input.
+        normalized = " ".join(query[:2000].split())
+        lowered = normalized.casefold()
         raw_aspects: List[str] = []
-        if match:
-            raw_aspects = re.split(r"\s*,\s*|\s+and\s+", match.group(1), flags=re.IGNORECASE)
+        marker_end = -1
+        for marker in ("across", "including", "covering", "in terms of"):
+            marker_start = lowered.find(marker)
+            marker_stop = marker_start + len(marker)
+            if marker_start < 0:
+                continue
+            if marker_start and lowered[marker_start - 1].isalnum():
+                continue
+            if marker_stop < len(lowered) and lowered[marker_stop].isalnum():
+                continue
+            marker_end = marker_stop
+            break
+
+        if marker_end >= 0:
+            aspect_text = normalized[marker_end:]
+            for terminator in ("?", "."):
+                terminator_at = aspect_text.find(terminator)
+                if terminator_at >= 0:
+                    aspect_text = aspect_text[:terminator_at]
+            raw_aspects = RAGService._split_coordinated_aspects(aspect_text)
         else:
-            verb = r"(?:identify|assess|evaluate|measure|recommend|monitor|mitigate|manage)\w*"
-            serial = re.search(
-                rf"\b({verb})\s*,\s*({verb})\s*,?\s+and\s+({verb}(?:\s+[A-Za-z][A-Za-z-]*){{0,4}})",
-                normalized,
-                re.IGNORECASE,
-            )
-            if serial:
-                raw_aspects = list(serial.groups())
-                final_words = re.findall(r"[A-Za-z][A-Za-z-]*", raw_aspects[-1])
+            comma_segments = normalized.split(",")
+            serial_operations = [
+                operation
+                for segment in comma_segments
+                if (operation := RAGService._coordinated_operation(segment)) is not None
+            ]
+            if len(serial_operations) >= 3:
+                raw_aspects = serial_operations[:3]
+                final_words = RAGService._aspect_words(raw_aspects[-1])
                 topic = final_words[-1] if len(final_words) > 1 else ""
                 if topic:
                     raw_aspects[0] = f"{raw_aspects[0]} {topic}"
@@ -1109,11 +1126,66 @@ class RAGService:
 
         aspects = []
         for raw_aspect in raw_aspects[:4]:
-            aspect = re.sub(r"^(?:and|or)\s+", "", raw_aspect, flags=re.IGNORECASE).strip(" ,:;-.?")
-            words = re.findall(r"[A-Za-z][A-Za-z0-9-]*", aspect)
+            aspect = raw_aspect.strip(" ,:;-.?")
+            lowered_aspect = aspect.casefold()
+            for connector in ("and ", "or "):
+                if lowered_aspect.startswith(connector):
+                    aspect = aspect[len(connector) :].lstrip()
+                    break
+            words = RAGService._aspect_words(aspect)
             if words and len(words) <= 6:
                 aspects.append(" ".join(words))
         return list(dict.fromkeys(aspects)) if len(aspects) >= 2 else []
+
+    @staticmethod
+    def _split_coordinated_aspects(value: str) -> List[str]:
+        """Split a short comma/``and`` list without interpreting it as regex."""
+        aspects: List[str] = []
+        for comma_segment in value.split(","):
+            pending = [comma_segment]
+            for connector in (" and ", " or "):
+                split_segments: List[str] = []
+                for segment in pending:
+                    offset = 0
+                    lowered = segment.casefold()
+                    while True:
+                        separator = lowered.find(connector, offset)
+                        if separator < 0:
+                            split_segments.append(segment[offset:])
+                            break
+                        split_segments.append(segment[offset:separator])
+                        offset = separator + len(connector)
+                pending = split_segments
+            aspects.extend(segment.strip() for segment in pending if segment.strip())
+        return aspects
+
+    @staticmethod
+    def _aspect_words(value: str) -> List[str]:
+        """Return ASCII word tokens used in a compact retrieval aspect."""
+        words: List[str] = []
+        token: List[str] = []
+        for character in value:
+            if character.isascii() and character.isalpha():
+                token.append(character)
+            elif token and ((character.isascii() and character.isdigit()) or character == "-"):
+                token.append(character)
+            else:
+                if token:
+                    words.append("".join(token).strip("-"))
+                    token = []
+        if token:
+            words.append("".join(token).strip("-"))
+        return [word for word in words if word]
+
+    @classmethod
+    def _coordinated_operation(cls, segment: str) -> str | None:
+        """Extract one explicit risk-management operation from a list segment."""
+        stems = ("identify", "assess", "evaluate", "measure", "recommend", "monitor", "mitigate", "manage")
+        words = cls._aspect_words(segment)
+        for index, word in enumerate(words):
+            if word.casefold().startswith(stems):
+                return " ".join(words[index:])
+        return None
 
     @classmethod
     def _compound_aspect_queries(cls, query: str) -> List[str]:
@@ -1251,17 +1323,68 @@ class RAGService:
         return [chunk for _, _, chunk in sorted(candidates, key=lambda candidate: candidate[:2], reverse=True)[:16]]
 
     @staticmethod
-    def _structured_identifier_pattern(query: str) -> str | None:
-        """Return a tolerant pattern for a named report table or control ID."""
-        match = re.search(
-            r"\b(govern|map|measure|manage)\s+(\d+)\s*[.]\s*(\d+)\b",
-            query,
-            re.IGNORECASE,
-        )
-        if not match:
-            return None
-        family, major, minor = match.groups()
-        return rf"\b{re.escape(family)}\s+{major}\s*[.]\s*{minor}\b"
+    def _structured_identifiers(value: str) -> List[str]:
+        """Find report-table identifiers with linear, literal parsing.
+
+        Queries can name identifiers such as ``GOVERN 1.2``.  This used to
+        build a regular expression from query text and execute it against
+        every retrieved chunk.  Parsing the small fixed identifier grammar
+        directly prevents regex injection and keeps this hot path linear.
+        """
+        text = value.casefold()
+        matches: List[tuple[int, str]] = []
+        for family in ("govern", "map", "measure", "manage"):
+            offset = 0
+            while True:
+                start = text.find(family, offset)
+                if start < 0:
+                    break
+                offset = start + len(family)
+                if start and (text[start - 1].isalnum() or text[start - 1] == "_"):
+                    continue
+
+                cursor = offset
+                if cursor >= len(text) or not text[cursor].isspace():
+                    continue
+                while cursor < len(text) and text[cursor].isspace():
+                    cursor += 1
+
+                major_start = cursor
+                while cursor < len(text) and text[cursor].isdigit():
+                    cursor += 1
+                if cursor == major_start:
+                    continue
+                major = text[major_start:cursor]
+
+                while cursor < len(text) and text[cursor].isspace():
+                    cursor += 1
+                if cursor >= len(text) or text[cursor] != ".":
+                    continue
+                cursor += 1
+                while cursor < len(text) and text[cursor].isspace():
+                    cursor += 1
+
+                minor_start = cursor
+                while cursor < len(text) and text[cursor].isdigit():
+                    cursor += 1
+                if cursor == minor_start:
+                    continue
+                if cursor < len(text) and (text[cursor].isalnum() or text[cursor] == "_"):
+                    continue
+                matches.append((start, f"{family} {major}.{text[minor_start:cursor]}"))
+
+        return list(dict.fromkeys(identifier for _, identifier in sorted(matches)))
+
+    @classmethod
+    def _structured_identifier(cls, query: str) -> str | None:
+        """Return the first explicitly named report table identifier, if any."""
+        identifiers = cls._structured_identifiers(query[:2000])
+        return identifiers[0] if identifiers else None
+
+    @classmethod
+    def _identifier_matches(cls, identifier: str, value: str) -> bool:
+        """Check a parsed identifier against source text without dynamic regex."""
+        return identifier in cls._structured_identifiers(value)
 
     @staticmethod
     def _query_named_source_names(query: str, source_names: set[str]) -> set[str]:
@@ -1319,8 +1442,8 @@ class RAGService:
         Tables such as ``GOVERN 1.2`` contain a precise identifier that should
         outrank adjacent controls even when all of them share similar language.
         """
-        pattern = self._structured_identifier_pattern(query)
-        if pattern is None:
+        identifier = self._structured_identifier(query)
+        if identifier is None:
             return []
 
         candidates = []
@@ -1330,7 +1453,7 @@ class RAGService:
             if chunk.type != "table":
                 continue
             content = f"{chunk.text}\n{chunk.table}"
-            if re.search(pattern, content, re.IGNORECASE):
+            if self._identifier_matches(identifier, content):
                 candidates.append(
                     RetrievalResult(
                         chunk_id=chunk.chunk_id,
@@ -1499,11 +1622,12 @@ class RAGService:
             re.IGNORECASE,
         )
         if acronym_match:
-            acronym = re.escape(acronym_match.group(1))
-            return bool(re.search(rf"\(\s*{acronym}\s*\)", evidence_text, re.IGNORECASE))
+            acronym = acronym_match.group(1).casefold()
+            compact_evidence = "".join(evidence_text.split())
+            return f"({acronym})" in compact_evidence
 
-        identifier_pattern = cls._structured_identifier_pattern(query)
-        if identifier_pattern and re.search(identifier_pattern, evidence_text, re.IGNORECASE):
+        identifier = cls._structured_identifier(query)
+        if identifier and cls._identifier_matches(identifier, evidence_text):
             return True
         if re.search(r"\b(?:today|tomorrow|yesterday|latest|current|live)\b|\bstock\s+price\b", query, re.IGNORECASE):
             # The assistant is intentionally local-document-grounded and does
@@ -2061,13 +2185,13 @@ class RAGService:
         if not asks_for_actions:
             return None
 
-        identifier_pattern = cls._structured_identifier_pattern(query)
+        identifier = cls._structured_identifier(query)
         table_evidence = [item for item in evidence if item.get("type") == "table" and item.get("table")]
-        if identifier_pattern:
+        if identifier:
             table_evidence = [
                 item
                 for item in table_evidence
-                if re.search(identifier_pattern, f"{item['text']}\n{item['table']}", re.IGNORECASE)
+                if cls._identifier_matches(identifier, f"{item['text']}\n{item['table']}")
             ]
         if not table_evidence:
             return None
@@ -2664,12 +2788,12 @@ class RAGService:
                 requested_source_names,
                 rerank_limit,
             )
-        identifier_pattern = self._structured_identifier_pattern(request.query)
-        if identifier_pattern and intent != "comparison":
+        identifier = self._structured_identifier(request.query)
+        if identifier and intent != "comparison":
             reranked = sorted(
                 reranked,
                 key=lambda result: (
-                    bool(re.search(identifier_pattern, result[0][1].text + "\n" + result[0][1].table, re.IGNORECASE)),
+                    self._identifier_matches(identifier, result[0][1].text + "\n" + result[0][1].table),
                     result[1],
                 ),
                 reverse=True,
@@ -2823,6 +2947,10 @@ class RAGService:
             "hybrid_bm25_faiss": retrieval.get("hybrid", {}).get("5", {}),
             "hybrid_plus_reranker": retrieval_rows,
         }
+        for name in ("comparison_reranked", "comparison_hybrid_reranked"):
+            values = retrieval.get(name, {}).get("5", {})
+            if values:
+                configurations[name] = values
         comparison = {
             name: {
                 "recall@5": float(values["recall@5"]),

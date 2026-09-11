@@ -11,6 +11,10 @@ services:
       # Download only the pinned model revisions on first container startup;
       # the artifacts volume retains them for subsequent offline starts.
       - MODEL_LOCAL_FILES_ONLY=${MODEL_LOCAL_FILES_ONLY:-false}
+      - RERANKER_MODEL=${RERANKER_MODEL:-cross-encoder/ms-marco-MiniLM-L-6-v2}
+      # The no-colon default preserves an intentionally empty revision for a
+      # locally trained checkpoint.
+      - RERANKER_REVISION=${RERANKER_REVISION-233902d25c440f23af6f7d6e94d2946bac0bee0a}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
       # Ollama is optional and runs on the local host, not in this container.
       - ANSWER_SYNTHESIS_ENABLED=${ANSWER_SYNTHESIS_ENABLED:-false}

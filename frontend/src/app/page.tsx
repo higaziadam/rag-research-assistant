@@ -24,6 +24,12 @@ function formatMetric(value: number | null | undefined) {
   return typeof value === "number" ? value.toFixed(2) : "â€”";
 }
 
+function formatConfigurationName(name: string) {
+  return name
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 function sourceFileUrl(source: Source) {
   return `${apiBaseUrl}/documents/${encodeURIComponent(source.source)}/file#page=${source.page}`;
 }
@@ -588,6 +594,31 @@ export default function Home() {
                 <div className="flex justify-between"><span>Faithfulness (review)</span><strong>{formatMetric(metrics?.answer_faithfulness)}</strong></div>
                 <div className="flex justify-between"><span>Query latency</span><strong>{queryLatency !== null ? `${Math.round(queryLatency)} ms` : "-"}</strong></div>
               </div>
+              {Object.keys(metrics?.comparison ?? {}).length > 0 && (
+                <div className="mt-5 border-t border-slate-800 pt-4">
+                  <p className="mb-3 text-xs uppercase tracking-[0.18em] text-slate-400">Retrieval configurations</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="text-slate-500">
+                        <tr>
+                          <th className="pb-2 pr-2 font-medium">Configuration</th>
+                          <th className="pb-2 pr-2 text-right font-medium">Recall@5</th>
+                          <th className="pb-2 text-right font-medium">MRR</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(metrics?.comparison ?? {}).map(([name, values]) => (
+                          <tr key={name} className="border-t border-slate-800/80">
+                            <td className="py-2 pr-2">{formatConfigurationName(name)}</td>
+                            <td className="py-2 pr-2 text-right">{formatMetric(values["recall@5"])}</td>
+                            <td className="py-2 text-right">{formatMetric(values.mrr)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
