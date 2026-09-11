@@ -110,7 +110,7 @@ $env:PYTHONPATH = "$PWD\src"
 ### Start the stack
 
 ```powershell
-git clone <your-repository-url>
+git clone https://github.com/higaziadam/rag-research-assistant.git
 cd rag-research-assistant
 docker compose -f docker/docker-compose.yml up --build
 ```
