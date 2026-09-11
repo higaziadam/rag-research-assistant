@@ -75,6 +75,7 @@ export type MetricsResponse = {
   citation_accuracy: number | null;
   answer_faithfulness: number | null;
   latency_ms: number | null;
+  comparison: Record<string, { "recall@5": number; mrr: number }>;
 };
 
 export async function readJson<T>(response: Response): Promise<T> {

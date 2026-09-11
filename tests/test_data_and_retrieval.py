@@ -11,7 +11,7 @@ from multimodal_rag.evaluation import evaluate_ranking_predictions
 from multimodal_rag.jobs import IngestionJob
 from multimodal_rag.retrieval import FAISSRetriever
 from multimodal_rag.sparse_retrieval import BM25Retriever, reciprocal_rank_fusion
-from multimodal_rag.train_reranker import prepare_dataset
+from multimodal_rag.train_reranker import prepare_dataset, train_reranker
 import multimodal_rag.api as api
 
 
@@ -311,6 +311,17 @@ def test_training_dataset_accepts_jsonl(tmp_path):
 
     assert len(dataset) == 1
     assert dataset[0]["label"] == 1.0
+
+
+def test_reranker_training_rejects_one_class_dataset_before_loading_a_model(tmp_path):
+    training_path = tmp_path / "one-class.json"
+    training_path.write_text(
+        '[{"query": "What is retrieval?", "passage": "Retrieval finds evidence.", "label": 1}]',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="both relevant and non-relevant"):
+        train_reranker(str(training_path), str(tmp_path / "checkpoint"))
 
 
 def test_service_restores_persisted_index_and_document_manifest(tmp_path, monkeypatch):

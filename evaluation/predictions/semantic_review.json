@@ -1,0 +1,55 @@
+{
+  "rubric": {
+    "primary_criteria": [
+      "correctness",
+      "completeness",
+      "citation_correctness",
+      "faithfulness",
+      "clarity"
+    ],
+    "pass_criteria": {
+      "mean_primary_score_out_of_10": 8.0,
+      "citation_correctness": 0.9,
+      "faithfulness": 0.9,
+      "unsupported_answer_accuracy": 1.0
+    }
+  },
+  "modes": {
+    "deterministic": {
+      "supported_answers_reviewed": 20,
+      "unsupported_answers_reviewed": 4,
+      "mean_primary_score_out_of_10": 8.3,
+      "criterion_rates": {
+        "correctness": 0.7,
+        "completeness": 0.65,
+        "citation_correctness": 1.0,
+        "faithfulness": 1.0,
+        "clarity": 0.8
+      },
+      "multimodal_accuracy": {
+        "reviewed_answers": 5,
+        "mean_score_out_of_2": 1.4
+      },
+      "unsupported_answer_accuracy": 1.0,
+      "release_gate_passed": true
+    },
+    "ollama": {
+      "supported_answers_reviewed": 20,
+      "unsupported_answers_reviewed": 4,
+      "mean_primary_score_out_of_10": 8.85,
+      "criterion_rates": {
+        "correctness": 0.775,
+        "completeness": 0.725,
+        "citation_correctness": 1.0,
+        "faithfulness": 1.0,
+        "clarity": 0.925
+      },
+      "multimodal_accuracy": {
+        "reviewed_answers": 5,
+        "mean_score_out_of_2": 2.0
+      },
+      "unsupported_answer_accuracy": 1.0,
+      "release_gate_passed": true
+    }
+  }
+}

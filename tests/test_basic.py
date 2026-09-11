@@ -14,7 +14,7 @@ from multimodal_rag.evaluation import compute_mrr, compute_ndcg_at_k, compute_re
 from multimodal_rag.math_extraction import LocalMathExtractor
 from multimodal_rag.jobs import IngestionJob
 from multimodal_rag.retrieval import FAISSRetriever
-from multimodal_rag.reranker import logits_to_scores
+from multimodal_rag.reranker import Reranker, logits_to_scores
 
 
 def test_retriever_returns_matching_chunk_for_query_embedding():
@@ -543,6 +543,7 @@ def test_health_and_metrics_are_available_without_loading_models():
     metrics = client.get("/metrics").json()
     assert metrics["recall_at_5"] == pytest.approx(0.8306451613)
     assert metrics["citation_accuracy"] == 1.0
+    assert metrics["comparison"]["hybrid_plus_reranker"]["mrr"] == pytest.approx(0.725)
     assert api.service is None
 
 
@@ -550,6 +551,11 @@ def test_logits_to_scores_handles_single_logit_output():
     logits = torch.tensor([[0.2], [0.8]])
     scores = logits_to_scores(logits)
     assert scores == pytest.approx([0.2, 0.8])
+
+
+def test_reranker_rejects_an_unpinned_remote_model_before_loading_it():
+    with pytest.raises(ValueError, match="pinned revision"):
+        Reranker("organization/unpinned-reranker", revision=None)
 
 
 def test_query_unpacks_reranked_candidate_before_building_evidence():
@@ -673,6 +679,15 @@ def test_table_identifier_is_prioritized_and_counts_as_direct_support():
 
     assert [candidate.chunk_id for candidate in candidates] == ["govern-1-2"]
     assert service._evidence_supports_query("What recommendations does GOVERN 1.2 make?", evidence, "visual")
+
+
+def test_structured_identifier_matching_uses_literal_linear_parsing():
+    query = "What does GOVERN 1 . 2 recommend? " + "(" * 5000
+    source_text = "Table GOVERN 1.2 lists its suggested actions."
+
+    assert RAGService._structured_identifier(query) == "govern 1.2"
+    assert RAGService._identifier_matches("govern 1.2", source_text)
+    assert not RAGService._identifier_matches("govern 1.3", source_text)
 
 
 def test_table_recommendation_answer_uses_structured_action_rows_not_flattened_prose():

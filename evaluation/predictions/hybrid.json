@@ -1334,17 +1334,17 @@
   {
     "query_id": "ipcc-002",
     "ranked_chunk_ids": [
-      "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
-      "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
       "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
+      "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
       "IPCC_AR6_SYR_FullVolume.pdf-20-text-3-0",
       "IPCC_AR6_SYR_FullVolume.pdf-91-text-10-0"
     ],
     "ranked_results": [
       {
-        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
         "source": "IPCC_AR6_SYR_FullVolume.pdf",
-        "page": 86
+        "page": 91
       },
       {
         "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-30-text-4-0",
@@ -1352,9 +1352,9 @@
         "page": 30
       },
       {
-        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-91-text-31-0",
+        "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-86-text-4-0",
         "source": "IPCC_AR6_SYR_FullVolume.pdf",
-        "page": 91
+        "page": 86
       },
       {
         "chunk_id": "IPCC_AR6_SYR_FullVolume.pdf-20-text-3-0",
@@ -1595,9 +1595,9 @@
     "ranked_chunk_ids": [
       "p60-287.pdf-39-text-3-0",
       "p60-287.pdf-23-text-10-0",
-      "p60-287.pdf-43-text-10-0",
-      "p60-287.pdf-42-text-10-0",
-      "p60-287.pdf-44-text-10-0"
+      "p60-287.pdf-6-figure-5-0",
+      "p60-287.pdf-5-text-2-0",
+      "p60-287.pdf-49-text-19-0"
     ],
     "ranked_results": [
       {
@@ -1611,19 +1611,19 @@
         "page": 23
       },
       {
-        "chunk_id": "p60-287.pdf-43-text-10-0",
+        "chunk_id": "p60-287.pdf-6-figure-5-0",
         "source": "p60-287.pdf",
-        "page": 43
+        "page": 6
       },
       {
-        "chunk_id": "p60-287.pdf-42-text-10-0",
+        "chunk_id": "p60-287.pdf-5-text-2-0",
         "source": "p60-287.pdf",
-        "page": 42
+        "page": 5
       },
       {
-        "chunk_id": "p60-287.pdf-44-text-10-0",
+        "chunk_id": "p60-287.pdf-49-text-19-0",
         "source": "p60-287.pdf",
-        "page": 44
+        "page": 49
       }
     ]
   },
@@ -1855,8 +1855,8 @@
       "SIR5241_WEB.pdf-12-text-2-0",
       "SIR5241_WEB.pdf-11-text-7-0",
       "SIR5241_WEB.pdf-3-text-0-0",
-      "SIR5241_WEB.pdf-19-text-2-0",
-      "SIR5241_WEB.pdf-11-text-0-0"
+      "SIR5241_WEB.pdf-11-text-0-0",
+      "SIR5241_WEB.pdf-19-text-2-0"
     ],
     "ranked_results": [
       {
@@ -1875,14 +1875,14 @@
         "page": 3
       },
       {
-        "chunk_id": "SIR5241_WEB.pdf-19-text-2-0",
-        "source": "SIR5241_WEB.pdf",
-        "page": 19
-      },
-      {
         "chunk_id": "SIR5241_WEB.pdf-11-text-0-0",
         "source": "SIR5241_WEB.pdf",
         "page": 11
+      },
+      {
+        "chunk_id": "SIR5241_WEB.pdf-19-text-2-0",
+        "source": "SIR5241_WEB.pdf",
+        "page": 19
       }
     ]
   },
@@ -1930,7 +1930,7 @@
       "SIR5241_WEB.pdf-12-text-5-0",
       "SIR5241_WEB.pdf-29-text-18-0",
       "SIR5241_WEB.pdf-85-text-5-0",
-      "SIR5241_WEB.pdf-3-text-0-0"
+      "SIR5241_WEB.pdf-11-text-0-0"
     ],
     "ranked_results": [
       {
@@ -1954,9 +1954,9 @@
         "page": 85
       },
       {
-        "chunk_id": "SIR5241_WEB.pdf-3-text-0-0",
+        "chunk_id": "SIR5241_WEB.pdf-11-text-0-0",
         "source": "SIR5241_WEB.pdf",
-        "page": 3
+        "page": 11
       }
     ]
   },
@@ -2003,8 +2003,8 @@
       "CalculusVolume3-OP.pdf-643-text-105-0",
       "CalculusVolume3-OP.pdf-491-text-4-0",
       "CalculusVolume3-OP.pdf-492-text-52-0",
-      "CalculusVolume3-OP.pdf-486-text-3-0",
-      "CalculusVolume3-OP.pdf-491-text-66-0"
+      "CalculusVolume3-OP.pdf-491-text-66-0",
+      "CalculusVolume3-OP.pdf-486-text-3-0"
     ],
     "ranked_results": [
       {
@@ -2023,14 +2023,14 @@
         "page": 492
       },
       {
-        "chunk_id": "CalculusVolume3-OP.pdf-486-text-3-0",
-        "source": "CalculusVolume3-OP.pdf",
-        "page": 486
-      },
-      {
         "chunk_id": "CalculusVolume3-OP.pdf-491-text-66-0",
         "source": "CalculusVolume3-OP.pdf",
         "page": 491
+      },
+      {
+        "chunk_id": "CalculusVolume3-OP.pdf-486-text-3-0",
+        "source": "CalculusVolume3-OP.pdf",
+        "page": 486
       }
     ]
   },
