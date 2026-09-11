@@ -10,4 +10,4 @@ uvicorn>=0.29.0,<1
 pydantic>=2.6.0,<3
 numpy>=1.26.0,<3
 requests>=2.34.2,<3
-python-multipart>=0.0.9,<1
+python-multipart>=0.0.32,<1
